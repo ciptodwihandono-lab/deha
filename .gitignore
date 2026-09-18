@@ -2,3 +2,20 @@ node_modules/
 dist/
 *.log
 .env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+
+# QGIS
+*.qgz~
+*.gpkg-journal

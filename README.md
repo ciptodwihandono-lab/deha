@@ -10,6 +10,7 @@ dalam satu struktur yang saling terhubung.
 deha/
 ├── data/
 │   ├── raw/          # data mentah (mis. export dari QGIS)
+│   │   └── boundaries/  # batas wilayah administrasi (provinsi/kab/kec/desa)
 │   ├── processed/    # data hasil olahan Python
 │   └── external/     # data dari sumber luar (API, download, dll.)
 ├── qgis/
@@ -39,6 +40,25 @@ Indonesia) diproses `scripts/python/process_geodata.py` menjadi
 `data/processed/sample_processed.csv`, lalu dianalisis
 `scripts/r/analyze_data.R` menjadi ringkasan dan grafik di `outputs/`.
 
+## Pemetaan seluruh Indonesia (batas wilayah)
+
+Untuk proyek pemetaan skala nasional (provinsi/kabupaten/kecamatan/desa),
+ada alur kerja kedua yang menghubungkan data batas wilayah, Python, dan R:
+
+```
+data/raw/boundaries/*.geojson (atau .gpkg untuk skala nasional)
+    → scripts/python/prepare_boundaries.py → data/processed/*.geojson + .csv
+        → scripts/r/map_indonesia.R → outputs/figures/*.png (peta choropleth)
+```
+
+Contoh yang sudah disiapkan: 13 kecamatan di Kota Yogyakarta
+(`data/raw/boundaries/yogyakarta_kecamatan.geojson`) diproses jadi peta
+kepadatan penduduk (data atribut simulasi) di
+`outputs/figures/peta_kecamatan_yogyakarta.png`. Ini contoh skala kecil
+untuk membuktikan alur kerjanya — lihat `data/raw/boundaries/README.md`
+untuk sumber data resmi (BIG, GADM, Kemendagri) saat sudah siap memperluas
+ke cakupan kecamatan/desa seluruh Indonesia.
+
 ## Setup tiap tool
 
 ### Python
@@ -47,6 +67,7 @@ Indonesia) diproses `scripts/python/process_geodata.py` menjadi
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python3 scripts/python/process_geodata.py
+python3 scripts/python/prepare_boundaries.py
 ```
 
 ### R / RStudio
@@ -54,6 +75,7 @@ python3 scripts/python/process_geodata.py
 ```bash
 Rscript scripts/r/install.R      # install dependency sekali saja
 Rscript scripts/r/analyze_data.R
+Rscript scripts/r/map_indonesia.R
 ```
 
 Bisa juga dibuka langsung di RStudio dengan membuka folder proyek ini

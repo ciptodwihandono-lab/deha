@@ -19,3 +19,9 @@ renv/library/
 # QGIS
 *.qgz~
 *.gpkg-journal
+
+# Data batas wilayah nasional berukuran besar (unduh manual, lihat
+# data/raw/boundaries/README.md) -- jangan commit file besar ke git biasa.
+data/raw/boundaries/*.gpkg
+data/raw/boundaries/*.shp
+data/raw/boundaries/*.zip

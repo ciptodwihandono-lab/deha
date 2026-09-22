@@ -13,12 +13,11 @@ library(readxl)
 library(dplyr)
 library(ggplot2)
 
-# --- GANTI DUA BARIS DI BAWAH INI kalau lokasi/nama filenya beda ---
-folder <- "C:/Users/Cipto Dwi Handono/OneDrive/Dokumen/Kukang Jawa, Kiarapayung/Kukang Jawa"
-nama_file_excel <- "Data_Vegetasi_Kukang_Kiarapayung.xlsx"
+# --- Pilih file Excel-nya lewat jendela dialog (tidak perlu ketik path) ---
+cat("Pilih file Excel data vegetasi kukang jawa di jendela yang muncul...\n")
+file_excel <- file.choose()
+folder <- dirname(file_excel)
 # --------------------------------------------------------------------
-
-file_excel <- file.path(folder, nama_file_excel)
 
 data <- read_excel(file_excel, sheet = "Vegetasi Kukang", skip = 3)
 

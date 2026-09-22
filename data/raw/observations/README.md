@@ -25,16 +25,26 @@ pakan/pohon tidurnya.
 | `nama_lokal` | nama lokal tumbuhan |
 | `nama_ilmiah` | nama ilmiah (cocokkan dengan `spesies_referensi_kukang_jawa.csv` bila memungkinkan) |
 | `kategori` | `pohon_pakan`, `pohon_tidur`, atau `lainnya` |
-| `koordinat_dms` | koordinat dari catatan lapangan/GPS, format bebas — mis. `6°12'57.2"S 106°49'12.4"E` |
-| `lat`, `lon` | **kosongkan saja**, akan otomatis terisi oleh script |
+| `koordinat_dms` | koordinat dari catatan lapangan/GPS **hanya jika formatnya derajat-menit-detik**, mis. `6°12'57.2"S 106°49'12.4"E` |
+| `lat`, `lon` | isi langsung jika koordinat sudah desimal (mis. dari Google Maps, `-6.889217,107.762170`); **kosongkan** jika mengisi `koordinat_dms` — akan otomatis terisi oleh script |
 | `nama_file_foto` | nama file foto di folder `photos/` |
 | `pengamat` | nama pencatat |
 | `catatan` | catatan tambahan |
 
-Kolom `koordinat_dms` menerima format derajat-menit-detik yang cukup
-fleksibel (pemisah `°`, `'`, `"`, spasi, atau huruf `o`/`m`/`s` seperti pada
-catatan GPS manual), asal urutannya derajat-menit-detik-arah
-(N/S/E/W), lintang dulu baru bujur.
+Kolom `kategori` idealnya salah satu dari `pohon_pakan`, `pohon_tidur`,
+atau `lainnya` (lihat `spesies_referensi_kukang_jawa.csv`). Kalau jenis
+tumbuhan belum teridentifikasi dari foto, isi `belum_teridentifikasi`
+lalu perbarui setelah identifikasi.
+
+Ada dua cara mengisi koordinat, tergantung sumbernya:
+
+- **Sudah desimal** (mis. disalin dari Google Maps: `-6.889217,107.762170`)
+  → isi langsung ke kolom `lat` dan `lon`, kosongkan `koordinat_dms`.
+- **Masih format derajat-menit-detik** (mis. dari alat GPS:
+  `6°12'57.2"S 106°49'12.4"E`) → isi ke kolom `koordinat_dms`, kosongkan
+  `lat`/`lon`, nanti otomatis dikonversi oleh script (pemisah bebas: `°`,
+  `'`, `"`, spasi, atau huruf `o`/`m`/`s`, asal urutannya
+  derajat-menit-detik-arah, lintang dulu baru bujur).
 
 ## Proses jadi peta
 

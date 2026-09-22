@@ -1,0 +1,14 @@
+{
+"type": "FeatureCollection",
+"name": "vegetasi_kukang_jawa",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "id": 2, "tanggal": null, "waktu": null, "nama_lokal": null, "nama_ilmiah": null, "kategori": "belum_teridentifikasi", "koordinat_dms": null, "lat": -6.889217, "lon": 107.76217, "nama_file_foto": null, "pengamat": null, "catatan": "Vegetasi 1 (Pohon)" }, "geometry": { "type": "Point", "coordinates": [ 107.76217, -6.889217 ] } },
+{ "type": "Feature", "properties": { "id": 3, "tanggal": null, "waktu": null, "nama_lokal": null, "nama_ilmiah": null, "kategori": "belum_teridentifikasi", "koordinat_dms": null, "lat": -6.888968, "lon": 107.762058, "nama_file_foto": null, "pengamat": null, "catatan": "Vegetasi 2 (Pohon)" }, "geometry": { "type": "Point", "coordinates": [ 107.762058, -6.888968 ] } },
+{ "type": "Feature", "properties": { "id": 4, "tanggal": null, "waktu": null, "nama_lokal": null, "nama_ilmiah": null, "kategori": "belum_teridentifikasi", "koordinat_dms": null, "lat": -6.889018, "lon": 107.761712, "nama_file_foto": null, "pengamat": null, "catatan": "Vegetasi 3 (Pohon)" }, "geometry": { "type": "Point", "coordinates": [ 107.761712, -6.889018 ] } },
+{ "type": "Feature", "properties": { "id": 5, "tanggal": null, "waktu": null, "nama_lokal": null, "nama_ilmiah": null, "kategori": "belum_teridentifikasi", "koordinat_dms": null, "lat": -6.889286, "lon": 107.761535, "nama_file_foto": null, "pengamat": null, "catatan": "Vegetasi 4 (Pohon)" }, "geometry": { "type": "Point", "coordinates": [ 107.761535, -6.889286 ] } },
+{ "type": "Feature", "properties": { "id": 6, "tanggal": null, "waktu": null, "nama_lokal": null, "nama_ilmiah": null, "kategori": "pohon_tidur", "koordinat_dms": null, "lat": -6.8879173, "lon": 107.760937, "nama_file_foto": null, "pengamat": null, "catatan": "Vegetasi 5 (Bambu)" }, "geometry": { "type": "Point", "coordinates": [ 107.760937, -6.8879173 ] } },
+{ "type": "Feature", "properties": { "id": 7, "tanggal": null, "waktu": null, "nama_lokal": null, "nama_ilmiah": null, "kategori": "pohon_tidur", "koordinat_dms": null, "lat": -6.888943, "lon": 107.761603, "nama_file_foto": null, "pengamat": null, "catatan": "Vegetasi 6 (Bambu)" }, "geometry": { "type": "Point", "coordinates": [ 107.761603, -6.888943 ] } },
+{ "type": "Feature", "properties": { "id": 8, "tanggal": null, "waktu": null, "nama_lokal": null, "nama_ilmiah": null, "kategori": "belum_teridentifikasi", "koordinat_dms": null, "lat": -6.88925, "lon": 107.762297, "nama_file_foto": null, "pengamat": null, "catatan": "Vegetasi di atas feses (pohon) - ditemukan feses kukang jawa di pohon ini" }, "geometry": { "type": "Point", "coordinates": [ 107.762297, -6.88925 ] } }
+]
+}

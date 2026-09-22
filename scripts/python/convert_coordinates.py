@@ -70,7 +70,10 @@ def build(input_path: Path = INPUT_PATH) -> gpd.GeoDataFrame:
 
 if __name__ == "__main__":
     result = build()
-    print(f"{len(result)} titik dengan koordinat valid -> {OUTPUT_GEOJSON}")
+    if len(result) > 0:
+        print(f"{len(result)} titik dengan koordinat valid -> {OUTPUT_GEOJSON}")
+    else:
+        print("Belum ada titik dengan koordinat valid, GeoJSON belum dibuat.")
     skipped = pd.read_csv(INPUT_PATH)
     skipped = skipped[skipped["lat"].isna()]
     if len(skipped) > 0:

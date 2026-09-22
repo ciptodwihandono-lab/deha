@@ -7,11 +7,12 @@
 # Ctrl+Shift+Enter / Cmd+Shift+Enter), atau select-all lalu Run.
 #
 # Kalau package di bawah belum terinstall, jalankan sekali saja:
-#   install.packages(c("readxl", "dplyr", "ggplot2"))
+#   install.packages(c("readxl", "dplyr", "ggplot2", "ggrepel"))
 
 library(readxl)
 library(dplyr)
 library(ggplot2)
+library(ggrepel)
 
 # --- Pilih file Excel-nya lewat jendela dialog (tidak perlu ketik path) ---
 cat("Pilih file Excel data vegetasi kukang jawa di jendela yang muncul...\n")
@@ -34,8 +35,10 @@ data <- data %>%
 
 peta <- ggplot(data, aes(x = lon, y = lat)) +
   geom_point(aes(color = kategori), size = 4) +
-  geom_text(aes(label = titik), size = 3, vjust = -1.1) +
+  geom_text_repel(aes(label = titik), size = 3, max.overlaps = Inf, box.padding = 0.6) +
   scale_color_manual(values = c("Pohon" = "#2e7d32", "Bambu (pohon tidur)" = "#8d6e63")) +
+  scale_x_continuous(expand = expansion(mult = 0.15)) +
+  scale_y_continuous(expand = expansion(mult = 0.1)) +
   coord_fixed() +
   labs(
     title = "Vegetasi Terkait Perjumpaan Kukang Jawa",

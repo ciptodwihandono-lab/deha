@@ -1,7 +1,7 @@
 # Install R dependencies for this project.
 # Run once with: Rscript scripts/r/install.R
 
-packages <- c("readr", "readxl", "dplyr", "ggplot2", "sf", "terra")
+packages <- c("readr", "readxl", "dplyr", "ggplot2", "ggrepel", "sf", "terra")
 
 installed <- rownames(installed.packages())
 to_install <- setdiff(packages, installed)

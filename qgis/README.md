@@ -3,6 +3,27 @@
 - `projects/` — simpan file proyek QGIS (`.qgz`/`.qgs`) di sini.
 - `styles/` — simpan file style (`.qml`) yang dipakai berulang di beberapa layer/proyek.
 
+## Cara tercepat: tanpa scripting sama sekali
+
+Untuk sekadar menampilkan titik-titik vegetasi di atas citra satelit,
+**tidak perlu Python Console** — cukup pakai menu biasa QGIS:
+
+1. **Tambah basemap satelit** (gratis, tanpa API key): panel **Browser** →
+   klik kanan **XYZ Tiles** → **New Connection** → isi Name `Esri
+   Satellite`, URL
+   `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}`
+   → OK, lalu double-click koneksinya untuk menampilkan di kanvas.
+2. **Tambah titik data**: menu **Layer → Add Layer → Add Delimited Text
+   Layer** → pilih file CSV vegetasi (kolom `Latitude`/`Longitude`) → CRS
+   `EPSG:4326` → **Add**.
+3. **Beri warna per kategori** (opsional): klik kanan layer → **Properties
+   → Symbology** → ganti ke **Categorized**, Value = kolom `Kategori` →
+   **Classify** → **Apply**.
+4. Export gambar lewat **Project → Import/Export → Export Map to Image**.
+
+Ini jauh lebih stabil dibanding lewat Python Console (lihat bagian
+script PyQGIS di bawah kalau memang butuh otomatisasi/reproducibility).
+
 ## Script PyQGIS (`scripts/qgis/`)
 
 Script Python yang jalan **di dalam QGIS** (pakai modul `qgis.core`), beda

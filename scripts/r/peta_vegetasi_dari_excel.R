@@ -1,13 +1,16 @@
 # Buat peta vegetasi kukang jawa LANGSUNG dari file Excel -- tanpa Python,
-# tanpa git, tanpa folder "deha". Cukup ganti path di bawah sesuai lokasi
-# file Excel Anda, lalu jalankan seluruh script ini.
+# tanpa git, tanpa folder "deha", dan TANPA Rtools (tidak pakai package
+# yang butuh kompilasi seperti sf/terra). Cukup ganti path di bawah sesuai
+# lokasi file Excel Anda, lalu jalankan seluruh script ini.
 #
 # Cara jalankan: buka file ini di RStudio, klik "Source" (atau tombol
 # Ctrl+Shift+Enter / Cmd+Shift+Enter), atau select-all lalu Run.
+#
+# Kalau package di bawah belum terinstall, jalankan sekali saja:
+#   install.packages(c("readxl", "dplyr", "ggplot2"))
 
 library(readxl)
 library(dplyr)
-library(sf)
 library(ggplot2)
 
 # --- GANTI DUA BARIS DI BAWAH INI kalau lokasi/nama filenya beda ---
@@ -30,19 +33,17 @@ data <- data %>%
   ) %>%
   mutate(kategori = if_else(grepl("Bambu", tipe, ignore.case = TRUE), "Bambu (pohon tidur)", "Pohon"))
 
-titik_sf <- st_as_sf(data, coords = c("lon", "lat"), crs = 4326)
-
-peta <- ggplot(titik_sf) +
-  geom_sf(aes(color = kategori), size = 3) +
-  geom_sf_text(aes(label = titik), size = 2.8, nudge_y = 0.00005, check_overlap = TRUE) +
+peta <- ggplot(data, aes(x = lon, y = lat)) +
+  geom_point(aes(color = kategori), size = 4) +
+  geom_text(aes(label = titik), size = 3, vjust = -1.1) +
   scale_color_manual(values = c("Pohon" = "#2e7d32", "Bambu (pohon tidur)" = "#8d6e63")) +
+  coord_fixed() +
   labs(
     title = "Vegetasi Terkait Perjumpaan Kukang Jawa",
     subtitle = "Taman Kehati Kiarapayung -- identifikasi jenis masih tentatif dari foto",
-    color = "Kategori"
+    x = "Longitude", y = "Latitude", color = "Kategori"
   ) +
-  theme_minimal() +
-  theme(axis.text = element_blank(), axis.ticks = element_blank())
+  theme_minimal()
 
 output_path <- file.path(folder, "Peta_Vegetasi_Kukang_Kiarapayung.png")
 ggsave(output_path, plot = peta, width = 7, height = 7)

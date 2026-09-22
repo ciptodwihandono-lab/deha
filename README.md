@@ -10,7 +10,8 @@ dalam satu struktur yang saling terhubung.
 deha/
 ├── data/
 │   ├── raw/          # data mentah (mis. export dari QGIS)
-│   │   └── boundaries/  # batas wilayah administrasi (provinsi/kab/kec/desa)
+│   │   ├── boundaries/  # batas wilayah administrasi (provinsi/kab/kec/desa)
+│   │   └── observations/  # observasi lapangan (mis. kukang jawa + vegetasi)
 │   ├── processed/    # data hasil olahan Python
 │   └── external/     # data dari sumber luar (API, download, dll.)
 ├── qgis/
@@ -59,6 +60,20 @@ untuk membuktikan alur kerjanya — lihat `data/raw/boundaries/README.md`
 untuk sumber data resmi (BIG, GADM, Kemendagri) saat sudah siap memperluas
 ke cakupan kecamatan/desa seluruh Indonesia.
 
+## Observasi kukang jawa & vegetasi
+
+Alur kerja ketiga untuk data survei satwa/vegetasi lapangan (koordinat dari
+catatan lapangan + foto):
+
+```
+data/raw/observations/vegetasi_kukang_jawa.csv (isi koordinat_dms + foto)
+    → scripts/python/convert_coordinates.py → data/processed/*.geojson
+        → buka di QGIS, atau lanjut dianalisis/dipetakan dengan R
+```
+
+Lihat `data/raw/observations/README.md` untuk format pengisian data dan
+daftar spesies pohon pakan/pohon tidur kukang jawa sebagai acuan.
+
 ## Setup tiap tool
 
 ### Python
@@ -68,6 +83,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python3 scripts/python/process_geodata.py
 python3 scripts/python/prepare_boundaries.py
+python3 scripts/python/convert_coordinates.py
 ```
 
 ### R / RStudio

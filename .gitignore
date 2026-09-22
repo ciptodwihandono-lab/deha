@@ -25,3 +25,7 @@ renv/library/
 data/raw/boundaries/*.gpkg
 data/raw/boundaries/*.shp
 data/raw/boundaries/*.zip
+
+# Foto lapangan (simpan di Google Drive, cukup rujuk nama file di CSV)
+data/raw/observations/photos/*
+!data/raw/observations/photos/.gitkeep

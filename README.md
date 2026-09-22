@@ -68,7 +68,7 @@ catatan lapangan + foto):
 ```
 data/raw/observations/vegetasi_kukang_jawa.csv (isi koordinat_dms + foto)
     → scripts/python/convert_coordinates.py → data/processed/*.geojson
-        → buka di QGIS, atau lanjut dianalisis/dipetakan dengan R
+        → scripts/r/map_vegetasi_kukang.R → outputs/figures/*.png
 ```
 
 Lihat `data/raw/observations/README.md` untuk format pengisian data dan
@@ -92,6 +92,7 @@ python3 scripts/python/convert_coordinates.py
 Rscript scripts/r/install.R      # install dependency sekali saja
 Rscript scripts/r/analyze_data.R
 Rscript scripts/r/map_indonesia.R
+Rscript scripts/r/map_vegetasi_kukang.R
 ```
 
 Bisa juga dibuka langsung di RStudio dengan membuka folder proyek ini

@@ -65,15 +65,24 @@ data/raw/observations/vegetasi_kukang_jawa.csv (isi koordinat_dms)
     → scripts/python/convert_coordinates.py
         → mengisi kolom lat/lon otomatis
         → data/processed/vegetasi_kukang_jawa.geojson
-            → buka di QGIS, atau proses lanjut dengan scripts/r/map_indonesia.R
+            → scripts/r/map_vegetasi_kukang.R → outputs/figures/*.png
+            (atau buka manual di QGIS kalau mau, lihat qgis/README.md)
 ```
 
 Jalankan:
 
 ```bash
 python3 scripts/python/convert_coordinates.py
+Rscript scripts/r/map_vegetasi_kukang.R
 ```
 
 Baris yang kolom `koordinat_dms`-nya masih kosong akan dilewati (dan
 disebutkan jumlahnya di output) — isi dulu dari catatan lapangan, lalu
 jalankan ulang.
+
+**Kenapa lewat R, bukan QGIS?** Membuat peta lewat R (`map_vegetasi_kukang.R`)
+jauh lebih stabil daripada lewat Python Console QGIS — tidak ada masalah
+paste/autocomplete/hang seperti di PyQGIS, tinggal jalankan satu perintah
+dan hasilnya langsung jadi file gambar. Script PyQGIS di `scripts/qgis/`
+tetap ada sebagai opsi kalau memang butuh buka datanya langsung sebagai
+proyek `.qgz` di QGIS.

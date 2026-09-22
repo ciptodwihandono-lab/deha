@@ -1,40 +1,52 @@
 # Observasi kukang jawa & vegetasi
 
 Data lapangan hasil survei kukang jawa (*Nycticebus javanicus*) dan vegetasi
-pakan/pohon tidurnya.
+pakan/pohon tidurnya, di **Taman Kehati Kiarapayung**.
+
+> **PENTING — status identifikasi jenis:** kolom `nama_ilmiah_tentatif` dan
+> `famili_tentatif` adalah hasil identifikasi visual dari foto (habitus,
+> daun, kulit batang), bukan identifikasi oleh ahli botani atau spesimen
+> herbarium. Prefiks `cf.` (*confer*) berarti "mirip dengan / kemungkinan".
+> **Wajib diverifikasi** oleh ahli botani atau spesimen herbarium sebelum
+> dipakai di naskah ilmiah final — lihat kolom `tingkat_keyakinan` dan
+> `ciri_kunci_foto` untuk konteksnya.
 
 ## File
 
-- `vegetasi_kukang_jawa.csv` — tabel utama, isi dari catatan lapangan.
+- `vegetasi_kukang_jawa.csv` — tabel utama, isi dari catatan lapangan +
+  identifikasi tentatif dari foto.
 - `spesies_referensi_kukang_jawa.csv` — daftar jenis pohon pakan & pohon
   tidur kukang jawa (sumber: LFP Slow Loris Translocation Guide, ada di
-  Google Drive folder "Kukang"). Dipakai sebagai acuan mengisi kolom
-  `kategori` di atas.
+  Google Drive folder "Kukang"). Dipakai sebagai acuan mencocokkan
+  `nama_ilmiah_tentatif`.
 - `photos/` — simpan foto lapangan di sini dengan nama file yang sama
   seperti yang tertulis di kolom `nama_file_foto`. Foto tidak di-commit ke
   git (lihat `.gitignore`) karena ukurannya besar — foto asli tetap di
   Google Drive, cukup rujuk nama filenya di sini.
 
-## Cara mengisi `vegetasi_kukang_jawa.csv`
+## Kolom di `vegetasi_kukang_jawa.csv`
 
 | Kolom | Isi |
 | --- | --- |
 | `id` | nomor urut |
-| `tanggal` | format `YYYY-MM-DD` |
-| `waktu` | jam pengamatan (opsional) |
-| `nama_lokal` | nama lokal tumbuhan |
-| `nama_ilmiah` | nama ilmiah (cocokkan dengan `spesies_referensi_kukang_jawa.csv` bila memungkinkan) |
-| `kategori` | `pohon_pakan`, `pohon_tidur`, atau `lainnya` |
+| `titik` | label titik survei (mis. "Vegetasi 1") |
+| `lokasi` | nama lokasi survei |
+| `tipe` | Pohon / Bambu (rumpun) / dll., dari pengamatan lapangan |
+| `famili_tentatif` | famili tumbuhan, **tentatif** dari foto |
+| `nama_ilmiah_tentatif` | nama ilmiah tentatif (prefiks `cf.` = kemungkinan), **wajib diverifikasi** |
+| `tingkat_keyakinan` | Rendah / Sedang / Tinggi — seberapa yakin identifikasi tentatif ini |
+| `kategori` | `pohon_pakan`, `pohon_tidur`, `lainnya`, atau `belum_teridentifikasi` — kategori kerja untuk analisis, lihat catatan di bawah |
 | `koordinat_dms` | koordinat dari catatan lapangan/GPS **hanya jika formatnya derajat-menit-detik**, mis. `6°12'57.2"S 106°49'12.4"E` |
 | `lat`, `lon` | isi langsung jika koordinat sudah desimal (mis. dari Google Maps, `-6.889217,107.762170`); **kosongkan** jika mengisi `koordinat_dms` — akan otomatis terisi oleh script |
+| `ciri_kunci_foto` | ciri morfologi yang teramati dari foto (dasar identifikasi tentatif) |
 | `nama_file_foto` | nama file foto di folder `photos/` |
 | `pengamat` | nama pencatat |
-| `catatan` | catatan tambahan |
+| `catatan` | catatan tambahan, termasuk alasan tingkat keyakinan dan apa yang perlu diverifikasi ulang |
 
-Kolom `kategori` idealnya salah satu dari `pohon_pakan`, `pohon_tidur`,
-atau `lainnya` (lihat `spesies_referensi_kukang_jawa.csv`). Kalau jenis
-tumbuhan belum teridentifikasi dari foto, isi `belum_teridentifikasi`
-lalu perbarui setelah identifikasi.
+Kolom `kategori` diisi `pohon_pakan`/`pohon_tidur` hanya kalau
+`nama_ilmiah_tentatif` cocok dengan daftar di
+`spesies_referensi_kukang_jawa.csv` DAN `tingkat_keyakinan`-nya minimal
+Sedang; selain itu pakai `belum_teridentifikasi` sampai ada konfirmasi ahli.
 
 Ada dua cara mengisi koordinat, tergantung sumbernya:
 

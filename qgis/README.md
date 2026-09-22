@@ -3,6 +3,28 @@
 - `projects/` — simpan file proyek QGIS (`.qgz`/`.qgs`) di sini.
 - `styles/` — simpan file style (`.qml`) yang dipakai berulang di beberapa layer/proyek.
 
+## Script PyQGIS (`scripts/qgis/`)
+
+Script Python yang jalan **di dalam QGIS** (pakai modul `qgis.core`), beda
+dengan script di `scripts/python/` yang jalan di terminal biasa. Tidak bisa
+dites di luar QGIS karena modul `qgis.core` cuma tersedia saat QGIS aktif.
+
+Cara menjalankan:
+
+1. Buka QGIS → menu **Plugins → Python Console**.
+2. Klik ikon **Show Editor** di console, lalu **Open** file skrip yang mau
+   dijalankan (mis. `scripts/qgis/build_vegetasi_project.py`).
+3. Klik **Run** (▶). Proyek otomatis tersimpan ke `qgis/projects/` dan
+   layer-nya langsung terlihat di kanvas QGIS.
+
+Script yang sudah ada:
+
+- `build_vegetasi_project.py` — memuat
+  `data/processed/vegetasi_kukang_jawa.geojson`, memberi warna berbeda per
+  `kategori` (pohon_pakan = hijau, pohon_tidur = coklat, lainnya = biru,
+  belum_teridentifikasi = abu-abu), menambahkan label nama titik, lalu
+  menyimpan sebagai `qgis/projects/vegetasi_kukang_kiarapayung.qgz`.
+
 ## Alur kerja
 
 1. Digitasi atau edit data spasial di QGIS, lalu export layer ke `data/raw/`

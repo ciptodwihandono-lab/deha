@@ -9,17 +9,30 @@ Script Python yang jalan **di dalam QGIS** (pakai modul `qgis.core`), beda
 dengan script di `scripts/python/` yang jalan di terminal biasa. Tidak bisa
 dites di luar QGIS karena modul `qgis.core` cuma tersedia saat QGIS aktif.
 
-Cara menjalankan:
+Ada dua cara menjalankan, pilih salah satu:
+
+**Cara 1 — lewat Editor (disarankan):**
 
 1. Buka QGIS → menu **Plugins → Python Console**.
 2. Klik ikon **Show Editor** di console, lalu **Open** file skrip yang mau
    dijalankan (mis. `scripts/qgis/build_vegetasi_project.py`).
-3. Klik **Run** (▶). Proyek otomatis tersimpan ke `qgis/projects/` dan
-   layer-nya langsung terlihat di kanvas QGIS.
+3. Klik **Run Script** (▶). Proyek otomatis tersimpan ke `qgis/projects/`
+   dan layer-nya langsung terlihat di kanvas QGIS.
+
+**Cara 2 — copy-paste langsung ke console:**
+
+Kalau console Anda menjalankan tiap baris begitu di-paste (bikin error
+`NameError`/`SyntaxError` pada script biasa karena fungsi jadi terpotong),
+pakai `build_vegetasi_project_paste.py` — versi tanpa `def`/`if` sama
+sekali, semua baris berdiri sendiri jadi aman di-paste langsung ke baris
+`>>>`. **Wajib** ganti dulu isi variabel `ROOT` di baris atas file itu ke
+lokasi folder proyek ini di komputer Anda, baru select-all + copy + paste
+ke Python Console.
 
 Script yang sudah ada:
 
-- `build_vegetasi_project.py` — memuat
+- `build_vegetasi_project.py` / `build_vegetasi_project_paste.py` — dua
+  versi (editor / paste-langsung) dari script yang sama: memuat
   `data/processed/vegetasi_kukang_jawa.geojson`, memberi warna berbeda per
   `kategori` (pohon_pakan = hijau, pohon_tidur = coklat, lainnya = biru,
   belum_teridentifikasi = abu-abu), menambahkan label nama titik, lalu

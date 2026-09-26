@@ -113,3 +113,9 @@ npm run build  # compile to dist/
 npm start      # run compiled output
 npm test       # run tests
 ```
+
+## Kontak
+
+**Cipto Dwi Handono**
+Email: ciptodwihandono@gmail.com
+HP: 0811369099

@@ -24,6 +24,9 @@ Untuk sekadar menampilkan titik-titik vegetasi di atas citra satelit,
 Ini jauh lebih stabil dibanding lewat Python Console (lihat bagian
 script PyQGIS di bawah kalau memang butuh otomatisasi/reproducibility).
 
+Detail lengkap soal layanan basemap ini (URL, atribusi, cara pakai di
+Python/R, alternatif lain): lihat `docs/basemap_satelit_esri.md`.
+
 ## Script PyQGIS (`scripts/qgis/`)
 
 Script Python yang jalan **di dalam QGIS** (pakai modul `qgis.core`), beda

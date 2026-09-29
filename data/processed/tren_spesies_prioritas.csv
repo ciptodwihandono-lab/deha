@@ -1,0 +1,4 @@
+spesies,nama_umum,jumlah_tahun_data,rentang_tahun,total_lokasi_unik,min_max_lokasi_per_tahun,laju_perubahan_tahunan_persen,p_value,signifikan,grafik
+Tringa guttifer,Nordmann's Greenshank,9,2002-2025,6,1-2,-0.45,0.9483,False,outputs/figures/tren_tringa_guttifer.png
+Numenius madagascariensis,Far Eastern Curlew,25,1989-2025,76,1-15,-2.63,0.2829,False,outputs/figures/tren_numenius_madagascariensis.png
+Calidris tenuirostris,Great Knot,15,1990-2024,38,1-9,2.24,0.5751,False,outputs/figures/tren_calidris_tenuirostris.png

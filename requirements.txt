@@ -6,3 +6,6 @@ rasterio
 fiona
 matplotlib
 jupyter
+statsmodels
+scipy
+openpyxl

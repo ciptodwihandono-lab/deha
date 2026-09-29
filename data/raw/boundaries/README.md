@@ -12,6 +12,14 @@ kerja skala kecil sebelum diperluas ke seluruh Indonesia.
 **Catatan:** file di atas hanya contoh kecil untuk latihan alur kerja
 (QGIS/Python/R). Jangan dipakai sebagai data resmi untuk publikasi.
 
+- `indonesia_nasional.geojson` — **batas negara Indonesia level nasional**
+  (264 pulau/polygon, ~19.500 titik), dipakai sebagai konteks peta skala
+  nasional (mis. peta grid sebaran burung pantai). Sumber:
+  [datasets/geo-countries](https://github.com/datasets/geo-countries)
+  (data publik, turunan Natural Earth). Resolusi cukup untuk visualisasi
+  nasional, tapi **bukan garis batas resmi pemerintah** (BIG) — jangan
+  dipakai untuk kebutuhan hukum/administratif, cukup untuk konteks visual.
+
 ## Sumber data resmi untuk cakupan seluruh Indonesia
 
 Data batas kecamatan/desa untuk seluruh Indonesia berukuran besar (ribuan

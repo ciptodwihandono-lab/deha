@@ -4,7 +4,14 @@ Data ekspor dari database global **International Waterbird Census (IWC)**
 yang dikoordinasikan Wetlands International — AWC (Asian Waterbird
 Census) adalah bagian regional dari program ini untuk Asia.
 
-File: `iwc-export_2020-2025.csv`
+File:
+
+- `iwc-export_2020-2025.csv` — **file asli lengkap** (ada kolom `participants`
+  berisi nama pengamat) — **tidak di-commit ke git**, hanya untuk dipakai
+  lokal. Simpan salinannya sendiri di luar repo ini kalau perlu.
+- `iwc_indonesia_2020_2025_anonim.csv` — versi tanpa kolom `participants`,
+  aman dan sudah masuk git, dipakai untuk semua analisis/pemetaan di
+  proyek ini.
 
 ## Cakupan
 
@@ -33,13 +40,13 @@ File: `iwc-export_2020-2025.csv`
 
 ## Catatan penting — data pribadi
 
-Kolom **`participants`** berisi **748 nama asli individu** pengamat di
-seluruh Indonesia yang berpartisipasi dalam sensus 1989–2025. Ini data
-pribadi (nama orang), mirip situasi dengan
-`data/raw/awc_indonesia_2026/` — file CSV aslinya **sengaja tidak
-otomatis di-commit** ke git melalui proses otomatis, menunggu keputusan
-pemilik repo soal cara terbaik menanganinya (commit manual apa adanya,
-atau buat versi tanpa kolom `participants` untuk versi publik/analisis).
+Kolom **`participants`** di file asli berisi **748 nama asli individu**
+pengamat di seluruh Indonesia yang berpartisipasi dalam sensus 1989–2025.
+Ini data pribadi (nama orang), mirip situasi dengan
+`data/raw/awc_indonesia_2026/`. Solusi yang dipakai: kolom itu dihapus di
+`iwc_indonesia_2020_2025_anonim.csv` (versi yang masuk git), sementara
+file asli lengkap tetap ada tapi tidak ikut ter-commit (lihat
+`.gitignore`).
 
 ## Relevansi untuk proyek
 

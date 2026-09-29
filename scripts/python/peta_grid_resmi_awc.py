@@ -31,7 +31,21 @@ import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from adjustText import adjust_text
+from matplotlib.patches import Rectangle
 from shapely.geometry import Point, box
+
+# Provinsi yang terlalu kecil/rapat untuk dilabeli langsung di peta utama
+# skala nasional -- dipindah ke panel inset zoom terpisah.
+PROVINSI_INSET = {
+    "Dki Jakarta",
+    "Probanten",
+    "Jawa Barat",
+    "Jawa Tengah",
+    "Daerah Istimewa Yogyakarta",
+    "Jawa Timur",
+    "Bali",
+}
 
 ROOT = Path(__file__).resolve().parents[2]
 INPUT_AWC = ROOT / "data" / "raw" / "awc_indonesia_2026" / "awc_indonesia_2026_anonim.xlsx"
@@ -91,14 +105,9 @@ def load_province_labels() -> gpd.GeoDataFrame:
     return provinces
 
 
-def plot_official_map(
-    boundary: gpd.GeoDataFrame,
-    grid: gpd.GeoDataFrame,
-    points: gpd.GeoDataFrame,
-    provinces: gpd.GeoDataFrame,
-) -> None:
-    fig, ax = plt.subplots(figsize=(11, 9))
-
+def draw_layer(ax, boundary, grid, points, vmax) -> None:
+    """Gambar satu lapisan peta (boundary + grid + titik) -- dipakai ulang
+    untuk peta utama maupun panel inset."""
     boundary.plot(ax=ax, color="#e8e4d8", edgecolor="#666666", linewidth=0.5, zorder=1)
 
     occupied = grid[grid["kekayaan_spesies"].notna()]
@@ -108,27 +117,73 @@ def plot_official_map(
         ax=ax,
         column="kekayaan_spesies",
         cmap="YlGnBu",
+        vmin=0,
+        vmax=vmax,
         edgecolor="#333333",
         linewidth=0.4,
-        legend=True,
-        legend_kwds={"label": "Kekayaan spesies per sel (100km x 100km)", "shrink": 0.6},
         zorder=3,
     )
+    points.plot(ax=ax, color="black", markersize=6, alpha=0.6, zorder=4)
 
-    points.plot(ax=ax, color="black", markersize=6, alpha=0.6, zorder=4, label="Lokasi survei AWC 2026")
 
+def add_labels(ax, provinces: gpd.GeoDataFrame, fontsize: float) -> list:
+    texts = []
     for _, prov in provinces.iterrows():
-        ax.text(
-            prov["label_point"].x,
-            prov["label_point"].y,
-            prov["label"],
-            fontsize=6,
-            ha="center",
-            va="center",
-            color="#333333",
-            zorder=6,
-            path_effects=[pe.withStroke(linewidth=2, foreground="white")],
+        texts.append(
+            ax.text(
+                prov["label_point"].x,
+                prov["label_point"].y,
+                prov["label"],
+                fontsize=fontsize,
+                ha="center",
+                va="center",
+                color="#333333",
+                zorder=6,
+                path_effects=[pe.withStroke(linewidth=2, foreground="white")],
+            )
         )
+    return texts
+
+
+def plot_official_map(
+    boundary: gpd.GeoDataFrame,
+    grid: gpd.GeoDataFrame,
+    points: gpd.GeoDataFrame,
+    provinces: gpd.GeoDataFrame,
+) -> None:
+    fig, ax = plt.subplots(figsize=(11, 9))
+    vmax = grid["kekayaan_spesies"].max()
+
+    draw_layer(ax, boundary, grid, points, vmax)
+
+    sm = plt.cm.ScalarMappable(cmap="YlGnBu", norm=plt.Normalize(vmin=0, vmax=vmax))
+    cbar = fig.colorbar(sm, ax=ax, shrink=0.6)
+    cbar.set_label("Kekayaan spesies per sel (100km x 100km)")
+
+    provinces_utama = provinces[~provinces["label"].isin(PROVINSI_INSET)]
+    provinces_inset = provinces[provinces["label"].isin(PROVINSI_INSET)]
+
+    texts_utama = add_labels(ax, provinces_utama, fontsize=6)
+    adjust_text(texts_utama, ax=ax, expand=(1.3, 1.5), force_text=(0.4, 0.6))
+
+    # Kotak penanda area yang di-zoom di panel inset.
+    inset_bounds = provinces_inset.total_bounds
+    margin = 40_000
+    inset_minx, inset_miny, inset_maxx, inset_maxy = (
+        inset_bounds[0] - margin, inset_bounds[1] - margin,
+        inset_bounds[2] + margin, inset_bounds[3] + margin,
+    )
+    ax.add_patch(
+        Rectangle(
+            (inset_minx, inset_miny),
+            inset_maxx - inset_minx,
+            inset_maxy - inset_miny,
+            fill=False,
+            edgecolor="#c62828",
+            linewidth=1.2,
+            zorder=7,
+        )
+    )
 
     # Skala batang sederhana (100 km), digambar di pojok kiri bawah.
     minx, miny, maxx, maxy = boundary.total_bounds
@@ -152,11 +207,26 @@ def plot_official_map(
         fontsize=12,
     )
     ax.set_axis_off()
+    ax.scatter([], [], color="black", s=15, alpha=0.6, label="Lokasi survei AWC 2026")
     ax.legend(loc="lower left", fontsize=8, bbox_to_anchor=(0.0, -0.02))
 
-    fig.tight_layout()
+    # Panel inset: zoom ke Jawa-Bali (provinsi terlalu rapat untuk peta utama).
+    # Ditaruh di area kosong kanan-bawah supaya tidak menimpa judul/peta utama.
+    inset_ax = fig.add_axes([0.56, 0.08, 0.38, 0.36])
+    draw_layer(inset_ax, boundary, grid, points, vmax)
+    texts_inset = add_labels(inset_ax, provinces_inset, fontsize=7)
+    inset_ax.set_xlim(inset_minx, inset_maxx)
+    inset_ax.set_ylim(inset_miny, inset_maxy)
+    adjust_text(texts_inset, ax=inset_ax, expand=(1.4, 1.8), force_text=(0.5, 0.8))
+    for spine in inset_ax.spines.values():
+        spine.set_edgecolor("#c62828")
+        spine.set_linewidth(1.2)
+    inset_ax.set_xticks([])
+    inset_ax.set_yticks([])
+    inset_ax.set_title("Detail: Jawa & Bali", fontsize=9)
+
     FIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG_PATH, dpi=200)
+    fig.savefig(FIG_PATH, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 

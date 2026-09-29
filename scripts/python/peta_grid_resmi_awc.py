@@ -12,9 +12,14 @@ eksploratif), script ini pakai:
    10x10 km yang dipakai banyak atlas burung Eropa).
 3. **Garis batas negara Indonesia** (`data/raw/boundaries/indonesia_nasional.geojson`)
    sebagai konteks peta, bukan cuma titik-titik lokasi survei.
+4. **Label nama provinsi** dari `data/raw/boundaries/indonesia_provinsi.geojson`
+   -- CATATAN: dataset ini lama (32 provinsi, masih pakai nama "Irian Jaya",
+   belum ada pemekaran Papua 2022 atau Kalimantan Utara) -- dipakai murni
+   untuk label orientasi visual, BUKAN batas administratif yang presisi.
 
 Workflow: data/raw/awc_indonesia_2026/awc_indonesia_2026_anonim.xlsx
           + data/raw/boundaries/indonesia_nasional.geojson
+          + data/raw/boundaries/indonesia_provinsi.geojson
 -> this script -> data/processed/awc_grid_resmi_100km.geojson
                   outputs/figures/peta_grid_resmi_awc.png
 """
@@ -22,6 +27,7 @@ Workflow: data/raw/awc_indonesia_2026/awc_indonesia_2026_anonim.xlsx
 from pathlib import Path
 
 import geopandas as gpd
+import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -30,6 +36,7 @@ from shapely.geometry import Point, box
 ROOT = Path(__file__).resolve().parents[2]
 INPUT_AWC = ROOT / "data" / "raw" / "awc_indonesia_2026" / "awc_indonesia_2026_anonim.xlsx"
 INPUT_BOUNDARY = ROOT / "data" / "raw" / "boundaries" / "indonesia_nasional.geojson"
+INPUT_PROVINCES = ROOT / "data" / "raw" / "boundaries" / "indonesia_provinsi.geojson"
 OUT_GRID = ROOT / "data" / "processed" / "awc_grid_resmi_100km.geojson"
 FIG_PATH = ROOT / "outputs" / "figures" / "peta_grid_resmi_awc.png"
 
@@ -77,7 +84,19 @@ def aggregate_to_grid(points: gpd.GeoDataFrame, grid: gpd.GeoDataFrame) -> gpd.G
     return grid.merge(agg, on="cell_id", how="left")
 
 
-def plot_official_map(boundary: gpd.GeoDataFrame, grid: gpd.GeoDataFrame, points: gpd.GeoDataFrame) -> None:
+def load_province_labels() -> gpd.GeoDataFrame:
+    provinces = gpd.read_file(INPUT_PROVINCES).to_crs(CRS_INDONESIA_EQUAL_AREA)
+    provinces["label"] = provinces["Propinsi"].str.title()
+    provinces["label_point"] = provinces.geometry.representative_point()
+    return provinces
+
+
+def plot_official_map(
+    boundary: gpd.GeoDataFrame,
+    grid: gpd.GeoDataFrame,
+    points: gpd.GeoDataFrame,
+    provinces: gpd.GeoDataFrame,
+) -> None:
     fig, ax = plt.subplots(figsize=(11, 9))
 
     boundary.plot(ax=ax, color="#e8e4d8", edgecolor="#666666", linewidth=0.5, zorder=1)
@@ -97,6 +116,19 @@ def plot_official_map(boundary: gpd.GeoDataFrame, grid: gpd.GeoDataFrame, points
     )
 
     points.plot(ax=ax, color="black", markersize=6, alpha=0.6, zorder=4, label="Lokasi survei AWC 2026")
+
+    for _, prov in provinces.iterrows():
+        ax.text(
+            prov["label_point"].x,
+            prov["label_point"].y,
+            prov["label"],
+            fontsize=6,
+            ha="center",
+            va="center",
+            color="#333333",
+            zorder=6,
+            path_effects=[pe.withStroke(linewidth=2, foreground="white")],
+        )
 
     # Skala batang sederhana (100 km), digambar di pojok kiri bawah.
     minx, miny, maxx, maxy = boundary.total_bounds
@@ -131,6 +163,7 @@ def plot_official_map(boundary: gpd.GeoDataFrame, grid: gpd.GeoDataFrame, points
 def main() -> None:
     boundary = gpd.read_file(INPUT_BOUNDARY).to_crs(CRS_INDONESIA_EQUAL_AREA)
     points = load_verified_points().to_crs(CRS_INDONESIA_EQUAL_AREA)
+    provinces = load_province_labels()
 
     grid = build_grid(boundary)
     grid = aggregate_to_grid(points, grid)
@@ -138,7 +171,7 @@ def main() -> None:
     OUT_GRID.parent.mkdir(parents=True, exist_ok=True)
     grid.to_crs("EPSG:4326").to_file(OUT_GRID, driver="GeoJSON")
 
-    plot_official_map(boundary, grid, points)
+    plot_official_map(boundary, grid, points, provinces)
 
     n_occupied = grid["kekayaan_spesies"].notna().sum()
     print(f"{len(grid)} sel grid dibuat ({UKURAN_SEL_M/1000:.0f}km x {UKURAN_SEL_M/1000:.0f}km), {n_occupied} terisi data")

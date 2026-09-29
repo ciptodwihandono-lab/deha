@@ -19,6 +19,15 @@ kerja skala kecil sebelum diperluas ke seluruh Indonesia.
   (data publik, turunan Natural Earth). Resolusi cukup untuk visualisasi
   nasional, tapi **bukan garis batas resmi pemerintah** (BIG) — jangan
   dipakai untuk kebutuhan hukum/administratif, cukup untuk konteks visual.
+- `indonesia_provinsi.geojson` — batas **32 provinsi** (dataset lama,
+  sumber peta dasar BAKOSURTANAL), dipakai untuk **label nama provinsi**
+  di peta skala nasional. **PERHATIAN**: masih pakai nama "Irian Jaya
+  Timur/Tengah/Barat" (belum Papua), belum ada Kalimantan Utara atau
+  pemekaran Papua 2022 — jangan dipakai untuk analisis administratif,
+  cuma untuk label orientasi visual. Sumber:
+  [superpikar/indonesia-geojson](https://github.com/superpikar/indonesia-geojson).
+  Untuk batas provinsi terkini dan akurat, pakai sumber resmi BIG/GADM
+  di bagian bawah halaman ini.
 
 ## Sumber data resmi untuk cakupan seluruh Indonesia
 

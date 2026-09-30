@@ -1,4 +1,12 @@
-"""Peta sebaran burung air AWC Indonesia 2026 -- versi GRID "resmi".
+"""Peta intensitas pengamatan burung air AWC Indonesia 2026 -- versi GRID "resmi".
+
+Warna tiap sel = jumlah lokasi survei di sel itu (proxy intensitas
+pengamatan/banyaknya "pengamat" di sana) -- bukan lagi kekayaan spesies.
+Data jumlah pengamat individu sudah dihapus dari sumbernya demi privasi
+(lihat data/raw/awc_indonesia_2026/README.md), jadi jumlah lokasi survei
+dipakai sebagai proxy terdekat yang masih tersedia. Kolom
+`kekayaan_spesies` dan `total_individu` tetap disimpan di
+awc_grid_resmi_100km.geojson untuk dipakai analisis lain.
 
 Beda dengan peta_grid_sebaran_awc.py (grid kotak derajat lintang/bujur,
 eksploratif), script ini pakai:
@@ -105,17 +113,19 @@ def load_province_labels() -> gpd.GeoDataFrame:
     return provinces
 
 
-def draw_layer(ax, boundary, grid, points, vmax) -> None:
-    """Gambar satu lapisan peta (boundary + grid + titik) -- dipakai ulang
-    untuk peta utama maupun panel inset."""
+def draw_layer(ax, boundary, grid, vmax) -> None:
+    """Gambar satu lapisan peta (boundary + grid) -- dipakai ulang untuk
+    peta utama maupun panel inset. Warna sel = jumlah lokasi survei
+    (proxy intensitas pengamatan; data pengamat individu sudah dihapus
+    demi privasi, lihat awc_indonesia_2026_anonim.xlsx)."""
     boundary.plot(ax=ax, color="#e8e4d8", edgecolor="#666666", linewidth=0.5, zorder=1)
 
-    occupied = grid[grid["kekayaan_spesies"].notna()]
-    empty = grid[grid["kekayaan_spesies"].isna()]
+    occupied = grid[grid["jumlah_lokasi"].notna()]
+    empty = grid[grid["jumlah_lokasi"].isna()]
     empty.boundary.plot(ax=ax, color="#cccccc", linewidth=0.3, zorder=2)
     occupied.plot(
         ax=ax,
-        column="kekayaan_spesies",
+        column="jumlah_lokasi",
         cmap="YlOrRd",
         vmin=0,
         vmax=vmax,
@@ -123,7 +133,6 @@ def draw_layer(ax, boundary, grid, points, vmax) -> None:
         linewidth=0.4,
         zorder=3,
     )
-    points.plot(ax=ax, facecolor="white", edgecolor="#444444", linewidth=0.8, markersize=16, alpha=0.95, zorder=4)
 
 
 def add_labels(ax, provinces: gpd.GeoDataFrame, fontsize: float) -> list:
@@ -148,17 +157,16 @@ def add_labels(ax, provinces: gpd.GeoDataFrame, fontsize: float) -> list:
 def plot_official_map(
     boundary: gpd.GeoDataFrame,
     grid: gpd.GeoDataFrame,
-    points: gpd.GeoDataFrame,
     provinces: gpd.GeoDataFrame,
 ) -> None:
     fig, ax = plt.subplots(figsize=(11, 9))
-    vmax = grid["kekayaan_spesies"].max()
+    vmax = grid["jumlah_lokasi"].max()
 
-    draw_layer(ax, boundary, grid, points, vmax)
+    draw_layer(ax, boundary, grid, vmax)
 
     sm = plt.cm.ScalarMappable(cmap="YlOrRd", norm=plt.Normalize(vmin=0, vmax=vmax))
-    cbar = fig.colorbar(sm, ax=ax, shrink=0.6)
-    cbar.set_label("Kekayaan spesies per sel (100km x 100km)")
+    cbar = fig.colorbar(sm, ax=ax, shrink=0.6, pad=0.03)
+    cbar.ax.set_title("Jumlah\nlokasi\nsurvei\nper sel", fontsize=9, pad=10)
 
     provinces_utama = provinces[~provinces["label"].isin(PROVINSI_INSET)]
     provinces_inset = provinces[provinces["label"].isin(PROVINSI_INSET)]
@@ -202,18 +210,16 @@ def plot_official_map(
     )
 
     ax.set_title(
-        "Peta Sebaran Burung Air -- Grid Resmi 100 km x 100 km\n"
-        "Proyeksi Albers Equal-Area (kustom Indonesia) -- AWC Indonesia 2026",
+        "Peta Intensitas Pengamatan Burung Air (Proxy: Jumlah Lokasi Survei)\n"
+        "Grid Resmi 100 km x 100 km, Proyeksi Albers Equal-Area -- AWC Indonesia 2026",
         fontsize=12,
     )
     ax.set_axis_off()
-    ax.scatter([], [], facecolor="white", edgecolor="#444444", linewidth=0.8, s=40, alpha=0.95, label="Lokasi survei AWC 2026")
-    ax.legend(loc="lower left", fontsize=8, bbox_to_anchor=(0.0, -0.02))
 
     # Panel inset: zoom ke Jawa-Bali (provinsi terlalu rapat untuk peta utama).
     # Ditaruh di area kosong kanan-bawah supaya tidak menimpa judul/peta utama.
     inset_ax = fig.add_axes([0.56, 0.08, 0.38, 0.36])
-    draw_layer(inset_ax, boundary, grid, points, vmax)
+    draw_layer(inset_ax, boundary, grid, vmax)
     texts_inset = add_labels(inset_ax, provinces_inset, fontsize=7)
     inset_ax.set_xlim(inset_minx, inset_maxx)
     inset_ax.set_ylim(inset_miny, inset_maxy)
@@ -226,7 +232,7 @@ def plot_official_map(
     inset_ax.set_title("Detail: Jawa & Bali", fontsize=9)
 
     FIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG_PATH, dpi=200, bbox_inches="tight")
+    fig.savefig(FIG_PATH, dpi=200, bbox_inches="tight", pad_inches=0.4)
     plt.close(fig)
 
 
@@ -241,15 +247,15 @@ def main() -> None:
     OUT_GRID.parent.mkdir(parents=True, exist_ok=True)
     grid.to_crs("EPSG:4326").to_file(OUT_GRID, driver="GeoJSON")
 
-    plot_official_map(boundary, grid, points, provinces)
+    plot_official_map(boundary, grid, provinces)
 
-    n_occupied = grid["kekayaan_spesies"].notna().sum()
+    n_occupied = grid["jumlah_lokasi"].notna().sum()
     print(f"{len(grid)} sel grid dibuat ({UKURAN_SEL_M/1000:.0f}km x {UKURAN_SEL_M/1000:.0f}km), {n_occupied} terisi data")
     print(f"Grid (GeoJSON, EPSG:4326) -> {OUT_GRID}")
     print(f"Peta -> {FIG_PATH}")
-    top5 = grid.dropna(subset=["kekayaan_spesies"]).nlargest(5, "kekayaan_spesies")
-    print("\n5 sel dengan kekayaan spesies tertinggi:")
-    print(top5[["cell_id", "kekayaan_spesies", "total_individu", "jumlah_lokasi"]].to_string(index=False))
+    top5 = grid.dropna(subset=["jumlah_lokasi"]).nlargest(5, "jumlah_lokasi")
+    print("\n5 sel dengan jumlah lokasi survei (proxy intensitas pengamatan) tertinggi:")
+    print(top5[["cell_id", "jumlah_lokasi", "kekayaan_spesies", "total_individu"]].to_string(index=False))
 
 
 if __name__ == "__main__":

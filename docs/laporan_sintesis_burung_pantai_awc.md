@@ -167,6 +167,38 @@ secara nasional belum signifikan statistik — kemungkinan karena cakupan
 lokasi survei yang tidak konsisten antar tahun (1-15 lokasi/tahun).
 Grafik per spesies: `outputs/figures/tren_*.png`.
 
+### 5.6 Analisis Kesenjangan Cakupan Survei (Tindak Lanjut Rekomendasi #3)
+
+Membandingkan provinsi yang tercakup AWC 2026 dengan daftar **38 provinsi
+resmi Indonesia** (pasca pemekaran Papua 2022) menghasilkan gambaran gap
+yang jauh lebih tajam dari perkiraan awal:
+
+- **12 dari 38 provinsi (32%) sama sekali tidak punya data lokasi
+  survei AWC 2026**: Kepulauan Bangka Belitung, Bengkulu, Lampung,
+  Kalimantan Selatan, Sulawesi Utara, **Sulawesi Tenggara**, Maluku,
+  Papua, Papua Barat, Papua Tengah, Papua Pegunungan, Papua Barat Daya.
+- **8 provinsi lain** baru punya 1-2 lokasi (data minim): Riau,
+  Kepulauan Riau, Jambi, Banten, Kalimantan Utara, Sulawesi Tengah,
+  Sulawesi Selatan, Gorontalo, Sulawesi Barat, NTB, DI Yogyakarta.
+- **Temuan prioritas tinggi**: **Sulawesi Tenggara** nol data survei,
+  padahal provinsi ini adalah lokasi **Taman Nasional Rawa Aopa
+  Watumohai** — salah satu dari 6 situs Ramsar Indonesia yang relevan
+  untuk burung migran (lihat
+  `docs/referensi_burung_pantai_dan_kehati_indonesia.md`). Situs Ramsar
+  lain (Danau Sentarum, Tanjung Puting, Wasur, Pulau Rambut,
+  Berbak-Sembilang) semuanya **sudah** tercakup data AWC 2026 di
+  provinsinya masing-masing — Rawa Aopa Watumohai jadi satu-satunya
+  situs Ramsar burung migran yang belum tersentuh sensus ini.
+- 11 provinsi nol-data lainnya belum punya situs spesifik yang
+  terdokumentasi di referensi proyek ini, tapi tetap layak diperiksa
+  karena berkarakter pesisir/kepulauan (mis. seluruh wilayah Papua di
+  luar Papua Selatan, dan Maluku).
+
+Tabel lengkap 38 provinsi dengan klasifikasi prioritas:
+`data/processed/awc_gap_survei_provinsi.csv`. Grafik:
+`outputs/figures/awc_gap_survei_provinsi.png`. Skrip:
+`scripts/python/analisis_gap_survei_awc.py`.
+
 ## 6. Keterbatasan Data
 
 - **AWC 2026** = potret satu musim sensus, bukan seri waktu → tidak
@@ -193,9 +225,12 @@ Grafik per spesies: `outputs/figures/tren_*.png`.
 2. **Tindak lanjuti tren penurunan Gajahan Timur** dengan survei
    tambahan di lokasi-lokasi historisnya untuk memperkuat signifikansi
    statistik, terutama di Semenanjung Banyuasin.
-3. **Perluas cakupan survei** ke provinsi dengan data minim (mis. Riau,
-   Sulawesi Tengah — hanya 1 lokasi tercatat) untuk gambaran nasional
-   yang lebih representatif.
+3. **Perluas cakupan survei** ke provinsi yang belum tercakup sama
+   sekali (12 provinsi, lihat 5.6) — prioritaskan **Sulawesi Tenggara**
+   (TN Rawa Aopa Watumohai, situs Ramsar yang belum pernah tersentuh
+   sensus AWC), lalu provinsi kepulauan/pesisir lain seperti Maluku,
+   Kepulauan Bangka Belitung, dan wilayah-wilayah Papua di luar Papua
+   Selatan.
 4. **Lengkapi data batas administratif resmi** (BIG/GADM) untuk analisis
    dan peta kabupaten/kota yang lebih akurat di masa depan.
 
@@ -206,8 +241,8 @@ Grafik per spesies: `outputs/figures/tren_*.png`.
 - Data olahan: `data/processed/awc_diversitas_per_lokasi.csv`,
   `awc_diversitas_per_provinsi.csv`, `awc_rekap_semua_spesies.csv`,
   `awc_rekap_kabupaten_kota.csv`, `tren_spesies_prioritas.csv`,
-  `awc_grid_resmi_100km.geojson`
+  `awc_grid_resmi_100km.geojson`, `awc_gap_survei_provinsi.csv`
 - Grafik & peta: `outputs/figures/` (lihat daftar file di atas)
 - Skrip analisis: `scripts/python/analisis_diversitas_awc.py`,
   `rekap_semua_spesies_awc.py`, `analisis_tren_iwc.py`,
-  `peta_grid_resmi_awc.py`
+  `peta_grid_resmi_awc.py`, `analisis_gap_survei_awc.py`

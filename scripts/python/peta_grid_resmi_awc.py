@@ -116,14 +116,14 @@ def draw_layer(ax, boundary, grid, points, vmax) -> None:
     occupied.plot(
         ax=ax,
         column="kekayaan_spesies",
-        cmap="YlGnBu",
+        cmap="YlOrRd",
         vmin=0,
         vmax=vmax,
         edgecolor="#333333",
         linewidth=0.4,
         zorder=3,
     )
-    points.plot(ax=ax, color="white", edgecolor="black", linewidth=0.6, markersize=14, alpha=0.9, zorder=4)
+    points.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=0.8, markersize=16, zorder=4)
 
 
 def add_labels(ax, provinces: gpd.GeoDataFrame, fontsize: float) -> list:
@@ -156,7 +156,7 @@ def plot_official_map(
 
     draw_layer(ax, boundary, grid, points, vmax)
 
-    sm = plt.cm.ScalarMappable(cmap="YlGnBu", norm=plt.Normalize(vmin=0, vmax=vmax))
+    sm = plt.cm.ScalarMappable(cmap="YlOrRd", norm=plt.Normalize(vmin=0, vmax=vmax))
     cbar = fig.colorbar(sm, ax=ax, shrink=0.6)
     cbar.set_label("Kekayaan spesies per sel (100km x 100km)")
 
@@ -207,7 +207,7 @@ def plot_official_map(
         fontsize=12,
     )
     ax.set_axis_off()
-    ax.scatter([], [], color="white", edgecolor="black", linewidth=0.6, s=30, alpha=0.9, label="Lokasi survei AWC 2026")
+    ax.scatter([], [], facecolor="none", edgecolor="black", linewidth=0.8, s=40, label="Lokasi survei AWC 2026")
     ax.legend(loc="lower left", fontsize=8, bbox_to_anchor=(0.0, -0.02))
 
     # Panel inset: zoom ke Jawa-Bali (provinsi terlalu rapat untuk peta utama).

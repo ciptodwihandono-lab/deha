@@ -123,7 +123,7 @@ def draw_layer(ax, boundary, grid, points, vmax) -> None:
         linewidth=0.4,
         zorder=3,
     )
-    points.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=0.8, markersize=16, zorder=4)
+    points.plot(ax=ax, facecolor="none", edgecolor="#444444", linewidth=0.8, markersize=16, zorder=4)
 
 
 def add_labels(ax, provinces: gpd.GeoDataFrame, fontsize: float) -> list:
@@ -207,7 +207,7 @@ def plot_official_map(
         fontsize=12,
     )
     ax.set_axis_off()
-    ax.scatter([], [], facecolor="none", edgecolor="black", linewidth=0.8, s=40, label="Lokasi survei AWC 2026")
+    ax.scatter([], [], facecolor="none", edgecolor="#444444", linewidth=0.8, s=40, label="Lokasi survei AWC 2026")
     ax.legend(loc="lower left", fontsize=8, bbox_to_anchor=(0.0, -0.02))
 
     # Panel inset: zoom ke Jawa-Bali (provinsi terlalu rapat untuk peta utama).

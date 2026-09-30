@@ -58,6 +58,41 @@ Alternatif yang sudah dipakai: buat peta tanpa basemap di R
 (`scripts/r/map_vegetasi_kukang.R`), lalu pakai QGIS kalau butuh versi
 dengan citra satelit.
 
+## Peta grid sebaran burung pantai (AWC) + satelit Esri di QGIS
+
+Peta grid resmi (`outputs/figures/peta_grid_resmi_awc.pdf`) dibuat di
+Python tanpa basemap (jaringan sandbox ini memblokir server tile Esri).
+Untuk versi dengan citra satelit, buka file-file berikut di QGIS **di
+komputer sendiri** (bukan di sandbox ini):
+
+1. Tambahkan basemap dulu (lihat langkah "QGIS" di atas): **Browser** →
+   klik kanan **XYZ Tiles** → **New Connection** → Name `Esri Satellite`,
+   URL `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}`
+   → double-click untuk load, taruh paling bawah di panel Layers.
+2. **Layer → Add Layer → Add Vector Layer**, pilih
+   `data/processed/awc_grid_resmi_100km.geojson` (grid 100km x 100km
+   dengan atribut `jumlah_lokasi`, `kekayaan_spesies`, `total_individu`).
+3. Klik kanan layer grid → **Properties → Symbology** → pilih
+   **Graduated**, Value = `jumlah_lokasi`, Color ramp = `YlOrRd` (sama
+   seperti versi PNG/PDF), Mode = `Natural Breaks` atau `Equal Interval`.
+4. Di tab **Symbology**, set **Opacity** layer grid ke sekitar 60-70%
+   supaya citra satelit di bawahnya tetap kelihatan.
+5. (Opsional) tambahkan `data/raw/boundaries/indonesia_provinsi.geojson`
+   di atas grid untuk label nama provinsi (klik kanan → **Properties →
+   Labels** → Single Labels → field nama provinsi).
+6. Set CRS project ke `EPSG:3857` (Web Mercator, dipakai basemap XYZ)
+   lewat ikon CRS di pojok kanan bawah, atau biarkan QGIS reproject
+   on-the-fly (default sudah aktif).
+7. Export peta lewat **Project → Import/Export → Export Map to Image**
+   (atau **New Print Layout** kalau mau tambah skala batang, north arrow,
+   legenda formal).
+
+File titik lokasi survei asli (kalau mau ditampilkan juga sebagai layer
+terpisah, bukan grid) ada di sheet `COUNT` pada
+`data/raw/awc_indonesia_2026/awc_indonesia_2026_anonim.xlsx`, kolom
+`Latitude (DD)` / `Longitude (DD)` — bisa di-import ke QGIS lewat
+**Layer → Add Layer → Add Delimited Text Layer** setelah diekspor ke CSV.
+
 ## Alternatif basemap lain (kalau Esri bermasalah)
 
 | Sumber | URL XYZ | Catatan |

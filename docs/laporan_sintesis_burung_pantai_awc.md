@@ -199,6 +199,59 @@ Tabel lengkap 38 provinsi dengan klasifikasi prioritas:
 `outputs/figures/awc_gap_survei_provinsi.png`. Skrip:
 `scripts/python/analisis_gap_survei_awc.py`.
 
+### 5.7 Kesenjangan Status Perlindungan (IUCN vs Status Nasional)
+
+Menyilangkan status IUCN global dengan status perlindungan hukum
+nasional (`StaNas`) pada 13 spesies berstatus terancam (EN/VU/CR)
+menghasilkan temuan tajam: **7 dari 13 spesies terancam (54%) belum
+berstatus "Protected" secara nasional**, termasuk spesies dengan
+populasi tercatat terbesar di seluruh dataset:
+
+| Nama Indonesia | Nama ilmiah | Status IUCN | Total individu | Status nasional |
+| --- | --- | --- | --- | --- |
+| Kedidi Besar | *Calidris tenuirostris* | EN | 2.204 | **Non-protected** |
+| Cerekpasir Mongolia | *Anarhynchus mongolus* | EN | 439 | **Non-protected** |
+| Kedidi Golgol | *Calidris ferruginea* | VU | 437 | **Non-protected** |
+| Cerek Besar | *Pluvialis squatarola* | VU | 320 | **Non-protected** |
+| Kerak Kerbau | *Acridotheres javanicus* | VU | 230 | **Non-protected** |
+| Kedidi Ekor-panjang | *Calidris acuminata* | VU | 14 | **Non-protected** |
+| Cica-koreng Selatan | *Poodytes albolimbatus* | VU | 2 | **Non-protected** |
+
+Sebagai pembanding, 6 spesies terancam lain (termasuk Bangau Bluwok,
+Gajahan Timur, Trinil Nordmann) sudah berstatus "Protected". Kedidi
+Besar jadi temuan paling signifikan: spesies EN dengan jumlah individu
+tercatat terbanyak (2.204) di seluruh dataset AWC 2026, tapi tidak
+mendapat perlindungan hukum nasional. Tabel lengkap:
+`data/processed/awc_gap_status_perlindungan.csv`, grafik:
+`outputs/figures/awc_gap_status_perlindungan.png`, skrip:
+`scripts/python/analisis_status_perlindungan_awc.py`.
+
+### 5.8 Sebaran per Spesies Prioritas (Status Endangered)
+
+Peta titik individual (bukan agregat grid) untuk 6 spesies berstatus
+IUCN Endangered menunjukkan pola sebaran yang berbeda-beda: Kedidi
+Besar sangat terkonsentrasi (1.699 individu di hanya 6 lokasi, mayoritas
+di satu lokasi Sumatera), sementara Gajahan Timur lebih tersebar (72
+individu di 13 lokasi berbeda). Trinil Nordmann dan Kacamata Jawa
+masing-masing hanya tercatat di 1-2 lokasi dengan jumlah individu
+sangat kecil (5 individu) — konsisten dengan status kelangkaannya.
+Peta: `outputs/figures/peta_spesies_prioritas_awc.png`, skrip:
+`scripts/python/peta_spesies_prioritas_awc.py`.
+
+### 5.9 Komposisi Kelompok Burung Air per Provinsi
+
+Secara nasional, kelompok **Kuntul & Cangak** (famili Ardeidae)
+mendominasi rata-rata komposisi provinsi (30,8%), diikuti **"Jenis Lain
+Non-Burung Air"** (19%) dan **Burung Pantai (Cerek)** (17,4%). Komposisi
+bervariasi tajam antar-provinsi: Kepulauan Riau dan Riau hampir 100%
+didominasi Burung Pantai (Cerek), sementara Kalimantan Barat dan Papua
+Selatan didominasi kelompok "Jenis Lain Non-Burung Air". Variasi ini
+mencerminkan perbedaan tipe habitat (mangrove vs lahan basah pedalaman
+vs pesisir berpasir) di tiap lokasi survei. Tabel:
+`data/processed/awc_komposisi_kelompok_provinsi.csv`, grafik:
+`outputs/figures/awc_komposisi_kelompok_provinsi.png`, skrip:
+`scripts/python/komposisi_kelompok_awc.py`.
+
 ## 6. Keterbatasan Data
 
 - **AWC 2026** = potret satu musim sensus, bukan seri waktu → tidak
@@ -233,6 +286,11 @@ Tabel lengkap 38 provinsi dengan klasifikasi prioritas:
    Selatan.
 4. **Lengkapi data batas administratif resmi** (BIG/GADM) untuk analisis
    dan peta kabupaten/kota yang lebih akurat di masa depan.
+5. **Dorong penetapan status perlindungan nasional** untuk 7 spesies
+   terancam (EN/VU) yang masih "Non-protected" (lihat 5.7), terutama
+   Kedidi Besar (*Calidris tenuirostris*) yang populasinya tercatat
+   paling besar (2.204 individu) di seluruh dataset tapi belum
+   dilindungi hukum nasional.
 
 ## 8. Referensi & Lampiran
 
@@ -241,8 +299,11 @@ Tabel lengkap 38 provinsi dengan klasifikasi prioritas:
 - Data olahan: `data/processed/awc_diversitas_per_lokasi.csv`,
   `awc_diversitas_per_provinsi.csv`, `awc_rekap_semua_spesies.csv`,
   `awc_rekap_kabupaten_kota.csv`, `tren_spesies_prioritas.csv`,
-  `awc_grid_resmi_100km.geojson`, `awc_gap_survei_provinsi.csv`
+  `awc_grid_resmi_100km.geojson`, `awc_gap_survei_provinsi.csv`,
+  `awc_gap_status_perlindungan.csv`, `awc_komposisi_kelompok_provinsi.csv`
 - Grafik & peta: `outputs/figures/` (lihat daftar file di atas)
 - Skrip analisis: `scripts/python/analisis_diversitas_awc.py`,
   `rekap_semua_spesies_awc.py`, `analisis_tren_iwc.py`,
-  `peta_grid_resmi_awc.py`, `analisis_gap_survei_awc.py`
+  `peta_grid_resmi_awc.py`, `analisis_gap_survei_awc.py`,
+  `analisis_status_perlindungan_awc.py`, `peta_spesies_prioritas_awc.py`,
+  `komposisi_kelompok_awc.py`

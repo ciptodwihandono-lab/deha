@@ -23,6 +23,10 @@ Fitur lapangan:
   loncatan kecil di bawah 4 m diabaikan. Layar dibuat tetap menyala selama
   merekam; mengunci layar atau pindah aplikasi menghentikan perekaman titik.
 - Tombol **Kini** mengisi jam saat ini.
+- **Ambil foto** di setiap baris membuka kamera HP; foto disimpan di aplikasi
+  (diperkecil ke 2560 px) dengan nama, jam, dan koordinat GPS otomatis.
+  Ekspor ZIP memuat folder `foto/` beserta `Daftar_Foto.csv` dan
+  `titik_foto.geojson`. File cadangan .json tidak memuat foto.
 - Kode formulir (PN/PT/MS/ST, MM/IS/TB/TG, dll.) tampil sebagai tombol, tidak perlu mengetik.
 - Daftar nama burung pantai dan ikan muncul sebagai saran saat mengetik.
 - **Simpan + baris baru** membawa sektor dan aktivitas ke baris berikutnya (B1).
@@ -43,6 +47,16 @@ Fitur lapangan:
 Setelah itu aplikasi bisa dibuka dari layar utama walau tanpa sinyal.
 Hosting statis lain (Netlify Drop, server kantor) juga bisa: unggah isi folder
 ini apa adanya. GPS dan mode offline hanya jalan lewat `https://`.
+
+## Pembaruan otomatis
+
+Aplikasi selalu dibuka dari simpanan di HP (cepat, juga tanpa sinyal). Saat
+ada sinyal, aplikasi memeriksa server ketika dibuka, ketika kembali ke
+aplikasi, dan tiap 15 menit. Bila `index.html` atau file lain di folder ini
+berubah di GitHub Pages, versi baru diunduh dan aplikasi memuat ulang sendiri.
+Bila sedang mengisi lembar atau merekam track, yang muncul hanya tombol
+**Perbarui** agar pekerjaan tidak terganggu. Tidak perlu instal ulang dan
+tidak perlu menaikkan nomor versi apa pun. Data survei tidak terpengaruh.
 
 ## Menjaga data tetap aman
 

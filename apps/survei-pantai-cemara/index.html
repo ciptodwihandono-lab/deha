@@ -219,6 +219,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
   flex-basis: 100%; margin: 4px -16px -10px; display: flex; align-items: center; gap: 10px;
   background: var(--bad); color: #fff; padding: 8px 16px; font-size: 14px; font-weight: 600;
 }
+.updbar {
+  flex-basis: 100%; margin: 4px -16px -10px; display: flex; align-items: center; gap: 10px;
+  background: var(--tide); color: #fff; padding: 8px 16px; font-size: 14px; font-weight: 600;
+}
+.updbar .grow { flex: 1; min-width: 0; }
+.updbar button { background: #fff; color: var(--tide); border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
 .recbar .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1.2s infinite; flex: none; }
 .recbar button { background: none; border: 1px solid rgba(255,255,255,.7); color: #fff; border-radius: 8px; padding: 5px 10px; font-weight: 650; cursor: pointer; }
 .recbar .grow { flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; }
@@ -229,6 +235,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 .trk-info { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .trk-info.wait { color: var(--warn); font-weight: 600; }
 .btn.rec { background: var(--bad); border-color: var(--bad); color: #fff; }
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.photos button { padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--surface-2); cursor: pointer; max-width: 100%; }
+.photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photos .missing { font-size: 11px; color: var(--muted); padding: 4px; display: grid; place-items: center; height: 100%; text-align: center; }
+.viewer { position: fixed; inset: 0; z-index: 40; background: #000; display: flex; flex-direction: column; }
+.viewer img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+.viewer .vbar { display: flex; gap: 8px; align-items: center; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); color: #fff; font-size: 13px; flex-wrap: wrap; }
+.viewer .vbar .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.viewer .vbar button { background: none; color: #fff; border: 1px solid rgba(255,255,255,.6); border-radius: 8px; padding: 8px 12px; font-weight: 650; cursor: pointer; }
+.viewer .vbar button.armed { background: #c0392b; border-color: #c0392b; }
 .toast {
   position: fixed; left: 50%; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 30;
@@ -250,6 +266,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
   <h1 id="title">Survei Pantai Cemara</h1>
   <span class="pill" id="net">Offline</span>
   <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
+  <div class="updbar" id="updbar" hidden>
+    <span class="grow">Versi baru aplikasi sudah siap.</span>
+    <button type="button" id="updBtn">Perbarui</button>
+  </div>
   <div class="recbar" id="recbar" hidden>
   <span class="dot" aria-hidden="true"></span>
   <button type="button" class="grow" id="recOpen">Merekam track…</button>
@@ -265,6 +285,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
   <button type="button" data-tab="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Data</button>
 </nav>
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="viewer" id="viewer" hidden>
+  <img id="viewerImg" alt="">
+  <div class="vbar"><span class="grow" id="viewerCap"></span><button type="button" id="viewerDel">Hapus foto</button><button type="button" id="viewerClose">Tutup</button></div>
+</div>
+<input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+<input type="file" id="galIn" accept="image/*" multiple hidden>
 
 <script>
 'use strict';
@@ -400,7 +426,7 @@ const FORMS = [
       F('rekam', 'Rekam track GPS', 'track', { w: 1, len: 'transek', file: 'track', start: 'mulai', end: 'selesai', area: true, fmt: 'text' }),
       F('nPengamat', 'Jumlah pengamat', 'int'), F('transek', 'Panjang transek (m) / luas (ha)'),
       F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 }),
-      F('track', 'File track GPS', 'text', { w: 1 }), CAT ] }] },
+      F('track', 'File track GPS', 'text', { w: 1, hide: true }), CAT ] }] },
 
   { id: 'B1', title: 'Penghitungan Burung Pantai', keg: ['B1', 'B2'], kegLabel: 'B1–B2',
     intro: 'High tide count dari titik tetap, mulai 1–2 jam sebelum pasang tertinggi.',
@@ -438,7 +464,7 @@ const FORMS = [
     header: [TGL, pengamat(), F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
       F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }),
       F('rekam', 'Rekam track batas tutupan Ipomoea', 'track', { w: 1, len: 'panjangTrack', file: 'track', start: 'mulai', end: 'selesai', area: true, fmt: 'num' }),
-      F('track', 'File track batas tutupan Ipomoea'), F('panjangTrack', 'Panjang track (m)', 'num')],
+      F('track', 'File track batas tutupan Ipomoea', 'text', { hide: true }), F('panjangTrack', 'Panjang track (m)', 'num')],
     tables: [
       { id: 'plot', title: 'Plot tutupan Ipomoea pes-caprae (C1)', sum: ['kodePlot', 'substrat'], big: 'tutupan', bigU: '%', fields: [
         F('kodePlot', 'Kode plot'), F('ukuran', 'Ukuran plot (m × m)', 'text', { ph: '5 × 5' }), COORD,
@@ -667,7 +693,7 @@ function cleanupEmptyRows() {
   const r = rows[i];
   const filled = Object.keys(r).filter(k => !k.startsWith('_') && !(r._auto || []).includes(k) && r[k] !== '' && !(Array.isArray(r[k]) && !r[k].length));
   if (REC && REC.rowId === rowId) return;
-  if (!filled.length && !r._track) { rows.splice(i, 1); save(); }
+  if (!filled.length && !r._track && !r._photos) { rows.splice(i, 1); save(); }
 }
 
 /* ================= Render ================= */
@@ -680,6 +706,7 @@ function render() {
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', TABS[view.v] === b.dataset.tab ? 'page' : 'false'));
   ({ home: renderHome, forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, status: renderStatus, data: renderData }[view.v] || renderHome)();
   refreshTrackUI();
+  if (updateReady && safeToReload()) setTimeout(() => { if (safeToReload()) applyUpdate(); }, 300);
 }
 
 function renderHome() {
@@ -768,6 +795,7 @@ function renderEntries() {
 }
 
 function fieldHTML(f, val, scope, extra = {}) {
+  if (f.hide) return '';   // diisi dari dalam kotak Rekam track
   const id = `${scope}-${f.k}`;
   const w = f.w ? ' w' : '';
   const attrs = `id="${id}" data-k="${f.k}"`;
@@ -810,6 +838,11 @@ function fieldHTML(f, val, scope, extra = {}) {
             : `<button type="button" class="btn" data-act="trkstart"${other ? ' disabled' : ''}>${st.n ? 'Lanjutkan rekam' : 'Mulai rekam track'}</button>`}
           ${st.n && !live ? `<button type="button" class="btn danger" data-act="trkclear">Hapus track</button>` : ''}
         </div>
+        ${f.file ? (o._track
+          ? `<span class="hint">File track: <b>${esc(o[f.file] || o._trackFile)}</b> (dibuat otomatis, ikut dalam ekspor ZIP).</span>`
+          : `<details${o[f.file] ? ' open' : ''}><summary class="hint">Merekam dengan alat GPS lain (Garmin dll.)?</summary>
+              <div class="field" style="margin-top:8px"><label for="${scope}-${f.file}">Nama file track di alat GPS</label>
+              <input type="text" id="${scope}-${f.file}" data-k="${f.file}" value="${esc(o[f.file] || '')}" placeholder="mis. Track_06-OKT-26 083015"></div></details>`) : ''}
         <span class="hint">${other ? 'Ada rekaman lain yang sedang berjalan.' : 'Panjang (dan luas untuk batas area) terisi otomatis. Layar dibuat tetap menyala; jangan kunci layar atau pindah aplikasi selama merekam. Track GPX ikut dalam ekspor ZIP.'}</span>
       </div></div>`;
     }
@@ -831,7 +864,7 @@ function fieldHTML(f, val, scope, extra = {}) {
 function rowSummary(form, table, row, entry) {
   const fs = Object.fromEntries(table.fields.map(f => [f.k, f]));
   const title = table.sum.map(k => label(fs[k], row[k])).filter(Boolean).join(' · ') || '(belum diisi)';
-  const bits = [row.jam || row.tanggal && fmtDate(row.tanggal), row.koordinat || '', row._track ? `track ${fmtLen(trackStats(row).len)}` : '', row.catatan].filter(Boolean);
+  const bits = [row.jam || row.tanggal && fmtDate(row.tanggal), row.koordinat || '', row._track ? `track ${fmtLen(trackStats(row).len)}` : '', row._photos ? `${row._photos.length} foto` : '', row.catatan].filter(Boolean);
   computed(form, table, row, entry).forEach(([, l, v]) => bits.push(`${l} ${v}`));
   const big = table.big && row[table.big] !== undefined && row[table.big] !== '' ? `${row[table.big]}${table.bigU || ''}` : '';
   return { title, sub: bits.join(' · '), big };
@@ -893,6 +926,15 @@ function renderRow() {
     <div class="fields" data-scope="r">${t.fields.map(f => fieldHTML(f, row[f.k], 'r', { acc: row[f.k + 'Acc'], obj: row })).join('')}
       ${(form.id === 'D2' || form.id === 'F1') ? `<div class="field w"><span class="computed" id="computed">${comp.map(c => `${c[1]}: ${c[2]}`).join(' · ')}</span></div>` : ''}
     </div>
+    <section class="section">
+      <div class="tablehead"><h2>Foto</h2><span class="count">${(row._photos || []).length} foto</span></div>
+      ${(row._photos || []).length ? `<div class="photos" id="photos">${row._photos.map(ph => `<button type="button" data-act="photo" data-ph="${ph.id}" aria-label="Buka foto ${esc(ph.name)}"></button>`).join('')}</div>` : ''}
+      <div class="row">
+        <button type="button" class="btn" data-act="cam">Ambil foto</button>
+        <button type="button" class="btn ghost" data-act="gal">Dari galeri</button>
+      </div>
+      <p class="note">Foto diberi nama, jam, dan koordinat GPS otomatis, lalu ikut dalam ekspor ZIP (folder foto/).</p>
+    </section>
     <div class="sticky-actions">
       <button type="button" class="btn" data-act="rowdone">Selesai</button>
       <button type="button" class="btn ghost" data-act="rownext">Simpan + baris baru</button>
@@ -902,6 +944,7 @@ function renderRow() {
       <button type="button" class="btn danger" data-act="rowdel">Hapus baris</button>
     </div>
     <p class="note">Data tersimpan otomatis di HP setiap kali Anda mengetik.</p>`;
+  loadThumbs();
 }
 
 function kegStatus(code) { return (S.keg[code] || {}).status || 'Belum'; }
@@ -959,8 +1002,15 @@ function renderStatus() {
     </section>`;
 }
 
+function withPhotos() { try { return localStorage.getItem('survei-cemara-zipfoto') !== '0'; } catch (e) { return true; } }
 function renderData() {
   setTitle('Data & ekspor', 'Simpan cadangan setiap malam');
+  const allPh = Object.values(S.entries).flatMap(photosOfEntry);
+  const nPhotos = allPh.length, photoBytes = allPh.reduce((a, p) => a + (p.size || 0), 0);
+  if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(est => {
+    const el = document.getElementById('storageInfo');
+    if (el && est.quota) el.textContent = `Ruang penyimpanan aplikasi: ${(est.usage / 1048576).toFixed(0)} MB terpakai dari ±${(est.quota / 1073741824).toFixed(1).replace('.', ',')} GB yang tersedia.`;
+  }).catch(() => {});
   const n = Object.keys(S.entries).length;
   const nRows = Object.values(S.entries).reduce((a, e) => a + rowCount(e), 0);
   app.innerHTML = `
@@ -977,7 +1027,9 @@ function renderData() {
         <button type="button" class="btn ghost" data-act="zip">Simpan ZIP ke HP</button>
       </div>
       <button type="button" class="btn ghost block" data-act="json">Unduh cadangan saja (.json)</button>
-      <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), CSV status kegiatan, dan file cadangan .json.</p>
+      <label class="check"><input type="checkbox" id="withPhotos" ${withPhotos() ? 'checked' : ''}>Sertakan foto (${nPhotos} foto, ±${(photoBytes / 1048576).toFixed(1).replace('.', ',')} MB)</label>
+      <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), folder foto/ dan track/, CSV status kegiatan, dan file cadangan .json. Cadangan .json tidak memuat file foto; foto hanya ada di ZIP.</p>
+      <p class="note" id="storageInfo"></p>
     </section>
     <section class="section"><h2>Gabungkan data tim</h2>
       <p class="note">Pilih file cadangan .json dari HP anggota tim lain. Lembar yang sama tidak terduplikasi; versi yang paling baru dipakai.</p>
@@ -997,6 +1049,7 @@ function renderData() {
 const TRK_MAX_ACC = 30;     // titik dengan akurasi lebih buruk dari ini diabaikan (m)
 const TRK_MIN_STEP = 4;     // jarak minimum antartitik untuk meredam loncatan GPS (m)
 let REC = null;
+let updateReady = false;   // versi baru sudah diunduh service worker
 let wakeLock = null;
 
 function hav(a, b) {
@@ -1156,6 +1209,128 @@ function allTracks() {
   return out;
 }
 
+/* ================= Foto =================
+   Foto disimpan di IndexedDB (localStorage terlalu kecil): store 'foto' berisi JPEG
+   yang diperkecil ke sisi terpanjang 2560 px, store 'thumb' berisi gambar kecil untuk daftar.
+   Baris data menyimpan metadata di row._photos = [{id, name, t, lat, lon, acc, w, h, size}]. */
+const PHOTO_MAX = 2560, PHOTO_Q = 0.88, THUMB_MAX = 320;
+let photoDB = null;
+function pdb() {
+  if (!photoDB) photoDB = new Promise((ok, fail) => {
+    const r = indexedDB.open('survei-cemara-foto', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('foto'); r.result.createObjectStore('thumb'); };
+    r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error);
+  });
+  return photoDB;
+}
+async function pdbDo(store, mode, fn) {
+  const db = await pdb();
+  return new Promise((ok, fail) => {
+    const tx = db.transaction(store, mode); const req = fn(tx.objectStore(store));
+    tx.oncomplete = () => ok(req && req.result); tx.onerror = () => fail(tx.error); tx.onabort = () => fail(tx.error);
+  });
+}
+const pdbGet = (store, k) => pdbDo(store, 'readonly', st => st.get(k));
+const pdbPut = (store, k, v) => pdbDo(store, 'readwrite', st => st.put(v, k));
+const pdbDel = (store, k) => pdbDo(store, 'readwrite', st => st.delete(k));
+async function deletePhotos(list) {
+  for (const ph of list || []) { try { await pdbDel('foto', ph.id); await pdbDel('thumb', ph.id); } catch (e) {} }
+}
+function photosOfEntry(e) { return Object.values(e.tables || {}).flat().flatMap(r => r._photos || []); }
+
+async function shrink(file, max) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch (e) { bmp = await new Promise((ok, fail) => { const im = new Image(); im.onload = () => ok(im); im.onerror = fail; im.src = URL.createObjectURL(file); }); }
+  const w0 = bmp.width, h0 = bmp.height, k = Math.min(1, max / Math.max(w0, h0));
+  const c = document.createElement('canvas'); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', PHOTO_Q));
+  return { blob, w: c.width, h: c.height };
+}
+let photoGeo = null;   // posisi GPS diminta saat tombol kamera ditekan, dipakai saat foto kembali
+function askPhotoGeo() {
+  photoGeo = new Promise(ok => {
+    if (!navigator.geolocation) return ok(null);
+    navigator.geolocation.getCurrentPosition(p => ok(p.coords), () => ok(null), { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
+  });
+}
+function photoName(e, rowNo, taken) {
+  const d = new Date(taken * 1000);
+  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  return `${e.form}_${view.t}_b${rowNo}_${stamp}`;
+}
+async function addPhotos(files) {
+  if (view.v !== 'row' || !files || !files.length) return;
+  const e = S.entries[view.id]; const row = e && e.tables[view.t][view.i]; if (!row) return;
+  const rowNo = view.i + 1, target = { id: view.id, t: view.t, rowId: row._id };
+  toast(files.length > 1 ? `Menyimpan ${files.length} foto…` : 'Menyimpan foto…');
+  const geo = await Promise.race([photoGeo || Promise.resolve(null), new Promise(ok => setTimeout(() => ok(null), 4000))]);
+  let n = 0;
+  for (const file of files) {
+    try {
+      const taken = Math.round((file.lastModified || Date.now()) / 1000);
+      const big = await shrink(file, PHOTO_MAX), small = await shrink(file, THUMB_MAX);
+      const id = rid();
+      await pdbPut('foto', id, big.blob); await pdbPut('thumb', id, small.blob);
+      const r = (S.entries[target.id].tables[target.t] || []).find(x => x._id === target.rowId); if (!r) break;
+      r._photos = r._photos || [];
+      let name = photoName(e, rowNo, taken), k = 1;
+      while (r._photos.some(p => p.name === name + '.jpg')) name = photoName(e, rowNo, taken) + '_' + (++k);
+      const meta = { id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size };
+      if (geo) Object.assign(meta, { lat: +geo.latitude.toFixed(6), lon: +geo.longitude.toFixed(6), acc: Math.round(geo.accuracy) });
+      r._photos.push(meta);
+      // Kolom "Dokumentasi" (F/V) ikut dicentang Foto bila ada.
+      const tdef = FORM[e.form].tables.find(t => t.id === target.t);
+      if (tdef.fields.some(f => f.k === 'dok')) { r.dok = Array.isArray(r.dok) ? r.dok : []; if (!r.dok.includes('F')) r.dok.push('F'); markEdited(r, 'dok'); }
+      markEdited(r, '_photos'); n++;
+    } catch (err) { toast('Foto gagal disimpan. Memori HP mungkin penuh.'); }
+  }
+  photoGeo = null;
+  if (n) { touch(e); save(); if (view.v === 'row') render(); toast(`${n} foto tersimpan${geo ? ' dengan koordinat' : ' (tanpa GPS)'}`); }
+}
+let thumbURLs = [];
+async function loadThumbs() {
+  thumbURLs.forEach(u => URL.revokeObjectURL(u)); thumbURLs = [];
+  const box = document.getElementById('photos'); if (!box) return;
+  for (const btn of box.querySelectorAll('button[data-ph]')) {
+    try {
+      const b = await pdbGet('thumb', btn.dataset.ph);
+      if (b) { const u = URL.createObjectURL(b); thumbURLs.push(u); btn.innerHTML = `<img src="${u}" alt="">`; }
+      else btn.innerHTML = '<span class="missing">Foto ada di HP lain</span>';
+    } catch (e) {}
+  }
+}
+let viewerPhoto = null, viewerURL = null;
+async function openViewer(id) {
+  const e = S.entries[view.id]; const row = e && e.tables[view.t][view.i]; if (!row) return;
+  const ph = (row._photos || []).find(p => p.id === id); if (!ph) return;
+  const b = await pdbGet('foto', id).catch(() => null);
+  if (!b) { toast('File foto ini tidak ada di HP ini (data digabung dari HP lain).'); return; }
+  viewerPhoto = ph; if (viewerURL) URL.revokeObjectURL(viewerURL); viewerURL = URL.createObjectURL(b);
+  document.getElementById('viewerImg').src = viewerURL;
+  const d = new Date(ph.t * 1000);
+  document.getElementById('viewerCap').textContent = `${ph.name} · ${pad(d.getHours())}:${pad(d.getMinutes())}${ph.lat != null ? ` · ${ph.lat}, ${ph.lon} (±${ph.acc} m)` : ''}`;
+  const del = document.getElementById('viewerDel'); del.classList.remove('armed'); del.textContent = 'Hapus foto';
+  document.getElementById('viewer').hidden = false;
+}
+function closeViewer() {
+  document.getElementById('viewer').hidden = true; viewerPhoto = null;
+  if (viewerURL) { URL.revokeObjectURL(viewerURL); viewerURL = null; }
+}
+document.getElementById('viewerClose').addEventListener('click', closeViewer);
+document.getElementById('viewerDel').addEventListener('click', async ev => {
+  const b = ev.currentTarget;
+  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; return; }
+  const e = S.entries[view.id]; const row = e && e.tables[view.t][view.i]; if (!row || !viewerPhoto) return;
+  await deletePhotos([viewerPhoto]);
+  row._photos = row._photos.filter(p => p.id !== viewerPhoto.id); if (!row._photos.length) delete row._photos;
+  touch(e); save(); closeViewer(); render(); toast('Foto dihapus');
+});
+['camIn', 'galIn'].forEach(id => document.getElementById(id).addEventListener('change', ev => {
+  const files = [...ev.target.files]; ev.target.value = ''; addPhotos(files);
+}));
+
 /* ================= Interaksi ================= */
 function currentTarget() {
   if (view.v === 'entry') { const e = S.entries[view.id]; return e && { obj: e.header, e }; }
@@ -1194,7 +1369,11 @@ app.addEventListener('input', ev => {
   }
   refreshComputed();
 });
-app.addEventListener('change', ev => { if (ev.target.id === 'importFile') importFile(ev.target.files[0]); else save(); });
+app.addEventListener('change', ev => {
+  if (ev.target.id === 'importFile') importFile(ev.target.files[0]);
+  else if (ev.target.id === 'withPhotos') { try { localStorage.setItem('survei-cemara-zipfoto', ev.target.checked ? '1' : '0'); } catch (e) {} }
+  else save();
+});
 
 let armed = null;
 function arm(btn, key, text) {
@@ -1276,6 +1455,9 @@ app.addEventListener('click', ev => {
     const inp = app.querySelector(`input[data-k="${b.dataset.k}"]`); if (inp) inp.value = tg.obj[b.dataset.k];
   }
   else if (a === 'gps') getGPS(b.dataset.k, b);
+  else if (a === 'cam') { askPhotoGeo(); document.getElementById('camIn').click(); }
+  else if (a === 'gal') { askPhotoGeo(); document.getElementById('galIn').click(); }
+  else if (a === 'photo') openViewer(b.dataset.ph);
   else if (a === 'trkstart') startTrack();
   else if (a === 'trkstop') stopTrack();
   else if (a === 'trktype') {
@@ -1299,7 +1481,7 @@ app.addEventListener('click', ev => {
   }
   else if (a === 'rowdup') {
     const e = S.entries[view.id]; const rows = e.tables[view.t];
-    const copy = JSON.parse(JSON.stringify(rows[view.i])); copy._id = rid(); copy._auto = [];
+    const copy = JSON.parse(JSON.stringify(rows[view.i])); copy._id = rid(); copy._auto = []; delete copy._photos; delete copy._track; delete copy._trackFile;
     const t = FORM[e.form].tables.find(x => x.id === view.t);
     if (t.numbered) copy[t.numbered] = String(rows.length + 1);
     rows.push(copy); touch(e); save(); pendingNew = null;
@@ -1307,13 +1489,13 @@ app.addEventListener('click', ev => {
   }
   else if (a === 'rowdel') {
     if (!arm(b, 'rowdel', 'Ketuk lagi untuk menghapus')) return;
-    const e = S.entries[view.id]; e.tables[view.t].splice(view.i, 1); touch(e); save(); pendingNew = null;
+    const e = S.entries[view.id]; deletePhotos(e.tables[view.t][view.i]._photos); e.tables[view.t].splice(view.i, 1); touch(e); save(); pendingNew = null;
     history.back(); toast('Baris dihapus');
   }
   else if (a === 'dupentry') { const e = newEntry(S.entries[view.id].form, S.entries[view.id]); go({ v: 'entry', id: e.id }, true); toast('Lembar baru dibuat dari kepala lembar ini'); }
   else if (a === 'delentry') {
     if (!arm(b, 'delentry', 'Ketuk lagi untuk menghapus lembar')) return;
-    const f = S.entries[view.id].form; delete S.entries[view.id]; save();
+    const f = S.entries[view.id].form; deletePhotos(photosOfEntry(S.entries[view.id])); delete S.entries[view.id]; save();
     go({ v: 'entries', f }, true); toast('Lembar dihapus');
   }
   else if (a === 'kegstatus') {
@@ -1324,7 +1506,9 @@ app.addEventListener('click', ev => {
   else if (a === 'json') download(backupBlob(), fileBase() + '.json');
   else if (a === 'wipe') {
     if (!arm(b, 'wipe', 'Ketuk lagi: semua data akan hilang')) return;
-    const keep = S.profile; S = blank(); S.profile = keep; save(); render(); toast('Semua data dihapus');
+    const keep = S.profile; S = blank(); S.profile = keep; save();
+    pdbDo('foto', 'readwrite', st => st.clear()).catch(() => {}); pdbDo('thumb', 'readwrite', st => st.clear()).catch(() => {});
+    render(); toast('Semua data dihapus');
   }
 });
 
@@ -1412,7 +1596,7 @@ function buildCSVs() {
       const rc = expandCols(t.fields, '');
       const compKeys = [];
       es.forEach(e => (e.tables[t.id] || []).forEach(r => computed(form, t, r, e).forEach(([k]) => { if (!compKeys.includes(k)) compKeys.push(k); })));
-      const head = ['form', 'lembar_id', ...hc.map(c => c.h), 'no', ...rc.map(c => c.h), ...compKeys];
+      const head = ['form', 'lembar_id', ...hc.map(c => c.h), 'no', ...rc.map(c => c.h), ...compKeys, 'foto_hp'];
       const out = [head];
       es.forEach(e => {
         const rows = e.tables[t.id] || [];
@@ -1420,7 +1604,7 @@ function buildCSVs() {
         if (!rows.length) return;
         rows.forEach((r, i) => {
           const comp = Object.fromEntries(computed(form, t, r, e).map(([k, , v]) => [k, v]));
-          out.push([form.id, e.id, ...hv, i + 1, ...rc.map(c => c.get(r)), ...compKeys.map(k => comp[k] ?? '')]);
+          out.push([form.id, e.id, ...hv, i + 1, ...rc.map(c => c.get(r)), ...compKeys.map(k => comp[k] ?? ''), (r._photos || []).map(p => 'foto/' + p.name).join('; ')]);
         });
       });
       if (out.length > 1) files.push([`Form_${form.id}_${t.id}.csv`, toCSV(out)]);
@@ -1445,6 +1629,18 @@ function buildCSVs() {
     });
     files.push(['track/semua_track.geojson', JSON.stringify({ type: 'FeatureCollection', features: feats })]);
   }
+  const fotoRows = [['file', 'form', 'tabel', 'lembar_id', 'no_baris', 'waktu', 'lat', 'lon', 'akurasi_m', 'lebar_px', 'tinggi_px', 'keterangan']];
+  const fotoFeats = [];
+  FORMS.forEach(form => entriesOf(form.id).reverse().forEach(e => form.tables.forEach(t => (e.tables[t.id] || []).forEach((r, i) => (r._photos || []).forEach(ph => {
+    const ket = rowSummary(form, t, r, e).title;
+    const waktu = new Date(ph.t * 1000).toISOString();
+    fotoRows.push(['foto/' + ph.name, form.id, t.id, e.id, i + 1, waktu, ph.lat ?? '', ph.lon ?? '', ph.acc ?? '', ph.w, ph.h, ket]);
+    if (ph.lat != null) fotoFeats.push({ type: 'Feature', properties: { file: 'foto/' + ph.name, form: form.id, tabel: t.id, no_baris: i + 1, waktu, akurasi_m: ph.acc, keterangan: ket }, geometry: { type: 'Point', coordinates: [ph.lon, ph.lat] } });
+  })))));
+  if (fotoRows.length > 1) {
+    files.push(['foto/Daftar_Foto.csv', toCSV(fotoRows)]);
+    if (fotoFeats.length) files.push(['foto/titik_foto.geojson', JSON.stringify({ type: 'FeatureCollection', features: fotoFeats })]);
+  }
   const keg = [['kode', 'kelompok', 'kegiatan', 'prioritas', 'hari', 'pic', 'status', 'catatan_lapangan']];
   KEG.forEach(k => { const s = S.keg[k.code] || {}; keg.push([k.code, k.kel, k.keg, k.prio, k.hari, s.pic || '', s.status || 'Belum', s.catatan || '']); });
   files.push(['Status_Kegiatan.csv', toCSV(keg)]);
@@ -1463,12 +1659,15 @@ function makeZip(files) {
   const d = new Date(); const dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF;
   const dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
   files.forEach(([name, content]) => {
-    const nb = enc.encode(name); const data = typeof content === 'string' ? enc.encode(content) : content; const crc = crc32(data);
+    const nb = enc.encode(name);
+    const isBlob = content && content.blob;
+    const data = isBlob ? { length: content.blob.size } : typeof content === 'string' ? enc.encode(content) : content;
+    const crc = isBlob ? content.crc : crc32(data);
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
     lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
     lh.setUint16(26, nb.length, true); lh.setUint16(28, 0, true);
-    parts.push(new Uint8Array(lh.buffer), nb, data);
+    parts.push(new Uint8Array(lh.buffer), nb, isBlob ? content.blob : data);
     const ch = new DataView(new ArrayBuffer(46));
     ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
     ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
@@ -1510,7 +1709,17 @@ async function exportZip(share) {
   save();
   const base = fileBase();
   const json = JSON.stringify({ app: 'survei-cemara', exported: new Date().toISOString(), data: S }, null, 1);
-  const zip = makeZip([...buildCSVs(), [base + '.json', json]]);
+  const photoFiles = [];
+  if (withPhotos()) {
+    const all = Object.values(S.entries).flatMap(photosOfEntry);
+    if (all.length) toast(`Menyiapkan ${all.length} foto…`);
+    for (const ph of all) {
+      const blob = await pdbGet('foto', ph.id).catch(() => null); if (!blob) continue;
+      const crc = crc32(new Uint8Array(await blob.arrayBuffer()));
+      photoFiles.push(['foto/' + ph.name, { blob, crc }]);
+    }
+  }
+  const zip = makeZip([...buildCSVs(), ...photoFiles, [base + '.json', json]]);
   const name = base + '.zip';
   if (NATIVE) { await nativeSave(zip, name, share); return; }
   if (share) {
@@ -1549,8 +1758,47 @@ function importFile(file) {
 
 /* ================= Mulai ================= */
 applyTheme(); updateNet(); render();
+/* ================= Pembaruan otomatis =================
+   Service worker memeriksa server setiap kali aplikasi dibuka, saat kembali ke
+   aplikasi, dan tiap 15 menit. Bila ada versi baru, halaman dimuat ulang sendiri
+   saat aman (tidak sedang merekam track atau mengisi lembar); bila tidak aman,
+   muncul tombol Perbarui. Posisi halaman dipulihkan setelah dimuat ulang. */
+function safeToReload() {
+  const a = document.activeElement;
+  const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  return !REC && !typing && !['row', 'entry'].includes(view.v);
+}
+function applyUpdate() {
+  save();
+  try { sessionStorage.setItem('survei-cemara-resume', JSON.stringify(view)); sessionStorage.setItem('survei-cemara-updated', '1'); } catch (e) {}
+  location.reload();
+}
+function onUpdateReady() {
+  updateReady = true;
+  if (safeToReload()) { applyUpdate(); return; }
+  document.getElementById('updbar').hidden = false;
+}
+function checkUpdate() {
+  if (!navigator.onLine || !navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+  navigator.serviceWorker.controller.postMessage({ type: 'check' });
+  navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+}
+document.getElementById('updBtn').addEventListener('click', applyUpdate);
+try {
+  const resume = JSON.parse(sessionStorage.getItem('survei-cemara-resume') || 'null');
+  sessionStorage.removeItem('survei-cemara-resume');
+  if (resume && resume.v && (!resume.id || S.entries[resume.id])) { view = resume; history.replaceState(view, ''); render(); }
+  if (sessionStorage.getItem('survei-cemara-updated')) { sessionStorage.removeItem('survei-cemara-updated'); toast('Aplikasi diperbarui ke versi terbaru'); }
+} catch (e) {}
 if (!NATIVE && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.type === 'updated') onUpdateReady(); });
+  // Service worker baru mengambil alih (mis. sw.js sendiri berubah): muat versi baru juga.
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) onUpdateReady(); });
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+  window.addEventListener('online', checkUpdate);
+  setInterval(checkUpdate, 15 * 60 * 1000);
 }
 </script>
 </body>

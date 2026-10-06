@@ -30,7 +30,7 @@ Fitur lapangan:
 
 1. Aktifkan GitHub Pages sekali: repo → **Settings → Pages → Source: GitHub Actions**.
    Workflow `.github/workflows/pages-survei.yml` menerbitkan folder ini setiap
-   ada perubahan di `main` (atau jalankan manual dari tab Actions).
+   ada perubahan di branch utama repo (atau jalankan manual dari tab Actions).
 2. Buka alamat Pages di Chrome HP **saat masih ada sinyal**, lalu pilih menu ⋮ →
    **Tambahkan ke layar utama**.
 3. Izinkan akses lokasi saat pertama kali menekan "Ambil GPS".

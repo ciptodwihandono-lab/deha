@@ -234,6 +234,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 .trk-len small { font-size: 14px; color: var(--muted); font-weight: 600; }
 .trk-info { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .trk-info.wait { color: var(--warn); font-weight: 600; }
+.trk-help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .btn.rec { background: var(--bad); border-color: var(--bad); color: #fff; }
 .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
 .photos button { padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--surface-2); cursor: pointer; max-width: 100%; }
@@ -291,6 +292,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 </div>
 <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
 <input type="file" id="galIn" accept="image/*" multiple hidden>
+<input type="file" id="gpxIn" hidden>
 
 <script>
 'use strict';
@@ -411,7 +413,7 @@ const TGL = F('tanggal', 'Tanggal', 'date', { def: 'today' });
 const COORD = F('koordinat', 'Koordinat', 'coord', { w: 1 });
 const CAT = F('catatan', 'Catatan', 'area', { w: 1 });
 const JAM = F('jam', 'Jam', 'time', { def: 'now' });
-const FOTO = F('foto', 'No. foto');
+const FOTO = F('foto', 'No. foto kamera lain (bila ada)');
 const pengamat = (l = 'Pengamat') => F('pengamat', l, 'text', { def: 'profile' });
 
 const FORMS = [
@@ -828,22 +830,29 @@ function fieldHTML(f, val, scope, extra = {}) {
       const o = extra.obj || {}; const live = REC && sameTarget(REC, view);
       const st = trackStats(o), info = trackInfoText(o, live);
       const other = REC && !live;
-      return `<div class="field w"><span class="lbl">${esc(f.l)}</span><div class="trk" data-trk>
+      const src = o._trackSrc === 'upload' ? 'diunggah dari file' : 'direkam dengan GPS HP';
+      return `<div class="field w"><span class="lbl">${esc(f.l)} <span class="hint">(tidak wajib)</span></span><div class="trk" data-trk>
         <div class="trk-len">${esc(fmtLen(st.len))}${o._trackType === 'area' && st.n >= 3 ? ` <small>/ ${st.ha.toFixed(2).replace('.', ',')} ha</small>` : ''}</div>
         <div class="trk-info ${info.cls}">${esc(info.txt)}</div>
         ${f.area ? `<div class="chips" role="group" aria-label="Jenis track">${[['garis', 'Transek (garis)'], ['area', 'Batas area (luas)']].map(([v, l]) =>
           `<button type="button" class="chip" data-act="trktype" data-v="${v}" aria-pressed="${(o._trackType || 'garis') === v}">${l}</button>`).join('')}</div>` : ''}
-        <div class="row">
-          ${live ? `<button type="button" class="btn rec" data-act="trkstop">Hentikan rekaman</button>`
-            : `<button type="button" class="btn" data-act="trkstart"${other ? ' disabled' : ''}>${st.n ? 'Lanjutkan rekam' : 'Mulai rekam track'}</button>`}
-          ${st.n && !live ? `<button type="button" class="btn danger" data-act="trkclear">Hapus track</button>` : ''}
-        </div>
-        ${f.file ? (o._track
-          ? `<span class="hint">File track: <b>${esc(o[f.file] || o._trackFile)}</b> (dibuat otomatis, ikut dalam ekspor ZIP).</span>`
-          : `<details${o[f.file] ? ' open' : ''}><summary class="hint">Merekam dengan alat GPS lain (Garmin dll.)?</summary>
+        ${live ? `<div class="row"><button type="button" class="btn rec" data-act="trkstop">Hentikan rekaman</button></div>`
+          : st.n ? `<span class="hint">File track: <b>${esc((f.file && o[f.file]) || o._trackFile)}</b> · ${src} · ikut dalam ekspor ZIP (folder track/).</span>
+              <div class="row">${o._trackSrc === 'upload' ? '' : `<button type="button" class="btn ghost" data-act="trkstart"${other ? ' disabled' : ''}>Lanjutkan rekam</button>`}
+              <button type="button" class="btn danger" data-act="trkclear">Hapus track</button></div>`
+          : `<div class="row">
+              <button type="button" class="btn" data-act="trkstart"${other ? ' disabled' : ''}>Rekam GPS HP</button>
+              <button type="button" class="btn ghost" data-act="trkupload">Unggah GPX/KML</button>
+            </div>
+            <ul class="hint trk-help">
+              <li><b>Rekam GPS HP</b>: tekan saat mulai berjalan menyusuri transek atau batas area, lalu tekan Hentikan di ujungnya. Layar dibuat tetap menyala; jangan kunci layar.</li>
+              <li><b>Unggah GPX/KML</b>: bila track direkam dengan Garmin atau aplikasi lain (OsmAnd, Avenza, Locus, dll.). Pindahkan dulu file .gpx/.kml ke HP, lalu pilih file-nya.</li>
+            </ul>
+            ${f.file ? `<details${o[f.file] ? ' open' : ''}><summary class="hint">File belum bisa dipindah ke HP? Catat namanya saja</summary>
               <div class="field" style="margin-top:8px"><label for="${scope}-${f.file}">Nama file track di alat GPS</label>
-              <input type="text" id="${scope}-${f.file}" data-k="${f.file}" value="${esc(o[f.file] || '')}" placeholder="mis. Track_06-OKT-26 083015"></div></details>`) : ''}
-        <span class="hint">${other ? 'Ada rekaman lain yang sedang berjalan.' : 'Panjang (dan luas untuk batas area) terisi otomatis. Layar dibuat tetap menyala; jangan kunci layar atau pindah aplikasi selama merekam. Track GPX ikut dalam ekspor ZIP.'}</span>
+              <input type="text" id="${scope}-${f.file}" data-k="${f.file}" value="${esc(o[f.file] || '')}" placeholder="mis. Track_06-OKT-26 083015"></div></details>` : ''}`}
+        ${other ? '<span class="hint">Ada rekaman lain yang sedang berjalan.</span>' : ''}
+        <span class="hint">Panjang${f.area ? ' (dan luas, bila memilih Batas area)' : ''} terisi otomatis dari track.</span>
       </div></div>`;
     }
     case 'coord': {
@@ -892,6 +901,7 @@ function renderEntry() {
     <section class="section"><h2>Kepala lembar</h2>
       <div class="fields" data-scope="h">${form.header.map(f => fieldHTML(f, e.header[f.k], 'h', { acc: e.header[f.k + 'Acc'], obj: e.header })).join('')}</div>
     </section>
+    ${photoSectionHTML(e.header._photos || [], 'Foto lokasi', 'Ambil foto lokasi', 'Untuk foto kondisi lokasi, titik pengamatan, stasiun, atau habitat. Nama, jam, dan koordinat GPS dicatat otomatis; ikut dalam ekspor ZIP (folder foto/).')}
     ${tallyHTML}
     ${form.tables.map(t => {
       const rows = e.tables[t.id] || [];
@@ -912,6 +922,7 @@ function renderEntry() {
         <button type="button" class="btn danger" data-act="delentry">Hapus lembar</button>
       </div>
     </section>`;
+  loadThumbs();
 }
 
 function renderRow() {
@@ -926,15 +937,7 @@ function renderRow() {
     <div class="fields" data-scope="r">${t.fields.map(f => fieldHTML(f, row[f.k], 'r', { acc: row[f.k + 'Acc'], obj: row })).join('')}
       ${(form.id === 'D2' || form.id === 'F1') ? `<div class="field w"><span class="computed" id="computed">${comp.map(c => `${c[1]}: ${c[2]}`).join(' · ')}</span></div>` : ''}
     </div>
-    <section class="section">
-      <div class="tablehead"><h2>Foto</h2><span class="count">${(row._photos || []).length} foto</span></div>
-      ${(row._photos || []).length ? `<div class="photos" id="photos">${row._photos.map(ph => `<button type="button" data-act="photo" data-ph="${ph.id}" aria-label="Buka foto ${esc(ph.name)}"></button>`).join('')}</div>` : ''}
-      <div class="row">
-        <button type="button" class="btn" data-act="cam">Ambil foto</button>
-        <button type="button" class="btn ghost" data-act="gal">Dari galeri</button>
-      </div>
-      <p class="note">Foto diberi nama, jam, dan koordinat GPS otomatis, lalu ikut dalam ekspor ZIP (folder foto/).</p>
-    </section>
+    ${photoSectionHTML(row._photos || [], 'Foto data ini', 'Ambil foto', 'Untuk foto satwa, tumbuhan, sampel, atau temuan pada baris ini. Nama, jam, dan koordinat GPS dicatat otomatis; ikut dalam ekspor ZIP (folder foto/).')}
     <div class="sticky-actions">
       <button type="button" class="btn" data-act="rowdone">Selesai</button>
       <button type="button" class="btn ghost" data-act="rownext">Simpan + baris baru</button>
@@ -1111,7 +1114,7 @@ function applyTrack(rec, final) {
   const set = (k, v) => { if (!k) return; o[k] = v; markEdited(o, k); const inp = sameTarget(rec, view) && app.querySelector(`input[data-k="${k}"]`); if (inp) inp.value = v; };
   if (st.n) set(f.len, lenTxt);
   if (f.file && !o[f.file]) set(f.file, o._trackFile);
-  if (f.start && !o[f.start] && st.t0) set(f.start, hhmm(st.t0));
+  if (f.start && st.t0 && (!o[f.start] || (o._auto || []).includes(f.start))) set(f.start, hhmm(st.t0));
   if (final && f.end && st.t1) set(f.end, hhmm(st.t1));
   touch(e);
 }
@@ -1152,6 +1155,7 @@ function startTrack() {
   const o = trackObj(rec); const f = trackField(e, rec);
   o._track = o._track || [];
   o._track.push([]);
+  o._trackSrc = 'hp';
   if (!o._trackFile) o._trackFile = trackFileName(e, f, o);
   if (f.area && !o._trackType) o._trackType = 'garis';
   pendingNew = null;
@@ -1194,9 +1198,54 @@ function stopTrack() {
   save(); render();
   if (o && o._track) toast(`Track tersimpan: ${fmtLen(trackStats(o).len)}`);
 }
+/* Baca file GPX atau KML dari alat GPS / aplikasi lain menjadi segmen track. */
+function parseTrackFile(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) return null;
+  const byTag = (el, t) => [...el.getElementsByTagNameNS('*', t)];
+  const ptsOf = list => list.map(n => {
+    const lat = +n.getAttribute('lat'), lon = +n.getAttribute('lon');
+    const tm = byTag(n, 'time')[0]; const t = tm ? Math.round(Date.parse(tm.textContent) / 1000) : 0;
+    return [+lat.toFixed(6), +lon.toFixed(6), 0, isNaN(t) ? 0 : t];
+  }).filter(p => isFinite(p[0]) && isFinite(p[1]) && (p[0] || p[1]));
+  let segs = byTag(doc, 'trkseg').map(sg => ptsOf(byTag(sg, 'trkpt'))).filter(sg => sg.length);
+  if (!segs.length) segs = byTag(doc, 'rte').map(r => ptsOf(byTag(r, 'rtept'))).filter(sg => sg.length);
+  if (!segs.length) {
+    // KML: <coordinates>lon,lat[,alt] lon,lat ...</coordinates> di LineString / Polygon / gx:Track
+    segs = byTag(doc, 'coordinates').map(c => c.textContent.trim().split(/\s+/).map(t => t.split(',').map(Number))
+      .filter(a => a.length >= 2 && isFinite(a[0]) && isFinite(a[1])).map(a => [+a[1].toFixed(6), +a[0].toFixed(6), 0, 0])).filter(sg => sg.length > 1);
+    const gx = byTag(doc, 'coord').map(c => c.textContent.trim().split(/\s+/).map(Number)).filter(a => a.length >= 2).map(a => [+a[1].toFixed(6), +a[0].toFixed(6), 0, 0]);
+    if (!segs.length && gx.length > 1) segs = [gx];
+  }
+  if (!segs.length) { const w = ptsOf(byTag(doc, 'wpt')); if (w.length > 1) segs = [w]; }
+  return segs.length ? segs : null;
+}
+let uploadRec = null;
+function uploadTrack() {
+  const e = S.entries[view.id]; if (!e) return;
+  uploadRec = view.v === 'entry' ? { id: e.id, t: null, rowId: null } : { id: e.id, t: view.t, rowId: e.tables[view.t][view.i]._id };
+  document.getElementById('gpxIn').click();
+}
+document.getElementById('gpxIn').addEventListener('change', ev => {
+  const file = ev.target.files[0]; ev.target.value = ''; if (!file || !uploadRec) return;
+  const rec = uploadRec; uploadRec = null;
+  file.text().then(text => {
+    const segs = parseTrackFile(text);
+    if (!segs) { toast('File ini bukan track GPX/KML yang bisa dibaca. Pilih file .gpx atau .kml hasil ekspor alat GPS.'); return; }
+    const o = trackObj(rec); const e = S.entries[rec.id]; if (!o || !e) return;
+    const f = trackField(e, rec);
+    o._track = segs; o._trackSrc = 'upload';
+    o._trackFile = file.name.replace(/\.(kml|xml)$/i, '') + (/\.gpx$/i.test(file.name) ? '' : '.gpx');
+    if (f.area && !o._trackType) o._trackType = 'garis';
+    if (f.file) { o[f.file] = file.name; markEdited(o, f.file); }
+    pendingNew = null;
+    applyTrack(rec, true); save(); render();
+    toast(`Track dibaca: ${fmtLen(trackStats(o).len)}, ${trackStats(o).n} titik`);
+  }).catch(() => toast('File tidak bisa dibaca.'));
+});
 function gpxFor(name, o) {
   const segs = (o._track || []).map(sg => '    <trkseg>\n' + sg.map(p =>
-    `      <trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(p[3] * 1000).toISOString()}</time><hdop>${(p[2] / 5).toFixed(1)}</hdop></trkpt>`).join('\n') + '\n    </trkseg>').join('\n');
+    `      <trkpt lat="${p[0]}" lon="${p[1]}">${p[3] ? `<time>${new Date(p[3] * 1000).toISOString()}</time>` : ''}${p[2] ? `<hdop>${(p[2] / 5).toFixed(1)}</hdop>` : ''}</trkpt>`).join('\n') + '\n    </trkseg>').join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Survei Pantai Cemara" xmlns="http://www.topografix.com/GPX/1/1">\n  <trk>\n    <name>${esc(name.replace(/\.gpx$/, ''))}</name>\n${segs}\n  </trk>\n</gpx>\n`;
 }
 function allTracks() {
@@ -1236,7 +1285,29 @@ const pdbDel = (store, k) => pdbDo(store, 'readwrite', st => st.delete(k));
 async function deletePhotos(list) {
   for (const ph of list || []) { try { await pdbDel('foto', ph.id); await pdbDel('thumb', ph.id); } catch (e) {} }
 }
-function photosOfEntry(e) { return Object.values(e.tables || {}).flat().flatMap(r => r._photos || []); }
+function photosOfEntry(e) { return [...((e.header && e.header._photos) || []), ...Object.values(e.tables || {}).flat().flatMap(r => r._photos || [])]; }
+/* Foto bisa menempel pada kepala lembar (foto lokasi) atau pada satu baris data. */
+function photoTarget() {
+  const e = S.entries[view.id]; if (!e) return null;
+  if (view.v === 'entry') return { e, obj: e.header, tag: 'lokasi', isRow: false, find: () => S.entries[e.id] && S.entries[e.id].header };
+  if (view.v === 'row') {
+    const r = (e.tables[view.t] || [])[view.i]; if (!r) return null;
+    const t = view.t, rid_ = r._id;
+    return { e, obj: r, tag: `${t}_b${view.i + 1}`, isRow: true, t, find: () => (S.entries[e.id].tables[t] || []).find(x => x._id === rid_) };
+  }
+  return null;
+}
+function photoSectionHTML(list, title, camLabel, note) {
+  return `<section class="section">
+      <div class="tablehead"><h2>${esc(title)}</h2><span class="count">${list.length} foto</span></div>
+      ${list.length ? `<div class="photos" id="photos">${list.map(ph => `<button type="button" data-act="photo" data-ph="${ph.id}" aria-label="Buka foto ${esc(ph.name)}"></button>`).join('')}</div>` : ''}
+      <div class="row">
+        <button type="button" class="btn" data-act="cam">${esc(camLabel)}</button>
+        <button type="button" class="btn ghost" data-act="gal">Dari galeri</button>
+      </div>
+      <p class="note">${esc(note)}</p>
+    </section>`;
+}
 
 async function shrink(file, max) {
   let bmp;
@@ -1255,15 +1326,14 @@ function askPhotoGeo() {
     navigator.geolocation.getCurrentPosition(p => ok(p.coords), () => ok(null), { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
   });
 }
-function photoName(e, rowNo, taken) {
+function photoName(e, tag, taken) {
   const d = new Date(taken * 1000);
   const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-  return `${e.form}_${view.t}_b${rowNo}_${stamp}`;
+  return `${e.form}_${tag}_${stamp}`;
 }
 async function addPhotos(files) {
-  if (view.v !== 'row' || !files || !files.length) return;
-  const e = S.entries[view.id]; const row = e && e.tables[view.t][view.i]; if (!row) return;
-  const rowNo = view.i + 1, target = { id: view.id, t: view.t, rowId: row._id };
+  const tgt = photoTarget(); if (!tgt || !files || !files.length) return;
+  const e = tgt.e;
   toast(files.length > 1 ? `Menyimpan ${files.length} foto…` : 'Menyimpan foto…');
   const geo = await Promise.race([photoGeo || Promise.resolve(null), new Promise(ok => setTimeout(() => ok(null), 4000))]);
   let n = 0;
@@ -1273,21 +1343,21 @@ async function addPhotos(files) {
       const big = await shrink(file, PHOTO_MAX), small = await shrink(file, THUMB_MAX);
       const id = rid();
       await pdbPut('foto', id, big.blob); await pdbPut('thumb', id, small.blob);
-      const r = (S.entries[target.id].tables[target.t] || []).find(x => x._id === target.rowId); if (!r) break;
+      const r = tgt.find(); if (!r) break;
       r._photos = r._photos || [];
-      let name = photoName(e, rowNo, taken), k = 1;
-      while (r._photos.some(p => p.name === name + '.jpg')) name = photoName(e, rowNo, taken) + '_' + (++k);
+      let name = photoName(e, tgt.tag, taken), k = 1;
+      while (r._photos.some(p => p.name === name + '.jpg')) name = photoName(e, tgt.tag, taken) + '_' + (++k);
       const meta = { id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size };
       if (geo) Object.assign(meta, { lat: +geo.latitude.toFixed(6), lon: +geo.longitude.toFixed(6), acc: Math.round(geo.accuracy) });
       r._photos.push(meta);
       // Kolom "Dokumentasi" (F/V) ikut dicentang Foto bila ada.
-      const tdef = FORM[e.form].tables.find(t => t.id === target.t);
-      if (tdef.fields.some(f => f.k === 'dok')) { r.dok = Array.isArray(r.dok) ? r.dok : []; if (!r.dok.includes('F')) r.dok.push('F'); markEdited(r, 'dok'); }
+      const tdef = tgt.isRow && FORM[e.form].tables.find(t => t.id === tgt.t);
+      if (tdef && tdef.fields.some(f => f.k === 'dok')) { r.dok = Array.isArray(r.dok) ? r.dok : []; if (!r.dok.includes('F')) r.dok.push('F'); markEdited(r, 'dok'); }
       markEdited(r, '_photos'); n++;
     } catch (err) { toast('Foto gagal disimpan. Memori HP mungkin penuh.'); }
   }
   photoGeo = null;
-  if (n) { touch(e); save(); if (view.v === 'row') render(); toast(`${n} foto tersimpan${geo ? ' dengan koordinat' : ' (tanpa GPS)'}`); }
+  if (n) { touch(e); save(); if (view.v === 'row' || view.v === 'entry') render(); toast(`${n} foto tersimpan${geo ? ' dengan koordinat' : ' (tanpa GPS)'}`); }
 }
 let thumbURLs = [];
 async function loadThumbs() {
@@ -1303,8 +1373,8 @@ async function loadThumbs() {
 }
 let viewerPhoto = null, viewerURL = null;
 async function openViewer(id) {
-  const e = S.entries[view.id]; const row = e && e.tables[view.t][view.i]; if (!row) return;
-  const ph = (row._photos || []).find(p => p.id === id); if (!ph) return;
+  const tgt = photoTarget(); if (!tgt) return;
+  const ph = (tgt.obj._photos || []).find(p => p.id === id); if (!ph) return;
   const b = await pdbGet('foto', id).catch(() => null);
   if (!b) { toast('File foto ini tidak ada di HP ini (data digabung dari HP lain).'); return; }
   viewerPhoto = ph; if (viewerURL) URL.revokeObjectURL(viewerURL); viewerURL = URL.createObjectURL(b);
@@ -1322,10 +1392,11 @@ document.getElementById('viewerClose').addEventListener('click', closeViewer);
 document.getElementById('viewerDel').addEventListener('click', async ev => {
   const b = ev.currentTarget;
   if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; return; }
-  const e = S.entries[view.id]; const row = e && e.tables[view.t][view.i]; if (!row || !viewerPhoto) return;
+  const tgt = photoTarget(); if (!tgt || !viewerPhoto) return;
+  const row = tgt.obj;
   await deletePhotos([viewerPhoto]);
-  row._photos = row._photos.filter(p => p.id !== viewerPhoto.id); if (!row._photos.length) delete row._photos;
-  touch(e); save(); closeViewer(); render(); toast('Foto dihapus');
+  row._photos = (row._photos || []).filter(p => p.id !== viewerPhoto.id); if (!row._photos.length) delete row._photos;
+  touch(tgt.e); save(); closeViewer(); render(); toast('Foto dihapus');
 });
 ['camIn', 'galIn'].forEach(id => document.getElementById(id).addEventListener('change', ev => {
   const files = [...ev.target.files]; ev.target.value = ''; addPhotos(files);
@@ -1459,6 +1530,7 @@ app.addEventListener('click', ev => {
   else if (a === 'gal') { askPhotoGeo(); document.getElementById('galIn').click(); }
   else if (a === 'photo') openViewer(b.dataset.ph);
   else if (a === 'trkstart') startTrack();
+  else if (a === 'trkupload') uploadTrack();
   else if (a === 'trkstop') stopTrack();
   else if (a === 'trktype') {
     const tg = currentTarget(); if (!tg) return;
@@ -1470,7 +1542,9 @@ app.addEventListener('click', ev => {
   else if (a === 'trkclear') {
     if (!arm(b, 'trkclear', 'Ketuk lagi untuk menghapus track')) return;
     const tg = currentTarget(); if (!tg) return;
-    delete tg.obj._track; delete tg.obj._trackFile; touch(tg.e); save(); render(); toast('Track dihapus');
+    delete tg.obj._track; delete tg.obj._trackFile; delete tg.obj._trackSrc;
+    const tf = fieldDef('rekam'); if (tf && tf.len) tg.obj[tf.len] = '';
+    touch(tg.e); save(); render(); toast('Track dihapus');
   }
   else if (a === 'rowdone') { save(); history.back(); }
   else if (a === 'rownext') {
@@ -1631,6 +1705,12 @@ function buildCSVs() {
   }
   const fotoRows = [['file', 'form', 'tabel', 'lembar_id', 'no_baris', 'waktu', 'lat', 'lon', 'akurasi_m', 'lebar_px', 'tinggi_px', 'keterangan']];
   const fotoFeats = [];
+  FORMS.forEach(form => entriesOf(form.id).reverse().forEach(e => (e.header._photos || []).forEach(ph => {
+    const ket = 'Foto lokasi: ' + entryLabel(form, e).t;
+    const waktu = new Date(ph.t * 1000).toISOString();
+    fotoRows.push(['foto/' + ph.name, form.id, 'kepala_lembar', e.id, '', waktu, ph.lat ?? '', ph.lon ?? '', ph.acc ?? '', ph.w, ph.h, ket]);
+    if (ph.lat != null) fotoFeats.push({ type: 'Feature', properties: { file: 'foto/' + ph.name, form: form.id, tabel: 'kepala_lembar', no_baris: null, waktu, akurasi_m: ph.acc, keterangan: ket }, geometry: { type: 'Point', coordinates: [ph.lon, ph.lat] } });
+  })));
   FORMS.forEach(form => entriesOf(form.id).reverse().forEach(e => form.tables.forEach(t => (e.tables[t.id] || []).forEach((r, i) => (r._photos || []).forEach(ph => {
     const ket = rowSummary(form, t, r, e).title;
     const waktu = new Date(ph.t * 1000).toISOString();

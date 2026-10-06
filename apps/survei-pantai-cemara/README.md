@@ -17,13 +17,15 @@ setelah dibuka sekali, dan semua data tersimpan di HP.
 Fitur lapangan:
 
 - Tombol **Ambil GPS** mengisi koordinat desimal beserta akurasinya.
-- **Rekam track GPS** (Form A, C1, F3): panjang transek dan, untuk batas
+- **Track GPS** (Form A, C1, F3, tidak wajib) bisa diisi dua cara:
+  **Rekam GPS HP** saat berjalan, atau **Unggah GPX/KML** hasil Garmin atau
+  aplikasi lain (OsmAnd, Avenza, Locus). Untuk keduanya, panjang transek dan, untuk batas
   area, luas (ha) dihitung otomatis; nama file track, jam mulai, dan jam
   selesai ikut terisi. Titik dengan akurasi lebih buruk dari ±30 m dan
   loncatan kecil di bawah 4 m diabaikan. Layar dibuat tetap menyala selama
   merekam; mengunci layar atau pindah aplikasi menghentikan perekaman titik.
 - Tombol **Kini** mengisi jam saat ini.
-- **Ambil foto** di setiap baris membuka kamera HP; foto disimpan di aplikasi
+- **Ambil foto lokasi** di setiap lembar dan **Ambil foto** di setiap baris membuka kamera HP; foto disimpan di aplikasi
   (diperkecil ke 2560 px) dengan nama, jam, dan koordinat GPS otomatis.
   Ekspor ZIP memuat folder `foto/` beserta `Daftar_Foto.csv` dan
   `titik_foto.geojson`. File cadangan .json tidak memuat foto.

@@ -44,6 +44,16 @@ Setelah itu aplikasi bisa dibuka dari layar utama walau tanpa sinyal.
 Hosting statis lain (Netlify Drop, server kantor) juga bisa: unggah isi folder
 ini apa adanya. GPS dan mode offline hanya jalan lewat `https://`.
 
+## Pembaruan otomatis
+
+Aplikasi selalu dibuka dari simpanan di HP (cepat, juga tanpa sinyal). Saat
+ada sinyal, aplikasi memeriksa server ketika dibuka, ketika kembali ke
+aplikasi, dan tiap 15 menit. Bila `index.html` atau file lain di folder ini
+berubah di GitHub Pages, versi baru diunduh dan aplikasi memuat ulang sendiri.
+Bila sedang mengisi lembar atau merekam track, yang muncul hanya tombol
+**Perbarui** agar pekerjaan tidak terganggu. Tidak perlu instal ulang dan
+tidak perlu menaikkan nomor versi apa pun. Data survei tidak terpengaruh.
+
 ## Menjaga data tetap aman
 
 Data tersimpan di browser HP masing-masing. **Setiap malam** buka tab Data →

@@ -219,6 +219,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
   flex-basis: 100%; margin: 4px -16px -10px; display: flex; align-items: center; gap: 10px;
   background: var(--bad); color: #fff; padding: 8px 16px; font-size: 14px; font-weight: 600;
 }
+.updbar {
+  flex-basis: 100%; margin: 4px -16px -10px; display: flex; align-items: center; gap: 10px;
+  background: var(--tide); color: #fff; padding: 8px 16px; font-size: 14px; font-weight: 600;
+}
+.updbar .grow { flex: 1; min-width: 0; }
+.updbar button { background: #fff; color: var(--tide); border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
 .recbar .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1.2s infinite; flex: none; }
 .recbar button { background: none; border: 1px solid rgba(255,255,255,.7); color: #fff; border-radius: 8px; padding: 5px 10px; font-weight: 650; cursor: pointer; }
 .recbar .grow { flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; }
@@ -250,6 +256,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
   <h1 id="title">Survei Pantai Cemara</h1>
   <span class="pill" id="net">Offline</span>
   <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
+  <div class="updbar" id="updbar" hidden>
+    <span class="grow">Versi baru aplikasi sudah siap.</span>
+    <button type="button" id="updBtn">Perbarui</button>
+  </div>
   <div class="recbar" id="recbar" hidden>
   <span class="dot" aria-hidden="true"></span>
   <button type="button" class="grow" id="recOpen">Merekam track…</button>
@@ -680,6 +690,7 @@ function render() {
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', TABS[view.v] === b.dataset.tab ? 'page' : 'false'));
   ({ home: renderHome, forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, status: renderStatus, data: renderData }[view.v] || renderHome)();
   refreshTrackUI();
+  if (updateReady && safeToReload()) setTimeout(() => { if (safeToReload()) applyUpdate(); }, 300);
 }
 
 function renderHome() {
@@ -997,6 +1008,7 @@ function renderData() {
 const TRK_MAX_ACC = 30;     // titik dengan akurasi lebih buruk dari ini diabaikan (m)
 const TRK_MIN_STEP = 4;     // jarak minimum antartitik untuk meredam loncatan GPS (m)
 let REC = null;
+let updateReady = false;   // versi baru sudah diunduh service worker
 let wakeLock = null;
 
 function hav(a, b) {
@@ -1549,8 +1561,47 @@ function importFile(file) {
 
 /* ================= Mulai ================= */
 applyTheme(); updateNet(); render();
+/* ================= Pembaruan otomatis =================
+   Service worker memeriksa server setiap kali aplikasi dibuka, saat kembali ke
+   aplikasi, dan tiap 15 menit. Bila ada versi baru, halaman dimuat ulang sendiri
+   saat aman (tidak sedang merekam track atau mengisi lembar); bila tidak aman,
+   muncul tombol Perbarui. Posisi halaman dipulihkan setelah dimuat ulang. */
+function safeToReload() {
+  const a = document.activeElement;
+  const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  return !REC && !typing && !['row', 'entry'].includes(view.v);
+}
+function applyUpdate() {
+  save();
+  try { sessionStorage.setItem('survei-cemara-resume', JSON.stringify(view)); sessionStorage.setItem('survei-cemara-updated', '1'); } catch (e) {}
+  location.reload();
+}
+function onUpdateReady() {
+  updateReady = true;
+  if (safeToReload()) { applyUpdate(); return; }
+  document.getElementById('updbar').hidden = false;
+}
+function checkUpdate() {
+  if (!navigator.onLine || !navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+  navigator.serviceWorker.controller.postMessage({ type: 'check' });
+  navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+}
+document.getElementById('updBtn').addEventListener('click', applyUpdate);
+try {
+  const resume = JSON.parse(sessionStorage.getItem('survei-cemara-resume') || 'null');
+  sessionStorage.removeItem('survei-cemara-resume');
+  if (resume && resume.v && (!resume.id || S.entries[resume.id])) { view = resume; history.replaceState(view, ''); render(); }
+  if (sessionStorage.getItem('survei-cemara-updated')) { sessionStorage.removeItem('survei-cemara-updated'); toast('Aplikasi diperbarui ke versi terbaru'); }
+} catch (e) {}
 if (!NATIVE && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.type === 'updated') onUpdateReady(); });
+  // Service worker baru mengambil alih (mis. sw.js sendiri berubah): muat versi baru juga.
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) onUpdateReady(); });
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+  window.addEventListener('online', checkUpdate);
+  setInterval(checkUpdate, 15 * 60 * 1000);
 }
 </script>
 </body>

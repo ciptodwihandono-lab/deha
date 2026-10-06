@@ -932,7 +932,7 @@ function renderData() {
       <p class="note">${n} lembar, ${nRows} baris tersimpan di HP ini. Data hanya ada di browser HP ini sampai Anda mengekspornya; kirim cadangan ke WhatsApp/Drive setiap malam.</p>
       <div class="row">
         <button type="button" class="btn" data-act="share">Bagikan ZIP (WA/Drive)</button>
-        <button type="button" class="btn ghost" data-act="zip">Unduh ZIP (CSV + cadangan)</button>
+        <button type="button" class="btn ghost" data-act="zip">Simpan ZIP ke HP</button>
       </div>
       <button type="button" class="btn ghost block" data-act="json">Unduh cadangan saja (.json)</button>
       <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), CSV status kegiatan, dan file cadangan .json.</p>
@@ -946,7 +946,7 @@ function renderData() {
       <p class="note">Hanya lakukan setelah ekspor tersimpan aman. Ketuk dua kali untuk mengonfirmasi.</p>
       <button type="button" class="btn danger block" data-act="wipe">Hapus semua data di HP ini</button>
     </section>
-    <p class="note">Tips: buka menu browser lalu pilih "Tambahkan ke layar utama" agar aplikasi bisa dibuka seperti aplikasi biasa, juga tanpa sinyal.</p>`;
+    <p class="note" id="installTip">Tips: aplikasi Android (APK) bisa diunduh dari halaman Releases repo GitHub proyek ini.</p>`;
 }
 
 /* ================= Interaksi ================= */
@@ -1229,7 +1229,26 @@ function makeZip(files) {
   end.setUint32(12, csize, true); end.setUint32(16, off, true);
   return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
 }
+/* Di aplikasi Android (Capacitor) unduhan browser tidak jalan: simpan ke folder Documents atau bagikan lewat plugin bawaan. */
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+function blobToBase64(blob) {
+  return new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = fail; r.readAsDataURL(blob); });
+}
+async function nativeSave(blob, name, share) {
+  const { Filesystem, Share } = window.Capacitor.Plugins;
+  const data = await blobToBase64(blob);
+  if (!share) {
+    try {
+      await Filesystem.writeFile({ path: 'SurveiCemara/' + name, data, directory: 'DOCUMENTS', recursive: true });
+      toast(`Tersimpan di Documents/SurveiCemara/${name}`); return;
+    } catch (e) { /* lanjut ke bagikan */ }
+  }
+  const res = await Filesystem.writeFile({ path: name, data, directory: 'CACHE' });
+  try { await Share.share({ title: name, text: 'Data Survei Pantai Cemara', files: [res.uri], dialogTitle: 'Kirim data survei' }); }
+  catch (e) { if (!/cancel/i.test(String(e && e.message))) toast('Gagal membagikan file. Coba "Simpan ZIP ke HP".'); }
+}
 function download(blob, name) {
+  if (NATIVE) { nativeSave(blob, name, false); return; }
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000); toast(`${name} diunduh`);
@@ -1240,6 +1259,7 @@ async function exportZip(share) {
   const json = JSON.stringify({ app: 'survei-cemara', exported: new Date().toISOString(), data: S }, null, 1);
   const zip = makeZip([...buildCSVs(), [base + '.json', json]]);
   const name = base + '.zip';
+  if (NATIVE) { await nativeSave(zip, name, share); return; }
   if (share) {
     const file = new File([zip], name, { type: 'application/zip' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1276,7 +1296,7 @@ function importFile(file) {
 
 /* ================= Mulai ================= */
 applyTheme(); updateNet(); render();
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+if (!NATIVE && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 </script>

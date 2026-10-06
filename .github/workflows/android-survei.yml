@@ -1,0 +1,79 @@
+# Membungkus aplikasi survei (apps/survei-pantai-cemara) menjadi APK Android
+# dengan Capacitor. APK dari branch utama diterbitkan di Releases dengan
+# tautan tetap: releases/download/apk-latest/survei-cemara.apk
+name: Buat APK Android survei
+
+on:
+  push:
+    paths:
+      - 'apps/survei-pantai-cemara/**'
+      - 'apps/android/**'
+      - '.github/workflows/android-survei.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Siapkan proyek Capacitor
+        run: |
+          mkdir -p build && cd build
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund \
+            @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 \
+            @capacitor/filesystem@6 @capacitor/share@6
+          cp -r ../apps/survei-pantai-cemara www
+          rm -f www/README.md
+          npx cap init "Survei Cemara" id.kee.pantaicemara.survei --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: Izin lokasi, ikon, dan versi
+        working-directory: build/android
+        run: |
+          MANIFEST=app/src/main/AndroidManifest.xml
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />#' "$MANIFEST"
+          grep -q ACCESS_FINE_LOCATION "$MANIFEST"
+          rm -rf app/src/main/res/mipmap-anydpi-v26
+          cp -r ../../apps/android/res/. app/src/main/res/
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"1.${{ github.run_number }}\"/" app/build.gradle
+          grep -E "versionCode|versionName" app/build.gradle
+
+      - name: Build APK
+        working-directory: build/android
+        run: |
+          # Kunci tanda tangan tetap agar APK baru bisa memperbarui yang lama tanpa menghapus data.
+          mkdir -p ~/.android
+          cp ../../apps/android/debug.keystore ~/.android/debug.keystore
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../survei-cemara.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survei-cemara-apk
+          path: survei-cemara.apk
+
+      - name: Terbitkan di Releases
+        if: github.ref == 'refs/heads/claude/claude-rc-9bhjno'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-latest --cleanup-tag -y || true
+          gh release create apk-latest survei-cemara.apk \
+            --title "Aplikasi Survei Cemara (Android) versi 1.${{ github.run_number }}" \
+            --notes "Unduh survei-cemara.apk di HP Android lalu pasang. Lihat apps/android/README.md." \
+            --target "${{ github.sha }}"

@@ -62,3 +62,9 @@ ZIP berisi satu CSV per tabel, mis. `Form_B1_hitung.csv`, `Form_D1_air.csv`:
 
 File CSV bisa disimpan ke `data/raw/observations/` untuk diolah dengan skrip
 Python/R di repo ini.
+
+## Versi aplikasi Android (APK)
+
+Untuk aplikasi Android sungguhan (bukan pintasan web), lihat
+`apps/android/README.md`. Tautan unduh APK terbaru:
+https://github.com/ciptodwihandono-lab/deha/releases/download/apk-latest/survei-cemara.apk

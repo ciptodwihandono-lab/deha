@@ -17,6 +17,11 @@ setelah dibuka sekali, dan semua data tersimpan di HP.
 Fitur lapangan:
 
 - Tombol **Ambil GPS** mengisi koordinat desimal beserta akurasinya.
+- **Rekam track GPS** (Form A, C1, F3): panjang transek dan, untuk batas
+  area, luas (ha) dihitung otomatis; nama file track, jam mulai, dan jam
+  selesai ikut terisi. Titik dengan akurasi lebih buruk dari ±30 m dan
+  loncatan kecil di bawah 4 m diabaikan. Layar dibuat tetap menyala selama
+  merekam; mengunci layar atau pindah aplikasi menghentikan perekaman titik.
 - Tombol **Kini** mengisi jam saat ini.
 - Kode formulir (PN/PT/MS/ST, MM/IS/TB/TG, dll.) tampil sebagai tombol, tidak perlu mengetik.
 - Daftar nama burung pantai dan ikan muncul sebagai saran saat mengetik.
@@ -58,7 +63,9 @@ ZIP berisi satu CSV per tabel, mis. `Form_B1_hitung.csv`, `Form_D1_air.csv`:
   sebagai *delimited text*, CRS EPSG:4326);
 - angka memakai titik desimal; pilihan ganda dipisah `; `;
 - kode tetap sama dengan formulir kertas (mis. `IS`, `PT`);
-- `Status_Kegiatan.csv` dan `Jadwal.csv` menyalin lembar Excel.
+- `Status_Kegiatan.csv` dan `Jadwal.csv` menyalin lembar Excel;
+- folder `track/` berisi satu file `.gpx` per track dan
+  `semua_track.geojson` (garis + poligon area) untuk langsung dibuka di QGIS.
 
 File CSV bisa disimpan ke `data/raw/observations/` untuk diolah dengan skrip
 Python/R di repo ini.

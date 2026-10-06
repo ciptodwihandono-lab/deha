@@ -64,7 +64,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .topbar {
   position: sticky; top: 0; z-index: 10; background: var(--bar); color: var(--bar-fg);
   padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
 }
 .topbar .back {
   background: none; border: 0; color: inherit; padding: 6px 8px 6px 0; font-size: 22px; line-height: 1; cursor: pointer;
@@ -215,6 +215,20 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 .rekap tr.tot td { font-weight: 700; }
 .scroll { overflow-x: auto; }
 
+.recbar {
+  flex-basis: 100%; margin: 4px -16px -10px; display: flex; align-items: center; gap: 10px;
+  background: var(--bad); color: #fff; padding: 8px 16px; font-size: 14px; font-weight: 600;
+}
+.recbar .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1.2s infinite; flex: none; }
+.recbar button { background: none; border: 1px solid rgba(255,255,255,.7); color: #fff; border-radius: 8px; padding: 5px 10px; font-weight: 650; cursor: pointer; }
+.recbar .grow { flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; }
+@keyframes blink { 50% { opacity: .25; } }
+.trk { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.trk-len { font-family: var(--font-data); font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.trk-len small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.trk-info { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trk-info.wait { color: var(--warn); font-weight: 600; }
+.btn.rec { background: var(--bad); border-color: var(--bad); color: #fff; }
 .toast {
   position: fixed; left: 50%; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 30;
@@ -236,7 +250,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
   <h1 id="title">Survei Pantai Cemara</h1>
   <span class="pill" id="net">Offline</span>
   <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
+  <div class="recbar" id="recbar" hidden>
+  <span class="dot" aria-hidden="true"></span>
+  <button type="button" class="grow" id="recOpen">Merekam track…</button>
+  <button type="button" id="recStop">Hentikan</button>
+</div>
 </header>
+
 <main id="app"></main>
 <nav class="tabs" id="tabs">
   <button type="button" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18c3-2 6-2 9 0s6 2 9 0"/><path d="M12 3v9M8 7l4-4 4 4"/></svg>Hari ini</button>
@@ -377,6 +397,7 @@ const FORMS = [
     tables: [{ id: 'sesi', title: 'Sesi kegiatan', sum: ['kode', 'lokasi'], fields: [
       F('kode', 'Kode kegiatan', 'drop', { o: KEG_CODES }), F('lokasi', 'Lokasi / stasiun'),
       F('mulai', 'Jam mulai', 'time', { def: 'now' }), F('selesai', 'Jam selesai', 'time'),
+      F('rekam', 'Rekam track GPS', 'track', { w: 1, len: 'transek', file: 'track', start: 'mulai', end: 'selesai', area: true, fmt: 'text' }),
       F('nPengamat', 'Jumlah pengamat', 'int'), F('transek', 'Panjang transek (m) / luas (ha)'),
       F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 }),
       F('track', 'File track GPS', 'text', { w: 1 }), CAT ] }] },
@@ -416,6 +437,7 @@ const FORMS = [
     key: 'tanggal',
     header: [TGL, pengamat(), F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
       F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }),
+      F('rekam', 'Rekam track batas tutupan Ipomoea', 'track', { w: 1, len: 'panjangTrack', file: 'track', start: 'mulai', end: 'selesai', area: true, fmt: 'num' }),
       F('track', 'File track batas tutupan Ipomoea'), F('panjangTrack', 'Panjang track (m)', 'num')],
     tables: [
       { id: 'plot', title: 'Plot tutupan Ipomoea pes-caprae (C1)', sum: ['kodePlot', 'substrat'], big: 'tutupan', bigU: '%', fields: [
@@ -517,6 +539,7 @@ const FORMS = [
     legend: 'Kelas ukuran buaya: I < 1 m · II 1–2 m · III 2–3 m · IV > 3 m · MO hanya mata terlihat. Gunakan tema Malam agar layar tidak menyilaukan.',
     key: 'rute',
     header: [TGL, F('rute', 'Rute / lokasi'), F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
+      F('rekam', 'Rekam track rute', 'track', { w: 1, len: 'panjang', start: 'mulai', end: 'selesai', fmt: 'num' }),
       F('panjang', 'Panjang rute (m)', 'num'), pengamat(), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 })],
     tables: [
       { id: 'ves', title: 'VES herpetofauna (F4)', sum: ['jenis', 'mikro'], big: 'jumlah', fields: [
@@ -546,7 +569,7 @@ function save() {
 }
 function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
 window.addEventListener('pagehide', save);
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else if (REC) keepAwake(); });
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
 
 /* ================= Utilitas ================= */
@@ -643,7 +666,8 @@ function cleanupEmptyRows() {
   if (i < 0) return;
   const r = rows[i];
   const filled = Object.keys(r).filter(k => !k.startsWith('_') && !(r._auto || []).includes(k) && r[k] !== '' && !(Array.isArray(r[k]) && !r[k].length));
-  if (!filled.length) { rows.splice(i, 1); save(); }
+  if (REC && REC.rowId === rowId) return;
+  if (!filled.length && !r._track) { rows.splice(i, 1); save(); }
 }
 
 /* ================= Render ================= */
@@ -655,6 +679,7 @@ function render() {
   document.getElementById('backBtn').hidden = !['entries', 'entry', 'row'].includes(view.v);
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', TABS[view.v] === b.dataset.tab ? 'page' : 'false'));
   ({ home: renderHome, forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, status: renderStatus, data: renderData }[view.v] || renderHome)();
+  refreshTrackUI();
 }
 
 function renderHome() {
@@ -771,6 +796,23 @@ function fieldHTML(f, val, scope, extra = {}) {
       return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><input type="datetime-local" ${attrs} value="${esc(v)}"></div>`;
     case 'time':
       return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><div class="combo"><input type="time" ${attrs} value="${esc(v)}"><button type="button" class="mini" data-act="now" data-k="${f.k}">Kini</button></div></div>`;
+    case 'track': {
+      const o = extra.obj || {}; const live = REC && sameTarget(REC, view);
+      const st = trackStats(o), info = trackInfoText(o, live);
+      const other = REC && !live;
+      return `<div class="field w"><span class="lbl">${esc(f.l)}</span><div class="trk" data-trk>
+        <div class="trk-len">${esc(fmtLen(st.len))}${o._trackType === 'area' && st.n >= 3 ? ` <small>/ ${st.ha.toFixed(2).replace('.', ',')} ha</small>` : ''}</div>
+        <div class="trk-info ${info.cls}">${esc(info.txt)}</div>
+        ${f.area ? `<div class="chips" role="group" aria-label="Jenis track">${[['garis', 'Transek (garis)'], ['area', 'Batas area (luas)']].map(([v, l]) =>
+          `<button type="button" class="chip" data-act="trktype" data-v="${v}" aria-pressed="${(o._trackType || 'garis') === v}">${l}</button>`).join('')}</div>` : ''}
+        <div class="row">
+          ${live ? `<button type="button" class="btn rec" data-act="trkstop">Hentikan rekaman</button>`
+            : `<button type="button" class="btn" data-act="trkstart"${other ? ' disabled' : ''}>${st.n ? 'Lanjutkan rekam' : 'Mulai rekam track'}</button>`}
+          ${st.n && !live ? `<button type="button" class="btn danger" data-act="trkclear">Hapus track</button>` : ''}
+        </div>
+        <span class="hint">${other ? 'Ada rekaman lain yang sedang berjalan.' : 'Panjang (dan luas untuk batas area) terisi otomatis. Layar dibuat tetap menyala; jangan kunci layar atau pindah aplikasi selama merekam. Track GPX ikut dalam ekspor ZIP.'}</span>
+      </div></div>`;
+    }
     case 'coord': {
       const acc = extra.acc ? `Akurasi ±${extra.acc} m` : 'Desimal: lintang, bujur (mis. -0.99512, 104.08934)';
       return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><div class="combo"><input type="text" inputmode="decimal" ${attrs} value="${esc(v)}" placeholder="lintang, bujur"><button type="button" class="mini" data-act="gps" data-k="${f.k}">Ambil GPS</button></div><span class="hint" data-acc="${f.k}">${esc(acc)}</span></div>`;
@@ -789,7 +831,7 @@ function fieldHTML(f, val, scope, extra = {}) {
 function rowSummary(form, table, row, entry) {
   const fs = Object.fromEntries(table.fields.map(f => [f.k, f]));
   const title = table.sum.map(k => label(fs[k], row[k])).filter(Boolean).join(' · ') || '(belum diisi)';
-  const bits = [row.jam || row.tanggal && fmtDate(row.tanggal), row.koordinat || '', row.catatan].filter(Boolean);
+  const bits = [row.jam || row.tanggal && fmtDate(row.tanggal), row.koordinat || '', row._track ? `track ${fmtLen(trackStats(row).len)}` : '', row.catatan].filter(Boolean);
   computed(form, table, row, entry).forEach(([, l, v]) => bits.push(`${l} ${v}`));
   const big = table.big && row[table.big] !== undefined && row[table.big] !== '' ? `${row[table.big]}${table.bigU || ''}` : '';
   return { title, sub: bits.join(' · '), big };
@@ -815,7 +857,7 @@ function renderEntry() {
   app.innerHTML = `
     <details class="legend"><summary>Petunjuk Form ${form.id}</summary><p>${esc(form.intro)}</p><p>${esc(form.legend)}</p></details>
     <section class="section"><h2>Kepala lembar</h2>
-      <div class="fields" data-scope="h">${form.header.map(f => fieldHTML(f, e.header[f.k], 'h', { acc: e.header[f.k + 'Acc'] })).join('')}</div>
+      <div class="fields" data-scope="h">${form.header.map(f => fieldHTML(f, e.header[f.k], 'h', { acc: e.header[f.k + 'Acc'], obj: e.header })).join('')}</div>
     </section>
     ${tallyHTML}
     ${form.tables.map(t => {
@@ -848,7 +890,7 @@ function renderRow() {
   setTitle(`${t.title.replace(/\s*\(.*\)$/, '')} · baris ${view.i + 1}`, `Form ${form.id} · ${entryLabel(form, e).t}`);
   const comp = computed(form, t, row, e);
   app.innerHTML = `
-    <div class="fields" data-scope="r">${t.fields.map(f => fieldHTML(f, row[f.k], 'r', { acc: row[f.k + 'Acc'] })).join('')}
+    <div class="fields" data-scope="r">${t.fields.map(f => fieldHTML(f, row[f.k], 'r', { acc: row[f.k + 'Acc'], obj: row })).join('')}
       ${(form.id === 'D2' || form.id === 'F1') ? `<div class="field w"><span class="computed" id="computed">${comp.map(c => `${c[1]}: ${c[2]}`).join(' · ')}</span></div>` : ''}
     </div>
     <div class="sticky-actions">
@@ -947,6 +989,171 @@ function renderData() {
       <button type="button" class="btn danger block" data-act="wipe">Hapus semua data di HP ini</button>
     </section>
     <p class="note" id="installTip">Tips: aplikasi Android (APK) bisa diunduh dari halaman Releases repo GitHub proyek ini.</p>`;
+}
+
+/* ================= Rekam track GPS =================
+   Titik disimpan per segmen di obj._track = [[[lat, lon, akurasi, detik], ...], ...].
+   Segmen baru dimulai setiap kali rekaman dilanjutkan, agar jeda tidak dihitung sebagai garis lurus. */
+const TRK_MAX_ACC = 30;     // titik dengan akurasi lebih buruk dari ini diabaikan (m)
+const TRK_MIN_STEP = 4;     // jarak minimum antartitik untuk meredam loncatan GPS (m)
+let REC = null;
+let wakeLock = null;
+
+function hav(a, b) {
+  const R = 6371008.8, r = Math.PI / 180;
+  const dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+function trackStats(o) {
+  const segs = (o && o._track) || [];
+  let len = 0, n = 0, t0 = null, t1 = null;
+  segs.forEach(sg => {
+    n += sg.length;
+    for (let i = 1; i < sg.length; i++) len += hav(sg[i - 1], sg[i]);
+    if (sg.length) { if (t0 == null) t0 = sg[0][3]; t1 = sg[sg.length - 1][3]; }
+  });
+  // Luas poligon tertutup: proyeksi ekuirektangular lokal + rumus shoelace (cukup akurat untuk area < beberapa km).
+  const pts = segs.flat();
+  let area = 0;
+  if (pts.length >= 3) {
+    const lat0 = pts.reduce((a, p) => a + p[0], 0) / pts.length * Math.PI / 180, R = 6371008.8, r = Math.PI / 180;
+    const xy = pts.map(p => [R * p[1] * r * Math.cos(lat0), R * p[0] * r]);
+    for (let i = 0; i < xy.length; i++) { const j = (i + 1) % xy.length; area += xy[i][0] * xy[j][1] - xy[j][0] * xy[i][1]; }
+    area = Math.abs(area) / 2;
+  }
+  return { len, n, area, ha: area / 10000, t0, t1 };
+}
+function fmtLen(m) { return m >= 1000 ? `${(m / 1000).toFixed(2).replace('.', ',')} km` : `${Math.round(m)} m`; }
+function fmtDur(sec) { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? `${h} j ${m} mnt` : `${m} mnt`; }
+function hhmm(sec) { const d = new Date(sec * 1000); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+
+function trackField(e, rec) {
+  const form = FORM[e.form];
+  const list = rec.t ? form.tables.find(t => t.id === rec.t).fields : form.header;
+  return list.find(f => f.t === 'track');
+}
+function trackObj(rec) {
+  const e = rec && S.entries[rec.id]; if (!e) return null;
+  if (!rec.t) return e.header;
+  return (e.tables[rec.t] || []).find(r => r._id === rec.rowId) || null;
+}
+function sameTarget(rec, v) {
+  if (!rec || !v) return false;
+  if (v.v === 'entry') return !rec.t && rec.id === v.id;
+  if (v.v === 'row') { const e = S.entries[v.id]; const r = e && (e.tables[v.t] || [])[v.i]; return !!r && rec.t === v.t && rec.rowId === r._id; }
+  return false;
+}
+function trackFileName(e, f, o) {
+  const tgl = (e.header.tanggal || e.header.tglPasang || today()).replace(/-/g, '');
+  let tag = '';
+  if (o !== e.header) { const rows = Object.values(e.tables).find(rs => rs.includes(o)) || []; tag = `_baris${rows.indexOf(o) + 1}`; }
+  return `${e.form}_${tgl}_${e.id.slice(-4)}${tag}.gpx`;
+}
+function applyTrack(rec, final) {
+  const e = S.entries[rec.id], o = trackObj(rec); if (!e || !o) return;
+  const f = trackField(e, rec), st = trackStats(o);
+  const lenTxt = f.fmt === 'num' ? String(Math.round(st.len))
+    : (o._trackType === 'area' ? `${Math.round(st.len)} m / ${st.ha.toFixed(2)} ha` : `${Math.round(st.len)} m`);
+  const set = (k, v) => { if (!k) return; o[k] = v; markEdited(o, k); const inp = sameTarget(rec, view) && app.querySelector(`input[data-k="${k}"]`); if (inp) inp.value = v; };
+  if (st.n) set(f.len, lenTxt);
+  if (f.file && !o[f.file]) set(f.file, o._trackFile);
+  if (f.start && !o[f.start] && st.t0) set(f.start, hhmm(st.t0));
+  if (final && f.end && st.t1) set(f.end, hhmm(st.t1));
+  touch(e);
+}
+function trackInfoText(o, live) {
+  const st = trackStats(o);
+  if (live && REC && REC.waitAcc) return { cls: 'wait', txt: `Menunggu sinyal GPS lebih akurat (±${REC.waitAcc} m, perlu ≤ ${TRK_MAX_ACC} m)…` };
+  if (!st.n) return { cls: '', txt: live ? 'Mencari sinyal GPS…' : 'Belum ada track.' };
+  const parts = [`${st.n} titik`];
+  if (st.t0) parts.push(fmtDur(st.t1 - st.t0));
+  if (o._trackType === 'area' && st.n >= 3) parts.push(`luas ${st.ha.toFixed(2).replace('.', ',')} ha`);
+  if (live && REC && REC.lastAcc) parts.push(`akurasi ±${REC.lastAcc} m`);
+  return { cls: '', txt: parts.join(' · ') };
+}
+function refreshTrackUI() {
+  const bar = document.getElementById('recbar');
+  bar.hidden = !REC;
+  if (REC) {
+    const o = trackObj(REC);
+    document.getElementById('recOpen').textContent = `Merekam track · ${fmtLen(trackStats(o).len)}${REC.waitAcc ? ' · menunggu GPS' : ''}`;
+  }
+  const box = app.querySelector('[data-trk]'); if (!box) return;
+  const tg = currentTarget(); if (!tg) return;
+  const o = tg.obj, live = REC && sameTarget(REC, view);
+  const st = trackStats(o), info = trackInfoText(o, live);
+  box.querySelector('.trk-len').innerHTML = `${esc(fmtLen(st.len))}${o._trackType === 'area' && st.n >= 3 ? ` <small>/ ${st.ha.toFixed(2).replace('.', ',')} ha</small>` : ''}`;
+  const inf = box.querySelector('.trk-info'); inf.textContent = info.txt; inf.className = 'trk-info ' + info.cls;
+}
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) { wakeLock = null; }
+}
+function startTrack() {
+  if (!navigator.geolocation) { toast('GPS tidak tersedia di perangkat ini.'); return; }
+  if (REC) { toast('Hentikan rekaman yang sedang berjalan dulu.'); return; }
+  const e = S.entries[view.id]; if (!e) return;
+  let rec;
+  if (view.v === 'entry') rec = { id: e.id, t: null, rowId: null };
+  else { const r = e.tables[view.t][view.i]; rec = { id: e.id, t: view.t, rowId: r._id }; }
+  const o = trackObj(rec); const f = trackField(e, rec);
+  o._track = o._track || [];
+  o._track.push([]);
+  if (!o._trackFile) o._trackFile = trackFileName(e, f, o);
+  if (f.area && !o._trackType) o._trackType = 'garis';
+  pendingNew = null;
+  REC = rec;
+  REC.watch = navigator.geolocation.watchPosition(onTrackPos, onTrackErr, { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 });
+  keepAwake(); save(); render();
+  toast('Rekaman dimulai. Biarkan layar menyala dan aplikasi tetap terbuka.');
+}
+function onTrackPos(p) {
+  if (!REC) return;
+  const o = trackObj(REC); if (!o) { stopTrack(); return; }
+  const acc = Math.round(p.coords.accuracy);
+  REC.lastAcc = acc;
+  if (acc > TRK_MAX_ACC) { REC.waitAcc = acc; refreshTrackUI(); return; }
+  REC.waitAcc = 0;
+  const seg = o._track[o._track.length - 1];
+  const pt = [+p.coords.latitude.toFixed(6), +p.coords.longitude.toFixed(6), acc, Math.round(p.timestamp / 1000)];
+  const last = seg[seg.length - 1];
+  if (last && hav(last, pt) < Math.max(TRK_MIN_STEP, acc * 0.5)) { refreshTrackUI(); return; }
+  seg.push(pt);
+  applyTrack(REC, false);
+  refreshTrackUI();
+}
+function onTrackErr(err) {
+  if (err.code === 1) { toast('Izin lokasi ditolak. Rekaman dihentikan.'); stopTrack(); }
+  else if (REC) { REC.waitAcc = REC.waitAcc || 99; refreshTrackUI(); }
+}
+function stopTrack() {
+  if (!REC) return;
+  navigator.geolocation.clearWatch(REC.watch);
+  const rec = REC; REC = null;
+  const o = trackObj(rec);
+  if (o && o._track) {
+    o._track = o._track.filter(sg => sg.length);
+    if (!o._track.length) { delete o._track; }
+    else applyTrack(rec, true);
+  }
+  try { if (wakeLock) wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+  save(); render();
+  if (o && o._track) toast(`Track tersimpan: ${fmtLen(trackStats(o).len)}`);
+}
+function gpxFor(name, o) {
+  const segs = (o._track || []).map(sg => '    <trkseg>\n' + sg.map(p =>
+    `      <trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(p[3] * 1000).toISOString()}</time><hdop>${(p[2] / 5).toFixed(1)}</hdop></trkpt>`).join('\n') + '\n    </trkseg>').join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Survei Pantai Cemara" xmlns="http://www.topografix.com/GPX/1/1">\n  <trk>\n    <name>${esc(name.replace(/\.gpx$/, ''))}</name>\n${segs}\n  </trk>\n</gpx>\n`;
+}
+function allTracks() {
+  const out = [];
+  Object.values(S.entries).forEach(e => {
+    const form = FORM[e.form]; if (!form) return;
+    if (e.header._track && e.header._track.length) out.push({ e, form, o: e.header, no: '' });
+    form.tables.forEach(t => (e.tables[t.id] || []).forEach((r, i) => { if (r._track && r._track.length) out.push({ e, form, o: r, t, no: i + 1 }); }));
+  });
+  return out;
 }
 
 /* ================= Interaksi ================= */
@@ -1069,6 +1276,20 @@ app.addEventListener('click', ev => {
     const inp = app.querySelector(`input[data-k="${b.dataset.k}"]`); if (inp) inp.value = tg.obj[b.dataset.k];
   }
   else if (a === 'gps') getGPS(b.dataset.k, b);
+  else if (a === 'trkstart') startTrack();
+  else if (a === 'trkstop') stopTrack();
+  else if (a === 'trktype') {
+    const tg = currentTarget(); if (!tg) return;
+    tg.obj._trackType = b.dataset.v;
+    const rec = view.v === 'entry' ? { id: view.id, t: null } : { id: view.id, t: view.t, rowId: tg.obj._id };
+    if (tg.obj._track) applyTrack(rec, false);
+    save(); render();
+  }
+  else if (a === 'trkclear') {
+    if (!arm(b, 'trkclear', 'Ketuk lagi untuk menghapus track')) return;
+    const tg = currentTarget(); if (!tg) return;
+    delete tg.obj._track; delete tg.obj._trackFile; touch(tg.e); save(); render(); toast('Track dihapus');
+  }
   else if (a === 'rowdone') { save(); history.back(); }
   else if (a === 'rownext') {
     const e = S.entries[view.id]; const prev = e.tables[view.t][view.i];
@@ -1112,6 +1333,14 @@ document.getElementById('tabs').addEventListener('click', ev => {
   cleanupEmptyRows(); go({ v: b.dataset.tab });
 });
 document.getElementById('backBtn').addEventListener('click', () => history.back());
+document.getElementById('recStop').addEventListener('click', () => stopTrack());
+document.getElementById('recOpen').addEventListener('click', () => {
+  if (!REC || sameTarget(REC, view)) return;
+  const e = S.entries[REC.id]; if (!e) return;
+  if (!REC.t) go({ v: 'entry', id: e.id });
+  else { const i = (e.tables[REC.t] || []).findIndex(r => r._id === REC.rowId); if (i >= 0) go({ v: 'row', id: e.id, t: REC.t, i }); }
+});
+window.addEventListener('beforeunload', ev => { if (REC) { save(); ev.preventDefault(); ev.returnValue = ''; } });
 
 /* Tema: Otomatis → Terang → Malam */
 const THEMES = ['auto', 'light', 'dark'];
@@ -1163,7 +1392,12 @@ function expandCols(fields, prefix) {
   const cols = [];
   fields.forEach(f => {
     const name = prefix + f.k;
-    if (f.t === 'coord') cols.push({ h: name, f, get: o => o[f.k] }, { h: name + '_lat', get: o => splitCoord(o[f.k])[0] }, { h: name + '_lon', get: o => splitCoord(o[f.k])[1] }, { h: name + '_akurasi_m', get: o => o[f.k + 'Acc'] ?? '' });
+    if (f.t === 'track') cols.push(
+      { h: name + '_panjang_m', get: o => o._track ? Math.round(trackStats(o).len) : '' },
+      { h: name + '_luas_ha', get: o => o._track && o._trackType === 'area' ? trackStats(o).ha.toFixed(4) : '' },
+      { h: name + '_titik', get: o => o._track ? trackStats(o).n : '' },
+      { h: name + '_file', get: o => o._track ? 'track/' + o._trackFile : '' });
+    else if (f.t === 'coord') cols.push({ h: name, f, get: o => o[f.k] }, { h: name + '_lat', get: o => splitCoord(o[f.k])[0] }, { h: name + '_lon', get: o => splitCoord(o[f.k])[1] }, { h: name + '_akurasi_m', get: o => o[f.k + 'Acc'] ?? '' });
     else cols.push({ h: name, f, get: o => cellValue(f, o[f.k]) });
   });
   return cols;
@@ -1192,6 +1426,25 @@ function buildCSVs() {
       if (out.length > 1) files.push([`Form_${form.id}_${t.id}.csv`, toCSV(out)]);
     });
   });
+  const tracks = allTracks();
+  if (tracks.length) {
+    const feats = [];
+    tracks.forEach(({ e, form, o, t, no }) => {
+      const name = o._trackFile || trackFileName(e, null, o);
+      files.push(['track/' + name, gpxFor(name, o)]);
+      const st = trackStats(o);
+      const props = { form: form.id, lembar_id: e.id, tabel: t ? t.id : 'kepala', no, file: name, jenis: o._trackType || 'garis',
+        panjang_m: Math.round(st.len), luas_ha: o._trackType === 'area' ? +st.ha.toFixed(4) : null, titik: st.n,
+        mulai: st.t0 ? new Date(st.t0 * 1000).toISOString() : null, selesai: st.t1 ? new Date(st.t1 * 1000).toISOString() : null,
+        kode: o.kode || '', lokasi: o.lokasi || e.header.rute || e.header.lokasi || '' };
+      feats.push({ type: 'Feature', properties: props, geometry: { type: 'MultiLineString', coordinates: o._track.map(sg => sg.map(p => [p[1], p[0]])) } });
+      if (o._trackType === 'area' && st.n >= 3) {
+        const ring = o._track.flat().map(p => [p[1], p[0]]); ring.push(ring[0]);
+        feats.push({ type: 'Feature', properties: { ...props, jenis: 'area_poligon' }, geometry: { type: 'Polygon', coordinates: [ring] } });
+      }
+    });
+    files.push(['track/semua_track.geojson', JSON.stringify({ type: 'FeatureCollection', features: feats })]);
+  }
   const keg = [['kode', 'kelompok', 'kegiatan', 'prioritas', 'hari', 'pic', 'status', 'catatan_lapangan']];
   KEG.forEach(k => { const s = S.keg[k.code] || {}; keg.push([k.code, k.kel, k.keg, k.prio, k.hari, s.pic || '', s.status || 'Belum', s.catatan || '']); });
   files.push(['Status_Kegiatan.csv', toCSV(keg)]);

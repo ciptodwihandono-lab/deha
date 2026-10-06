@@ -74,6 +74,13 @@ data/raw/observations/vegetasi_kukang_jawa.csv (isi koordinat_dms + foto)
 Lihat `data/raw/observations/README.md` untuk format pengisian data dan
 daftar spesies pohon pakan/pohon tidur kukang jawa sebagai acuan.
 
+## Aplikasi survei lapangan Pantai Cemara
+
+`apps/survei-pantai-cemara/` berisi aplikasi formulir lapangan (offline, untuk
+HP) untuk Survei Lanjutan KEHATI KEE Mangrove Pantai Cemara: 12 formulir,
+jadwal H1–H4, status kegiatan, GPS, dan ekspor CSV. Lihat
+`apps/survei-pantai-cemara/README.md` untuk cara memasang di HP.
+
 ## Setup tiap tool
 
 ### Python

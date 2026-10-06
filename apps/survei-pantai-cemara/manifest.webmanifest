@@ -1,0 +1,14 @@
+{
+  "name": "Survei KEE Pantai Cemara",
+  "short_name": "Survei Cemara",
+  "description": "Formulir lapangan Survei Lanjutan KEHATI KEE Mangrove Pantai Cemara (offline).",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f1ea",
+  "theme_color": "#1f4a3c",
+  "lang": "id",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

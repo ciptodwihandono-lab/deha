@@ -1,0 +1,1284 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Survei Pantai Cemara</title>
+<meta name="description" content="Formulir lapangan Survei Lanjutan KEHATI KEE Mangrove Pantai Cemara. Bekerja tanpa sinyal.">
+<meta name="theme-color" content="#1f4a3c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+/* Layout: satu kolom sempit untuk HP, bar atas tipis + navigasi bawah; kartu hanya untuk baris data. */
+:root {
+  --bg: #e9eeeb;          /* lumpur pagi, abu kehijauan */
+  --surface: #ffffff;
+  --surface-2: #f4f7f5;
+  --fg: #15231e;
+  --muted: #56665f;
+  --line: #ccd6d1;
+  --accent: #1f6b55;      /* hijau mangrove */
+  --accent-fg: #ffffff;
+  --accent-soft: #d6ebe2;
+  --tide: #24708f;        /* air pasang */
+  --mud: #7d5d3a;         /* substrat */
+  --ok: #2b7a4b;
+  --warn: #a8670f;
+  --bad: #b03636;
+  --bar: #1f4a3c;
+  --bar-fg: #eef5f1;
+  --shadow: 0 1px 2px rgba(20, 40, 30, .08);
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+  --font-data: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --r: 10px;
+  color-scheme: light;
+}
+/* Mode malam: merah redup agar mata tetap adaptasi gelap saat VES & spotlight buaya. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f0c0b; --surface: #1a1412; --surface-2: #221a17; --fg: #f0d9cf; --muted: #b0907f;
+    --line: #3a2c27; --accent: #d06a4a; --accent-fg: #1a0f0b; --accent-soft: #3b2219;
+    --tide: #c98a6d; --mud: #b8906b; --ok: #9fbf6a; --warn: #e0a24a; --bad: #ff7a6b;
+    --bar: #1a1412; --bar-fg: #f0d9cf; --shadow: none; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f0c0b; --surface: #1a1412; --surface-2: #221a17; --fg: #f0d9cf; --muted: #b0907f;
+  --line: #3a2c27; --accent: #d06a4a; --accent-fg: #1a0f0b; --accent-soft: #3b2219;
+  --tide: #c98a6d; --mud: #b8906b; --ok: #9fbf6a; --warn: #e0a24a; --bad: #ff7a6b;
+  --bar: #1a1412; --bar-fg: #f0d9cf; --shadow: none; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-ui);
+  font-size: 16px; line-height: 1.45; -webkit-tap-highlight-color: transparent;
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+}
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--tide); outline-offset: 2px; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 10; background: var(--bar); color: var(--bar-fg);
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar .back {
+  background: none; border: 0; color: inherit; padding: 6px 8px 6px 0; font-size: 22px; line-height: 1; cursor: pointer;
+}
+.topbar h1 { font-size: 17px; margin: 0; font-weight: 650; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; }
+.pill { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor; opacity: .9; white-space: nowrap; }
+.iconbtn { background: none; border: 1px solid color-mix(in srgb, var(--bar-fg) 40%, transparent); color: var(--bar-fg); border-radius: 8px; padding: 5px 9px; font-size: 13px; cursor: pointer; }
+
+main { max-width: 720px; margin: 0 auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface);
+  border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+nav.tabs button {
+  background: none; border: 0; padding: 8px 4px 9px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 12px; color: var(--muted); cursor: pointer; min-height: 58px;
+}
+nav.tabs button svg { width: 24px; height: 24px; }
+nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 650; }
+
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; font-weight: 650; }
+h3 { font-size: 17px; margin: 0; text-wrap: balance; }
+.section { display: flex; flex-direction: column; gap: 10px; }
+.note { font-size: 14px; color: var(--muted); margin: 0; }
+.legend { font-size: 13px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.legend summary { cursor: pointer; color: var(--fg); font-weight: 600; }
+.legend p { margin: 8px 0 0; }
+
+.list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
+.item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 0; border-top: 1px solid var(--line);
+  background: none; text-align: left; width: 100%; cursor: pointer; min-height: 56px;
+}
+.item:first-child { border-top: 0; }
+.item:active { background: var(--surface-2); }
+.item .main { flex: 1; min-width: 0; }
+.item .t { font-weight: 600; }
+.item .s { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.code {
+  font-family: var(--font-data); font-weight: 700; font-size: 13px; min-width: 38px; text-align: center;
+  padding: 4px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent);
+}
+.count { font-family: var(--font-data); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chev { color: var(--muted); }
+
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field.w { grid-column: 1 / -1; }
+.field > label, .field > .lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field .hint { font-size: 12px; color: var(--muted); }
+.field .warn { font-size: 12px; color: var(--warn); font-weight: 600; }
+input[type=text], input[type=date], input[type=time], input[type=datetime-local], select, textarea {
+  width: 100%; min-height: 46px; padding: 10px 11px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--fg); min-width: 0;
+}
+textarea { min-height: 70px; resize: vertical; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; background: var(--surface); }
+.combo { display: flex; gap: 6px; }
+.combo input { flex: 1; }
+.mini {
+  flex: none; border: 1px solid var(--accent); color: var(--accent); background: var(--surface); border-radius: 8px;
+  padding: 0 12px; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 46px;
+}
+.mini.busy { opacity: .6; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 8px 12px; min-height: 40px;
+  font-size: 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline;
+}
+.chip b { font-family: var(--font-data); font-size: 13px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 16px;
+  border-radius: 10px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+  font-weight: 650; cursor: pointer; text-align: center;
+}
+.btn.ghost { background: var(--surface); color: var(--accent); }
+.btn.danger { background: var(--surface); color: var(--bad); border-color: var(--bad); }
+.btn.danger.armed { background: var(--bad); color: var(--surface); }
+.btn.block { width: 100%; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > .btn { flex: 1 1 140px; }
+
+.tablehead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.rcard {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; cursor: pointer; text-align: left; width: 100%;
+  box-shadow: var(--shadow);
+}
+.rcard .no { font-family: var(--font-data); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rcard .rt { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.rcard .rs { grid-column: 2 / 4; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.rcard .num { font-family: var(--font-data); font-weight: 700; font-variant-numeric: tabular-nums; }
+.empty { border: 1px dashed var(--line); border-radius: var(--r); padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+.tally { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tally td { padding: 6px 0; border-top: 1px solid var(--line); }
+.tally td:last-child { text-align: right; font-family: var(--font-data); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tally tr:first-child td { border-top: 0; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+
+.days { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.days .chip { justify-content: center; font-weight: 650; }
+.blk { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.blk.done { opacity: .62; }
+.blk-head { display: flex; align-items: center; gap: 10px; }
+.blk-head .when { font-weight: 700; flex: 1; }
+.blk-head input[type=time] { width: 116px; min-height: 40px; padding: 6px 8px; }
+.blk .what { font-size: 15px; }
+.codes { display: flex; flex-wrap: wrap; gap: 6px; }
+.codes button { border: 0; cursor: pointer; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); }
+
+.meter { height: 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.stat .v { font-family: var(--font-data); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 12px; color: var(--muted); }
+
+.seg { display: inline-grid; grid-template-columns: repeat(3, auto); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface-2); padding: 7px 10px; font-size: 13px; cursor: pointer; min-height: 38px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"][data-v="Selesai"] { background: var(--ok); color: var(--surface); }
+.seg button[aria-pressed="true"][data-v="Proses"] { background: var(--warn); color: var(--surface); }
+.seg button[aria-pressed="true"][data-v="Belum"] { background: var(--muted); color: var(--surface); }
+.keg { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.keg-top { display: flex; gap: 10px; align-items: flex-start; }
+.keg-top .main { flex: 1; min-width: 0; }
+.prio { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 99px; border: 1px solid currentColor; }
+.prio.p1 { color: var(--bad); } .prio.p2 { color: var(--warn); } .prio.p3 { color: var(--muted); }
+.keg-meta { font-size: 13px; color: var(--muted); }
+.keg-ctl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.keg-ctl input { flex: 1 1 120px; min-height: 38px; padding: 6px 10px; }
+.keg details { font-size: 14px; }
+.keg details summary { cursor: pointer; color: var(--tide); font-size: 13px; font-weight: 600; }
+
+.rekap { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.rekap th, .rekap td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+.rekap th:first-child, .rekap td:first-child { text-align: left; }
+.rekap th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.rekap tr.tot td { font-weight: 700; }
+.scroll { overflow-x: auto; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 30;
+  max-width: calc(100% - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+.sticky-actions {
+  position: sticky; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); background: var(--bg);
+  padding-block: 8px; display: flex; gap: 8px; flex-wrap: wrap;
+}
+.sticky-actions .btn { flex: 1 1 140px; }
+.computed { font-size: 13px; color: var(--tide); font-weight: 600; }
+@media (max-width: 420px) { .fields { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr 1fr 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="back" id="backBtn" type="button" aria-label="Kembali" hidden>&#8592;</button>
+  <h1 id="title">Survei Pantai Cemara</h1>
+  <span class="pill" id="net">Offline</span>
+  <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
+</header>
+<main id="app"></main>
+<nav class="tabs" id="tabs">
+  <button type="button" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18c3-2 6-2 9 0s6 2 9 0"/><path d="M12 3v9M8 7l4-4 4 4"/></svg>Hari ini</button>
+  <button type="button" data-tab="forms"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Form</button>
+  <button type="button" data-tab="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg>Status</button>
+  <button type="button" data-tab="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Data</button>
+</nav>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+'use strict';
+
+/* ================= Kode dari formulir ================= */
+const C = {
+  hari: [['H1','Hari 1'],['H2','Hari 2'],['H3','Hari 3'],['H4','Hari 4']],
+  pasang: [['PN','Pasang naik'],['PT','Pasang tertinggi'],['MS','Menuju surut'],['ST','Surut']],
+  cuaca: [['C','Cerah'],['B','Berawan'],['G','Gerimis'],['H','Hujan']],
+  vis: [['Baik','Baik'],['Sedang','Sedang'],['Buruk','Buruk']],
+  alatB: [['BIN','Binokuler'],['SS','Spotting scope']],
+  aktB: [['MM','Mencari makan'],['IS','Istirahat/roosting'],['TB','Terbang'],['TG','Terganggu']],
+  dok: [['F','Foto'],['V','Video']],
+  ganggu: [['MN','Manusia berjalan'],['PR','Perahu'],['JR','Jaring'],['AJ','Anjing'],['LN','Lainnya']],
+  respon: [['0','Tidak ada'],['1','Waspada'],['2','Berpindah dekat'],['3','Terbang meninggalkan area']],
+  habitat: [['TB','Tambak'],['LT','Lahan terbuka'],['KB','Kebun'],['LN','Lainnya']],
+  substrat: [['LM','Lumpur'],['LP','Lumpur berpasir'],['PS','Pasir']],
+  garis: [['AB','Abrasi'],['AK','Akresi'],['ST','Stabil']],
+  ancaman: [['SM','Sampah'],['TI','Tangkapan/alat tangkap ikan'],['PB','Perburuan burung']],
+  tipeSt: [['B','Area mencari makan burung'],['P','Pembanding']],
+  yn: [['Y','Ya'],['T','Tidak']],
+  kalib: [['PH','pH meter'],['TDS','TDS/konduktivitas'],['REF','Refraktometer']],
+  bagian: [['PRW','Perawakan'],['DA','Daun atas'],['DB','Daun bawah'],['UD','Ujung daun'],['SD','Susunan daun'],['BG','Bunga'],['BH','Buah/propagul'],['KB','Kulit batang'],['AK','Akar'],['SK','Skala']],
+  akar: [['NA','Akar napas'],['TJ','Akar tunjang'],['LT','Akar lutut'],['PP','Akar papan'],['TA','Tanpa akar khusus']],
+  mode: [['F','Foto'],['V','Video']],
+  kondisiCam: [['OK','OK'],['PD','Pindah/diganggu'],['RS','Rusak'],['HL','Hilang']],
+  primata: [['TC','Lutung kelabu'],['MF','Monyet ekor-panjang']],
+  aktP: [['MK','Makan'],['BG','Bergerak'],['IS','Istirahat'],['SO','Sosial']],
+  mikro: [['GN','Genangan'],['PR','Parit'],['TM','Tepi mangrove'],['VG','Vegetasi/batang'],['TN','Tanah terbuka']],
+  aktH: [['DM','Diam'],['BG','Bergerak'],['MK','Makan'],['BS','Bersuara']],
+  kelas: [['I','< 1 m'],['II','1–2 m'],['III','2–3 m'],['IV','> 3 m'],['MO','Hanya mata']],
+  posisi: [['AI','Di air'],['TP','Tepian'],['DR','Darat']],
+  reaksi: [['0','Tidak bereaksi'],['1','Menyelam/menjauh']],
+};
+
+const BIRDS = [
+  'Gajahan timur — Numenius madagascariensis','Gajahan besar — Numenius arquata','Gajahan pengala — Numenius phaeopus',
+  'Biru-laut ekor-blorok — Limosa lapponica','Biru-laut ekor-hitam — Limosa limosa','Trinil-lumpur Asia — Limnodromus semipalmatus',
+  'Trinil Nordmann — Tringa guttifer','Trinil kaki-merah — Tringa totanus','Trinil kaki-hijau — Tringa nebularia',
+  'Trinil rawa — Tringa stagnatilis','Trinil semak — Tringa glareola','Trinil bedaran — Xenus cinereus','Trinil pantai — Actitis hypoleucos',
+  'Kedidi besar — Calidris tenuirostris','Kedidi merah — Calidris canutus','Kedidi golgol — Calidris ferruginea',
+  'Kedidi leher-merah — Calidris ruficollis','Kedidi ekor-tajam — Calidris acuminata','Kedidi paruh-lebar — Calidris falcinellus',
+  'Kedidi jari-panjang — Calidris subminuta','Kedidi putih — Calidris alba',
+  'Cerek besar — Pluvialis squatarola','Cerek kernyut — Pluvialis fulva','Cerekpasir Mongolia — Anarhynchus mongolus',
+  'Cerekpasir besar — Anarhynchus leschenaultii','Cerek tilil — Anarhynchus alexandrinus','Cerek kalung-kecil — Charadrius dubius',
+  'Gagang-bayam timur — Himantopus leucocephalus','Kuntul cina — Egretta eulophotes','Kuntul kecil — Egretta garzetta',
+  'Kuntul besar — Ardea alba','Cangak abu — Ardea cinerea','Bangau bluwok — Mycteria cinerea',
+  'Dara-laut kumis — Chlidonias hybrida','Dara-laut sayap-putih — Chlidonias leucopterus','Dara-laut kecil — Sternula albifrons',
+  'Dara-laut tiram — Gelochelidon nilotica','Dara-laut jambul — Thalasseus bergii',
+];
+const FISH = ['Kurau','Kakap putih','Senangin','Manyung','Sembilang','Baung','Gerut','Belanak','Gulama','Malong'];
+
+/* ================= Lembar "Kegiatan & Metode" ================= */
+const KEG = [
+  ['A','Upaya survei','A1','Catat upaya survei per sesi','Wajib di setiap kegiatan; tanpa ini perbandingan antarlokasi dan antartahun tidak sah.','Panjang transek, durasi, jumlah pengamat, jam mulai–selesai, kondisi pasang','Setiap sesi','H1–H4',1],
+  ['A','Upaya survei','A2','Ukur luas area survei','Rekam track GPS batas area yang benar-benar disurvei; hitung luas di QGIS. Indeks non-shorebird dihitung gabungan semua lokasi.','Track GPS, luas (ha) per lokasi dan total','Disisipkan saat berjalan antarlokasi','H1–H3',2],
+  ['B','Burung pantai','B1','Penghitungan saat pasang (high tide count)','Dari titik tetap, mulai 1–2 jam sebelum pasang tertinggi; diulang setiap hari survei sesuai tabel pasang surut.','Jenis, jumlah, jam, titik pengamatan','Pasang tinggi','H1–H4',1],
+  ['B','Burung pantai','B2','Aktivitas burung','Catat per kelompok saat teramati; catat jenis mangsa bila terlihat.','Mencari makan / istirahat (roosting) / terbang / terganggu; jenis mangsa','Bersamaan dengan B1 dan saat surut','H1–H4',1],
+  ['B','Burung pantai','B3','Lokasi persinggahan di luar intertidal','Opsional bila waktu cukup; cek tambak, lahan terbuka, tepi kebun saat pasang tinggi.','Titik GPS, jenis, jumlah, aktivitas','Pasang tinggi','H2 atau H4',3],
+  ['B','Burung pantai','B4','Gangguan di mudflat','Catat setiap kejadian selama pengamatan burung.','Jenis gangguan (manusia, perahu, jaring, anjing), frekuensi, respons burung','Selama B1–B2','H1–H4',1],
+  ['C','Data ancaman','C1','Ekspansi Ipomoea pes-caprae ke mudflat','Plot atau track GPS batas tutupan di tepi mudflat. Klaim "prioritas mendesak" di laporan belum punya angka.','Luas atau persen tutupan, titik GPS, foto','Saat surut','H2–H3',2],
+  ['C','Data ancaman','C2','Titik garis pantai (abrasi/akresi)','Tandai titik dengan GPS dan foto dari arah tetap sebagai titik ulang monitoring.','Koordinat, foto, keterangan kondisi','Saat surut','H1',2],
+  ['C','Data ancaman','C3','Sampah, tangkapan ikan, perburuan burung','Pencatatan sederhana setiap kali dijumpai.','Titik, jumlah, jenis','Sepanjang survei','H1–H4',3],
+  ['D','Perairan & epifauna','D1','Tetapkan stasiun tetap','2–3 stasiun di area mencari makan burung + 1 stasiun pembanding di mudflat yang jarang dipakai burung; menjadi baseline baru.','Kode stasiun, koordinat, foto kondisi','Surut pertama setelah B1–B2','H1',1],
+  ['D','Perairan & epifauna','D2','Ukur parameter air','pH, suhu, salinitas, TDS; TDS meter rentang > 10.000 ppm atau konduktivitimeter; kalibrasi alat. Titik lama (PCM, REHAB, Pemanfaatan) hanya bila searah rute.','Nilai tiap parameter, jam, kondisi pasang, kode stasiun','Saat surut, setelah pengamatan burung','H1–H3',1],
+  ['D','Perairan & epifauna','D3','Kuadrat epifauna','Di stasiun D1; hitung kepiting (termasuk lubang Uca) dan gastropoda per kuadrat; bandingkan stasiun burung vs pembanding. Ukuran kuadrat dan jumlah ulangan disepakati sebelum berangkat. Plankton dan infauna tidak diulang.','Jenis, jumlah per kuadrat (kepadatan per m²); foto jenis yang belum pasti (Bivalvia indet., Cassidula, Cerithidea, Ocypode)','Saat surut, bersamaan dengan D2','H1–H3',1],
+  ['E','Dokumentasi','E1','Foto tumbuhan per jenis','Fokus Avicennia sp. dan 19 jenis berkode numerik; selalu pakai pembanding skala. Untuk Avicennia utamakan warna bawah daun, bentuk ujung daun, bentuk buah.','Perawakan utuh; daun atas dan bawah, ujung, susunan; bunga; buah/propagul; kulit batang; tipe akar; label kode dan koordinat','Siang, di luar jadwal pasang/surut','H2–H3',2],
+  ['E','Dokumentasi','E2','Dokumentasi jenis ikan','Foto dari tangkapan nelayan atau tempat pendaratan, tampak samping, sirip terbuka, dengan skala. Tanyakan musim kemunculan tiap jenis.','Nama lokal, alat tangkap, lokasi tangkap, bulan, musim kemunculan','Saat nelayan pulang melaut','H2–H3',2],
+  ['F','Mamalia & herpetofauna','F1','Petakan lokasi kelompok Macaca','Sebelum memasang kamera jebak; bisa dibantu informasi warga.','Jalur harian, pohon tidur, titik GPS','Pagi H1','H1',2],
+  ['F','Mamalia & herpetofauna','F2','Pasang kamera jebak','Jalur satwa, tepi sungai/parit, batas mangrove–kebun, di atas pasang tertinggi; hindari jalur dan pohon tidur monyet. Security box + kabel pengunci, kamuflase, IR no-glow, label pemilik, silika gel, tanpa umpan. Titipkan pengambilan ke pengelola/warga setelah 2–4 minggu.','Kode unit, koordinat, tinggi, arah hadap, tanggal pasang, pengaturan kamera','Sore H1, setelah F1','H1',2],
+  ['F','Mamalia & herpetofauna','F3','Cek kamera jebak','Cek titik rawan monyet di H3; atur serah terima pengambilan dengan pengelola/warga sebelum pulang.','Tanggal cek, kondisi unit, nama penanggung jawab pengambilan','H3 atau H4','H3–H4',2],
+  ['F','Mamalia & herpetofauna','F4','VES malam herpetofauna','Susuri genangan, parit, tepi mangrove.','Jenis, jumlah, titik, mikrohabitat','Malam','H1–H2',3],
+  ['F','Mamalia & herpetofauna','F5','Spotlight buaya muara','Susuri sungai atau kuala dengan senter.','Jumlah, perkiraan ukuran, lokasi','Malam','H1 atau H2',3],
+  ['F','Mamalia & herpetofauna','F6','Kelompok primata','Setiap kali berjumpa lutung atau monyet ekor-panjang.','Jumlah dan komposisi kelompok (jantan, betina, anak), titik GPS','Sepanjang survei','H1–H4',3],
+].map(([g,kel,code,keg,metode,data,waktu,hari,prio]) => ({g,kel,code,keg,metode,data,waktu,hari,prio}));
+const KEG_CODES = KEG.map(k => [k.code, k.keg]);
+
+/* ================= Lembar "Jadwal 4 Hari" ================= */
+const JADWAL = [
+  ['H1','Pagi','F1 petakan kelompok Macaca; C2 titik garis pantai; A2 track area survei'],
+  ['H1','Pasang tinggi','B1 penghitungan, B2 aktivitas, B4 gangguan; A1 upaya survei'],
+  ['H1','Surut','D1 tetapkan stasiun tetap; D2 parameter air; D3 kuadrat epifauna'],
+  ['H1','Sore','F2 pasang kamera jebak (setelah F1)'],
+  ['H1','Malam','F4 VES herpetofauna; F5 spotlight buaya'],
+  ['H2','Pasang tinggi','B1, B2, B4; B3 lokasi persinggahan di luar intertidal (opsional)'],
+  ['H2','Surut','D2, D3 di stasiun berikutnya; C1 tutupan Ipomoea'],
+  ['H2','Siang','E1 foto tumbuhan; A2 track area survei'],
+  ['H2','Sore','E2 dokumentasi ikan di pendaratan'],
+  ['H2','Malam','F4 VES (bila H1 belum cukup); rekap data harian'],
+  ['H3','Pasang tinggi','B1, B2, B4'],
+  ['H3','Surut','D2, D3 sisa stasiun/ulangan; C1 lanjutan'],
+  ['H3','Siang–sore','E1 dan E2 lanjutan; F3 cek kamera jebak'],
+  ['H3','Malam','Rekap dan cek kelengkapan data (lembar Kegiatan & Metode)'],
+  ['H4','Pasang tinggi','B1, B2, B4 hari terakhir; B3 bila belum'],
+  ['H4','Siang','F3 serah terima kamera jebak ke pengelola/warga; pelengkap data yang kurang'],
+];
+
+/* ================= Lembar "Persiapan Alat" ================= */
+const ALAT = [
+  ['Tabel pasang surut seluruh hari survei; jam di lembar Jadwal diisi','B1, D2–D3'],
+  ['PIC setiap kegiatan diisi di lembar Kegiatan & Metode','Semua'],
+  ['Ukuran kuadrat dan jumlah ulangan epifauna disepakati','D3'],
+  ['Lembar data: metadata sesi, burung pantai, kuadrat epifauna, kamera jebak','A1, B, D3, F2–F3'],
+  ['GPS dan baterai cadangan','A2, C, D1, F'],
+  ['Binokuler, spotting scope, kamera digital','B, E'],
+  ['pH meter, termometer, TDS meter > 10.000 ppm atau konduktivitimeter, refraktometer, larutan kalibrasi','D2'],
+  ['Bingkai kuadrat, meteran, penggaris/pembanding skala foto','D3, E'],
+  ['Kamera jebak, security box, kabel pengunci, baterai, kartu memori, silika gel, label pemilik','F2–F3'],
+  ['Kesepakatan pengambilan kamera jebak dengan pengelola/warga (nama, kontak, tanggal)','F3'],
+  ['Senter/headlamp untuk survei malam','F4–F5'],
+  ['Label kode, spidol tahan air, kantong plastik','D3, E1'],
+];
+
+/* ================= Definisi formulir =================
+   t: text | num | int | date | time | dt | coord | sel | multi | drop | area | list(datalist)  */
+const F = (k, l, t = 'text', x = {}) => ({ k, l, t, ...x });
+const TGL = F('tanggal', 'Tanggal', 'date', { def: 'today' });
+const COORD = F('koordinat', 'Koordinat', 'coord', { w: 1 });
+const CAT = F('catatan', 'Catatan', 'area', { w: 1 });
+const JAM = F('jam', 'Jam', 'time', { def: 'now' });
+const FOTO = F('foto', 'No. foto');
+const pengamat = (l = 'Pengamat') => F('pengamat', l, 'text', { def: 'profile' });
+
+const FORMS = [
+  { id: 'A', title: 'Metadata Sesi Survei', keg: ['A1', 'A2'], kegLabel: 'A1–A2',
+    intro: 'Isi satu baris untuk setiap sesi kegiatan apa pun (burung, air, epifauna, malam, dll.).',
+    legend: 'Kode kegiatan sesuai lembar Excel (mis. B1, D2, F4). Luas (A2) dihitung dari file track GPS di QGIS.',
+    key: 'hari',
+    header: [TGL, F('hari', 'Hari ke-', 'sel', { o: C.hari, def: 'day' }), pengamat('Pencatat'), F('gps', 'GPS (merek/unit)', 'text', { def: 'gps' })],
+    tables: [{ id: 'sesi', title: 'Sesi kegiatan', sum: ['kode', 'lokasi'], fields: [
+      F('kode', 'Kode kegiatan', 'drop', { o: KEG_CODES }), F('lokasi', 'Lokasi / stasiun'),
+      F('mulai', 'Jam mulai', 'time', { def: 'now' }), F('selesai', 'Jam selesai', 'time'),
+      F('nPengamat', 'Jumlah pengamat', 'int'), F('transek', 'Panjang transek (m) / luas (ha)'),
+      F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 }),
+      F('track', 'File track GPS', 'text', { w: 1 }), CAT ] }] },
+
+  { id: 'B1', title: 'Penghitungan Burung Pantai', keg: ['B1', 'B2'], kegLabel: 'B1–B2',
+    intro: 'High tide count dari titik tetap, mulai 1–2 jam sebelum pasang tertinggi.',
+    legend: 'Satu baris = satu jenis dalam satu kelompok pada satu waktu; kelompok campuran dicatat per jenis. Gangguan dicatat di Form B2.',
+    key: 'titik', tally: { table: 'hitung', by: 'jenis', n: 'jumlah' },
+    header: [TGL, F('titik', 'Titik pengamatan'), COORD, pengamat(),
+      F('jamPT', 'Jam pasang tertinggi', 'time'), F('tinggiPT', 'Tinggi pasang (m)', 'num'),
+      F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
+      F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 }), F('vis', 'Visibilitas', 'sel', { o: C.vis, w: 1 }),
+      F('alat', 'Alat', 'multi', { o: C.alatB, w: 1 }), F('pasangMulai', 'Kondisi pasang saat mulai', 'sel', { o: C.pasang, w: 1 })],
+    tables: [{ id: 'hitung', title: 'Hitungan per jenis', sum: ['jenis'], big: 'jumlah', carry: ['sektor', 'aktivitas'], fields: [
+      JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis (nama lokal / ilmiah)', 'list', { o: BIRDS, w: 1 }),
+      F('aktivitas', 'Aktivitas', 'sel', { o: C.aktB, w: 1 }), F('sektor', 'Sektor / lokasi'), F('mangsa', 'Mangsa teramati'),
+      F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), CAT ] }] },
+
+  { id: 'B2', title: 'Gangguan dan Lokasi Persinggahan', keg: ['B3', 'B4'], kegLabel: 'B3–B4',
+    intro: 'Gangguan dicatat selama pengamatan burung; lokasi persinggahan di luar intertidal saat pasang tinggi (opsional).',
+    legend: 'Respons: 0 tidak ada · 1 waspada · 2 berpindah dekat · 3 terbang meninggalkan area.',
+    key: 'tanggal',
+    header: [TGL, pengamat()],
+    tables: [
+      { id: 'gangguan', title: 'Gangguan di mudflat (B4)', sum: ['jenis', 'respons'], big: 'jumlah', fields: [
+        JAM, F('jumlah', 'Jumlah (orang/perahu/ekor)', 'int'), F('jenis', 'Jenis gangguan', 'sel', { o: C.ganggu, w: 1 }),
+        F('jarak', 'Jarak ke burung (m)', 'num'), F('burung', 'Jenis burung terdampak', 'list', { o: BIRDS }),
+        F('respons', 'Respons burung', 'sel', { o: C.respon, w: 1 }), COORD, CAT ] },
+      { id: 'singgah', title: 'Lokasi persinggahan di luar intertidal (B3)', sum: ['jenis', 'habitat'], big: 'jumlah', fields: [
+        JAM, F('kodeTitik', 'Kode titik'), COORD, F('habitat', 'Tipe habitat', 'sel', { o: C.habitat, w: 1 }),
+        F('jenis', 'Jenis', 'list', { o: BIRDS, w: 1 }), F('jumlah', 'Jumlah', 'int'),
+        F('aktivitas', 'Aktivitas', 'sel', { o: C.aktB, w: 1 }), CAT ] }] },
+
+  { id: 'C1', title: 'Tutupan Ipomoea dan Garis Pantai', keg: ['C1', 'C2'], kegLabel: 'C1–C2',
+    intro: 'Dilakukan saat surut.',
+    legend: 'Foto garis pantai diambil dari arah yang sama setiap monitoring; catat arah kompas.',
+    key: 'tanggal',
+    header: [TGL, pengamat(), F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
+      F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }),
+      F('track', 'File track batas tutupan Ipomoea'), F('panjangTrack', 'Panjang track (m)', 'num')],
+    tables: [
+      { id: 'plot', title: 'Plot tutupan Ipomoea pes-caprae (C1)', sum: ['kodePlot', 'substrat'], big: 'tutupan', bigU: '%', fields: [
+        F('kodePlot', 'Kode plot'), F('ukuran', 'Ukuran plot (m × m)', 'text', { ph: '5 × 5' }), COORD,
+        F('tutupan', 'Tutupan Ipomoea (%)', 'num', { min: 0, max: 100 }), F('jarak', 'Jarak ke tepi mudflat (m)', 'num'),
+        F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), FOTO, CAT ] },
+      { id: 'garis', title: 'Titik garis pantai (C2)', sum: ['kodeTitik', 'kondisi'], fields: [
+        F('kodeTitik', 'Kode titik'), F('arah', 'Arah foto (°)', 'num', { min: 0, max: 360 }), COORD, FOTO,
+        F('kondisi', 'Kondisi', 'sel', { o: C.garis, w: 1 }), F('penanda', 'Penanda fisik (patok/pohon/dll.)', 'text', { w: 1 }), CAT ] }] },
+
+  { id: 'C2', title: 'Temuan Ancaman (Oportunistik)', keg: ['C3'], kegLabel: 'C3', quick: true,
+    intro: 'Catat setiap temuan sampah, tangkapan ikan, atau perburuan burung selama survei.',
+    legend: 'PB = perburuan atau penangkapan burung (jerat, jaring kabut, senapan). Untuk sampah, tuliskan jenis dominan (plastik, kayu, styrofoam) dan perkiraan volume atau luas sebaran.',
+    key: 'tanggal',
+    header: [TGL, pengamat('Pencatat')],
+    tables: [{ id: 'temuan', title: 'Temuan', sum: ['kategori', 'uraian'], fields: [
+      F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('kategori', 'Kategori', 'sel', { o: C.ancaman, w: 1 }),
+      F('uraian', 'Jenis / uraian', 'area', { w: 1 }), F('jumlah', 'Jumlah / volume'), FOTO, COORD, CAT ] }] },
+
+  { id: 'D1', title: 'Stasiun Tetap dan Parameter Air', keg: ['D1', 'D2'], kegLabel: 'D1–D2',
+    intro: 'Ukur saat surut, segera setelah pengamatan burung di stasiun.',
+    legend: 'Burung MM: Y bila ada burung mencari makan di stasiun saat pengukuran, T bila tidak. Titik lama (PCM, REHAB, Pemanfaatan) dicatat dengan kode lamanya bila diukur.',
+    key: 'alat',
+    header: [pengamat(), F('alat', 'Alat (merek/tipe)'), F('kalibrasi', 'Kalibrasi', 'multi', { o: C.kalib, w: 1 }),
+      F('tglKalibrasi', 'Tanggal kalibrasi', 'date')],
+    tables: [
+      { id: 'stasiun', title: 'Daftar stasiun tetap (D1)', sum: ['kode', 'tipe'], fields: [
+        F('kode', 'Kode stasiun'), F('tglDitetapkan', 'Tanggal ditetapkan', 'date', { def: 'today' }),
+        F('tipe', 'Tipe', 'sel', { o: C.tipeSt, w: 1 }), COORD, F('deskripsi', 'Deskripsi habitat dan substrat', 'area', { w: 1 }), FOTO ] },
+      { id: 'air', title: 'Pengukuran parameter air (D2)', sum: ['stasiun', 'pasang'], fields: [
+        F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('stasiun', 'Kode stasiun', 'list', { o: 'stations', w: 1 }),
+        F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }), F('mm', 'Burung mencari makan saat ukur?', 'sel', { o: C.yn, w: 1 }),
+        F('ph', 'pH', 'num', { min: 0, max: 14 }), F('suhu', 'Suhu (°C)', 'num', { min: 15, max: 45 }),
+        F('salinitas', 'Salinitas (‰)', 'num', { min: 0, max: 60 }), F('tds', 'TDS (ppm) / Kond. (µS/cm)', 'num'), CAT ] }] },
+
+  { id: 'D2', title: 'Kuadrat Epifauna', keg: ['D3'], kegLabel: 'D3',
+    intro: 'Satu lembar untuk satu stasiun per kunjungan.',
+    legend: 'Hitung individu yang terlihat di permukaan dan lubang Uca aktif di dalam kuadrat. Jenis yang belum pasti tulis nama sementara + nomor foto (mis. "Bivalvia sp. 1, foto 233–235"). Kepadatan per m² dihitung otomatis dari ukuran kuadrat.',
+    key: 'stasiun',
+    header: [TGL, F('stasiun', 'Kode stasiun', 'list', { o: 'stations' }), F('tipe', 'Tipe stasiun', 'sel', { o: C.tipeSt, w: 1 }), COORD,
+      F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'), F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }),
+      F('kuadrat', 'Ukuran kuadrat (m × m)', 'text', { ph: '0,5 × 0,5' }), pengamat(),
+      F('burungMM', 'Burung mencari makan di stasiun?', 'sel', { o: C.yn, w: 1 }), F('jenisBurung', 'Jenis burung', 'list', { o: BIRDS }),
+      F('jarakKuadrat', 'Jarak antarkuadrat (m)', 'num')],
+    tables: [{ id: 'kuadrat', title: 'Kuadrat', sum: ['ke'], numbered: 'ke', fields: [
+      F('ke', 'Kuadrat ke-', 'int'), F('uca', 'Uca (individu)', 'int'), F('lubang', 'Lubang Uca aktif', 'int'), F('bivalvia', 'Bivalvia (jumlah)', 'int'),
+      F('kepiting', 'Kepiting lain (jenis: jml)', 'text', { w: 1, ph: 'Ocypode: 2' }), F('gastropoda', 'Gastropoda (jenis: jml)', 'text', { w: 1, ph: 'Cerithidea: 14; Cassidula: 3' }),
+      F('lainnya', 'Lainnya (jenis: jml)', 'text', { w: 1 }), F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), FOTO, CAT ] }] },
+
+  { id: 'E1', title: 'Dokumentasi Foto Tumbuhan', keg: ['E1'], kegLabel: 'E1',
+    intro: 'Fokus Avicennia sp. dan 19 jenis berkode numerik. Tandai setiap bagian yang sudah difoto; selalu sertakan pembanding skala.',
+    legend: 'Untuk Avicennia, foto jelas warna permukaan bawah daun, bentuk ujung daun, dan bentuk buah. Beri label kode jenis pada foto pertama setiap set.',
+    key: 'lokasi',
+    header: [TGL, pengamat(), F('lokasi', 'Lokasi'), F('kamera', 'Kamera')],
+    tables: [{ id: 'foto', title: 'Set foto per jenis', sum: ['kode', 'fotoNo'], fields: [
+      F('kode', 'Kode jenis / nama sementara', 'text', { w: 1 }), COORD,
+      F('bagian', 'Bagian yang sudah difoto', 'multi', { o: C.bagian, w: 1 }), F('fotoNo', 'No. foto (dari–sampai)'),
+      F('akar', 'Tipe akar', 'sel', { o: C.akar, w: 1 }), CAT ] }] },
+
+  { id: 'E2', title: 'Dokumentasi Jenis Ikan', keg: ['E2'], kegLabel: 'E2',
+    intro: 'Dari tangkapan nelayan atau tempat pendaratan. Foto tampak samping, sirip terbuka, dengan pembanding skala.',
+    legend: 'Panjang total dari ujung mulut ke ujung ekor; bila banyak individu, tulis kisaran. Tanyakan juga jenis dari daftar laporan sebelumnya (kurau, kakap putih, senangin, manyung, sembilang, baung, gerut, belanak, gulama, malong) meskipun tidak ada saat survei.',
+    key: 'lokasiPendaratan',
+    header: [TGL, pengamat('Pewawancara / pencatat'), F('lokasiPendaratan', 'Lokasi pendaratan'), F('jam', 'Jam', 'time', { def: 'now' }),
+      F('informan', 'Informan (nama, asal)', 'text', { w: 1 }), COORD],
+    tables: [{ id: 'ikan', title: 'Jenis ikan', sum: ['lokal', 'musim'], big: 'jumlah', fields: [
+      F('lokal', 'Nama lokal', 'list', { o: FISH }), F('ilmiah', 'Nama ilmiah (bila tahu)'), F('jumlah', 'Jumlah', 'int'),
+      F('panjang', 'Panjang (cm)', 'text', { ph: '25–32' }), F('alat', 'Alat tangkap'), F('lokasiTangkap', 'Lokasi tangkap'),
+      F('musim', 'Musim muncul (menurut nelayan)', 'area', { w: 1 }), FOTO, CAT ] }] },
+
+  { id: 'F1', title: 'Kamera Jebak', keg: ['F2', 'F3'], kegLabel: 'F2–F3',
+    intro: 'Pasang setelah lokasi kelompok Macaca dipetakan (Form F2). Satu baris = satu unit.',
+    legend: 'Pengaturan: sensitivitas, jumlah foto per picu, interval, panjang video. Pastikan label pemilik terpasang dan tidak ada sisa makanan di sekitar unit. Hari-kamera dihitung otomatis.',
+    key: 'tglPasang',
+    header: [F('tglPasang', 'Tanggal pemasangan', 'date', { def: 'today' }), pengamat('Pemasang'),
+      F('pj', 'Penanggung jawab pengambilan (nama, kontak)', 'text', { w: 1 }), F('rencanaAmbil', 'Rencana tanggal pengambilan', 'date')],
+    tables: [{ id: 'unit', title: 'Unit kamera', sum: ['kode', 'kondisi'], fields: [
+      F('kode', 'Kode unit'), F('pasang', 'Tanggal–jam pasang', 'dt', { def: 'nowdt' }), COORD,
+      F('habitat', 'Habitat / lokasi', 'text', { w: 1 }), F('tinggi', 'Tinggi (cm)', 'num'), F('arah', 'Arah (°)', 'num', { min: 0, max: 360 }),
+      F('target', 'Target'), F('mode', 'Mode', 'sel', { o: C.mode }), F('pengaturan', 'Pengaturan', 'text', { w: 1 }),
+      F('box', 'Box + kabel terpasang', 'sel', { o: C.yn }), F('kartu', 'Kartu + baterai', 'sel', { o: C.yn }),
+      F('rawan', 'Rawan Macaca', 'sel', { o: C.yn, w: 1 }), F('tglCek', 'Tanggal cek', 'date'),
+      F('kondisi', 'Kondisi saat cek', 'sel', { o: C.kondisiCam, w: 1 }), F('tglAmbil', 'Tanggal ambil', 'date'), CAT ] }] },
+
+  { id: 'F2', title: 'Primata dan Pemetaan Kelompok Macaca', keg: ['F1', 'F6'], kegLabel: 'F1, F6', quick: true,
+    intro: 'Catat setiap perjumpaan lutung atau monyet ekor-panjang selama survei.',
+    legend: 'TC lutung kelabu (Trachypithecus cristatus) · MF monyet ekor-panjang (Macaca fascicularis). Anak termasuk yang digendong. Bila jumlah tidak pasti, tulis perkiraan minimum dan centang "≥". Lokasi MF dipakai untuk menghindari titik kamera jebak yang rawan.',
+    key: 'periode',
+    header: [pengamat('Pencatat'), F('periode', 'Periode survei')],
+    tables: [{ id: 'jumpa', title: 'Perjumpaan', sum: ['jenis', 'aktivitas'], big: 'total', fields: [
+      F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('jenis', 'Jenis', 'sel', { o: C.primata, w: 1 }), COORD,
+      F('total', 'Jumlah total', 'int'), F('minimum', 'Perkiraan minimum (≥)?', 'sel', { o: C.yn }),
+      F('jd', 'Jantan dewasa', 'int'), F('bd', 'Betina dewasa', 'int'), F('rmj', 'Remaja', 'int'), F('anak', 'Anak', 'int'),
+      F('aktivitas', 'Aktivitas', 'sel', { o: C.aktP, w: 1 }), F('pohonTidur', 'Pohon tidur?', 'sel', { o: C.yn }),
+      F('arahGerak', 'Arah gerak'), CAT ] }] },
+
+  { id: 'F3', title: 'Survei Malam: Herpetofauna dan Buaya', keg: ['F4', 'F5'], kegLabel: 'F4–F5', night: true,
+    intro: 'VES menyusuri genangan, parit, dan tepi mangrove; spotlight di sungai atau kuala.',
+    legend: 'Kelas ukuran buaya: I < 1 m · II 1–2 m · III 2–3 m · IV > 3 m · MO hanya mata terlihat. Gunakan tema Malam agar layar tidak menyilaukan.',
+    key: 'rute',
+    header: [TGL, F('rute', 'Rute / lokasi'), F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
+      F('panjang', 'Panjang rute (m)', 'num'), pengamat(), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 })],
+    tables: [
+      { id: 'ves', title: 'VES herpetofauna (F4)', sum: ['jenis', 'mikro'], big: 'jumlah', fields: [
+        JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis', 'text', { w: 1 }), F('mikro', 'Mikrohabitat', 'sel', { o: C.mikro, w: 1 }),
+        F('aktivitas', 'Aktivitas', 'sel', { o: C.aktH, w: 1 }), COORD, F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), CAT ] },
+      { id: 'buaya', title: 'Spotlight buaya muara (F5)', sum: ['kelas', 'posisi'], big: 'jumlah', fields: [
+        JAM, F('jumlah', 'Jumlah', 'int'), COORD, F('kelas', 'Kelas ukuran', 'sel', { o: C.kelas, w: 1 }),
+        F('posisi', 'Posisi', 'sel', { o: C.posisi, w: 1 }), F('reaksi', 'Reaksi', 'sel', { o: C.reaksi, w: 1 }), CAT ] }] },
+];
+const FORM = Object.fromEntries(FORMS.map(f => [f.id, f]));
+const CODE_TO_FORM = {};
+FORMS.forEach(f => f.keg.forEach(k => { CODE_TO_FORM[k] = f.id; }));
+
+/* ================= Penyimpanan ================= */
+const KEY = 'survei-cemara-v1';
+let S = load();
+function blank() { return { v: 1, profile: { nama: '', gps: '', hari: 'H1', device: rid() }, entries: {}, keg: {}, jadwal: {}, alat: {} }; }
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) return Object.assign(blank(), JSON.parse(raw)); } catch (e) {}
+  return blank();
+}
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { toast('Gagal menyimpan: memori browser penuh. Ekspor data lalu hapus lembar lama.'); }
+}
+function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
+window.addEventListener('pagehide', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+/* ================= Utilitas ================= */
+function rid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+const pad = n => String(n).padStart(2, '0');
+function today() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function nowTime() { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function fmtDate(s) {
+  if (!s) return '';
+  const [y, m, d] = s.split('-');
+  const bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][+m - 1];
+  return `${+d} ${bln} ${y}`;
+}
+function num(v) { if (v == null || v === '') return NaN; return parseFloat(String(v).replace(',', '.')); }
+function label(f, v) {
+  if (v == null || v === '') return '';
+  if (f.t === 'multi') return (v || []).map(x => (f.o.find(o => o[0] === x) || [x, x])[1]).join(', ');
+  if (f.t === 'sel' || f.t === 'drop') { const o = f.o.find(o => o[0] === v); return o ? `${o[0]} ${o[1]}` : v; }
+  if (f.t === 'date') return fmtDate(v);
+  if (f.t === 'list') return String(v).split(' — ')[0];
+  return String(v);
+}
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+function quadArea(s) {
+  const n = String(s || '').replace(/,/g, '.').match(/\d+(\.\d+)?/g);
+  if (!n) return NaN;
+  return n.length >= 2 ? (+n[0]) * (+n[1]) : (+n[0]) * (+n[0]);
+}
+function stations() {
+  const set = new Set();
+  Object.values(S.entries).forEach(e => {
+    if (e.form === 'D1') (e.tables.stasiun || []).forEach(r => r.kode && set.add(r.kode));
+    if (e.form === 'D2' && e.header.stasiun) set.add(e.header.stasiun);
+  });
+  ['PCM', 'REHAB', 'Pemanfaatan'].forEach(x => set.add(x));
+  return [...set];
+}
+function defaultFor(f) {
+  switch (f.def) {
+    case 'today': return today();
+    case 'now': return nowTime();
+    case 'nowdt': return `${today()}T${nowTime()}`;
+    case 'profile': return S.profile.nama || '';
+    case 'gps': return S.profile.gps || '';
+    case 'day': return S.profile.hari || '';
+    default: return '';
+  }
+}
+function entriesOf(formId) {
+  return Object.values(S.entries).filter(e => e.form === formId).sort((a, b) => (b.created || 0) - (a.created || 0));
+}
+function rowCount(e) { return Object.values(e.tables || {}).reduce((n, rows) => n + rows.length, 0); }
+function computed(form, table, row, entry) {
+  const out = [];
+  if (form.id === 'D2' && table.id === 'kuadrat') {
+    const a = quadArea(entry.header.kuadrat);
+    if (a > 0) {
+      const u = num(row.uca), l = num(row.lubang);
+      if (!isNaN(u)) out.push(['ucaPerM2', 'Uca/m²', +(u / a).toFixed(2)]);
+      if (!isNaN(l)) out.push(['lubangPerM2', 'Lubang/m²', +(l / a).toFixed(2)]);
+    }
+  }
+  if (form.id === 'F1' && table.id === 'unit' && row.pasang && row.tglAmbil) {
+    const d = (new Date(row.tglAmbil) - new Date(row.pasang.slice(0, 10))) / 86400000;
+    if (!isNaN(d)) out.push(['hariKamera', 'Hari-kamera', Math.round(d)]);
+  }
+  return out;
+}
+
+/* ================= Navigasi ================= */
+let view = { v: 'home' };
+function go(v, replace) {
+  view = v;
+  if (replace) history.replaceState(v, ''); else history.pushState(v, '');
+  render(); window.scrollTo(0, 0);
+}
+window.addEventListener('popstate', e => { view = e.state || { v: 'home' }; cleanupEmptyRows(); render(); });
+history.replaceState(view, '');
+const TABS = { home: 'home', forms: 'forms', entries: 'forms', entry: 'forms', row: 'forms', status: 'status', data: 'data' };
+
+/* Baris baru yang ditinggal kosong dihapus agar lembar tetap rapi. */
+let pendingNew = null;
+function cleanupEmptyRows() {
+  if (!pendingNew) return;
+  const { id, t, rowId } = pendingNew; pendingNew = null;
+  const e = S.entries[id]; if (!e) return;
+  const rows = e.tables[t] || []; const i = rows.findIndex(r => r._id === rowId);
+  if (i < 0) return;
+  const r = rows[i];
+  const filled = Object.keys(r).filter(k => !k.startsWith('_') && !(r._auto || []).includes(k) && r[k] !== '' && !(Array.isArray(r[k]) && !r[k].length));
+  if (!filled.length) { rows.splice(i, 1); save(); }
+}
+
+/* ================= Render ================= */
+const app = document.getElementById('app');
+function setTitle(t, sub) {
+  document.getElementById('title').innerHTML = esc(t) + (sub ? `<span class="sub">${esc(sub)}</span>` : '');
+}
+function render() {
+  document.getElementById('backBtn').hidden = !['entries', 'entry', 'row'].includes(view.v);
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', TABS[view.v] === b.dataset.tab ? 'page' : 'false'));
+  ({ home: renderHome, forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, status: renderStatus, data: renderData }[view.v] || renderHome)();
+}
+
+function renderHome() {
+  const day = S.profile.hari || 'H1';
+  setTitle('Survei Pantai Cemara', `KEE Mangrove · ${S.profile.nama || 'isi nama di tab Data'}`);
+  const blocks = JADWAL.map((j, i) => ({ j, i })).filter(x => x.j[0] === day);
+  const total = KEG.length, done = KEG.filter(k => kegStatus(k.code) === 'Selesai').length;
+  const p1 = KEG.filter(k => k.prio === 1), p1done = p1.filter(k => kegStatus(k.code) === 'Selesai').length;
+  const nRows = Object.values(S.entries).reduce((n, e) => n + rowCount(e), 0);
+  app.innerHTML = `
+    <section class="section">
+      <h2>Hari survei</h2>
+      <div class="days">${C.hari.map(([c]) => `<button type="button" class="chip" data-act="day" data-v="${c}" aria-pressed="${c === day}">${c}</button>`).join('')}</div>
+    </section>
+    <section class="stats" aria-label="Ringkasan">
+      <div class="stat"><div class="v">${done}/${total}</div><div class="k">Kegiatan selesai</div></div>
+      <div class="stat"><div class="v">${p1done}/${p1.length}</div><div class="k">Prioritas 1</div></div>
+      <div class="stat"><div class="v">${nRows}</div><div class="k">Baris data</div></div>
+    </section>
+    <section class="section">
+      <h2>Catat cepat</h2>
+      <div class="row">
+        <button type="button" class="btn ghost" data-act="quick" data-f="C2">+ Temuan ancaman (C3)</button>
+        <button type="button" class="btn ghost" data-act="quick" data-f="F2">+ Perjumpaan primata (F6)</button>
+      </div>
+    </section>
+    <section class="section">
+      <h2>Jadwal ${esc(day)}${day === 'H4' ? ' (opsional)' : ''}</h2>
+      <p class="note">Isi jam tiap blok dari tabel pasang surut. Ketuk kode kegiatan untuk membuka formulirnya.</p>
+      ${blocks.map(({ j, i }) => {
+        const st = S.jadwal[i] || {};
+        const codes = [...new Set((j[2].match(/\b[A-F][1-6]\b/g) || []))];
+        return `<div class="blk${st.cek ? ' done' : ''}">
+          <div class="blk-head">
+            <span class="when">${esc(j[1])}</span>
+            <input type="time" id="jam-${i}" aria-label="Jam blok ${esc(j[1])}" value="${esc(st.jam || '')}" data-jad="${i}" data-k="jam">
+            <label class="check"><input type="checkbox" id="cek-${i}" data-jad="${i}" data-k="cek" ${st.cek ? 'checked' : ''}>Cek</label>
+          </div>
+          <div class="what">${esc(j[2])}</div>
+          ${codes.length ? `<div class="codes">${codes.map(c => `<button type="button" class="code" data-act="openform" data-f="${CODE_TO_FORM[c] || ''}">${c}</button>`).join('')}</div>` : ''}
+        </div>`;
+      }).join('')}
+      <p class="note">A1 (upaya survei) dan C3, F6 (pencatatan oportunistik) dilakukan di setiap sesi.</p>
+    </section>`;
+}
+
+function renderForms() {
+  setTitle('Formulir', '12 lembar data lapangan');
+  const groups = { A: 'Upaya survei', B: 'Burung pantai', C: 'Data ancaman', D: 'Perairan & epifauna', E: 'Dokumentasi', F: 'Mamalia & herpetofauna' };
+  app.innerHTML = Object.entries(groups).map(([g, name]) => `
+    <section class="section"><h2>${g}. ${esc(name)}</h2>
+      <div class="list">${FORMS.filter(f => f.id[0] === g).map(f => {
+        const es = entriesOf(f.id); const n = es.reduce((a, e) => a + rowCount(e), 0);
+        return `<button type="button" class="item" data-act="openform" data-f="${f.id}">
+          <span class="code">${f.id}</span>
+          <span class="main"><span class="t">${esc(f.title)}</span><br><span class="s">Kegiatan ${esc(f.kegLabel)}</span></span>
+          <span class="count">${es.length ? `${es.length} lbr · ${n} brs` : '—'}</span><span class="chev">›</span></button>`;
+      }).join('')}</div></section>`).join('');
+}
+
+function entryLabel(form, e) {
+  const k = form.header.find(f => f.k === form.key);
+  const main = k ? label(k, e.header[form.key]) : '';
+  const tgl = e.header.tanggal || e.header.tglPasang;
+  return { t: main || (tgl ? fmtDate(tgl) : 'Lembar tanpa judul'), s: [tgl && main !== fmtDate(tgl) ? fmtDate(tgl) : '', e.header.pengamat].filter(Boolean).join(' · ') };
+}
+
+function renderEntries() {
+  const form = FORM[view.f];
+  setTitle(`Form ${form.id}`, form.title);
+  const es = entriesOf(form.id);
+  app.innerHTML = `
+    <section class="section">
+      <h3>${esc(form.title)}</h3>
+      <p class="note">Kegiatan ${esc(form.kegLabel)} · ${esc(form.intro)}</p>
+      <button type="button" class="btn block" data-act="newentry" data-f="${form.id}">+ Lembar baru</button>
+    </section>
+    <section class="section"><h2>Lembar tersimpan</h2>
+      ${es.length ? `<div class="list">${es.map(e => {
+        const l = entryLabel(form, e);
+        return `<button type="button" class="item" data-act="openentry" data-id="${e.id}">
+          <span class="main"><span class="t">${esc(l.t)}</span><br><span class="s">${esc(l.s || '—')}</span></span>
+          <span class="count">${rowCount(e)} baris</span><span class="chev">›</span></button>`;
+      }).join('')}</div>` : `<div class="empty">Belum ada lembar. Ketuk "Lembar baru" untuk mulai mencatat.</div>`}
+    </section>`;
+}
+
+function fieldHTML(f, val, scope, extra = {}) {
+  const id = `${scope}-${f.k}`;
+  const w = f.w ? ' w' : '';
+  const attrs = `id="${id}" data-k="${f.k}"`;
+  const v = val ?? '';
+  let warn = '';
+  if ((f.min != null || f.max != null) && v !== '') {
+    const n = num(v);
+    if (isNaN(n)) warn = 'Bukan angka';
+    else if ((f.min != null && n < f.min) || (f.max != null && n > f.max)) warn = `Di luar kisaran wajar (${f.min}–${f.max})`;
+  }
+  const warnHTML = `<span class="warn" data-warn="${f.k}"${warn ? '' : ' hidden'}>${esc(warn)}</span>`;
+  switch (f.t) {
+    case 'sel': case 'multi': {
+      const sel = f.t === 'multi' ? (Array.isArray(v) ? v : []) : [v];
+      return `<div class="field${w}"><span class="lbl" id="${id}-l">${esc(f.l)}</span>
+        <div class="chips" role="group" aria-labelledby="${id}-l">${f.o.map(([c, l]) =>
+          `<button type="button" class="chip" data-act="${f.t}" data-k="${f.k}" data-v="${esc(c)}" aria-pressed="${sel.includes(c)}">${c !== l ? `<b>${esc(c)}</b>` : ''}${esc(l)}</button>`).join('')}</div></div>`;
+    }
+    case 'drop':
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><select ${attrs}><option value="">— pilih —</option>${f.o.map(([c, l]) => `<option value="${esc(c)}"${c === v ? ' selected' : ''}>${esc(c)} · ${esc(l)}</option>`).join('')}</select></div>`;
+    case 'area':
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><textarea ${attrs} rows="2">${esc(v)}</textarea></div>`;
+    case 'date':
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><input type="date" ${attrs} value="${esc(v)}"></div>`;
+    case 'dt':
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><input type="datetime-local" ${attrs} value="${esc(v)}"></div>`;
+    case 'time':
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><div class="combo"><input type="time" ${attrs} value="${esc(v)}"><button type="button" class="mini" data-act="now" data-k="${f.k}">Kini</button></div></div>`;
+    case 'coord': {
+      const acc = extra.acc ? `Akurasi ±${extra.acc} m` : 'Desimal: lintang, bujur (mis. -0.99512, 104.08934)';
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><div class="combo"><input type="text" inputmode="decimal" ${attrs} value="${esc(v)}" placeholder="lintang, bujur"><button type="button" class="mini" data-act="gps" data-k="${f.k}">Ambil GPS</button></div><span class="hint" data-acc="${f.k}">${esc(acc)}</span></div>`;
+    }
+    case 'num': case 'int':
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><input type="text" inputmode="${f.t === 'int' ? 'numeric' : 'decimal'}" ${attrs} value="${esc(v)}"${f.ph ? ` placeholder="${esc(f.ph)}"` : ''}>${warnHTML}</div>`;
+    case 'list': {
+      const opts = f.o === 'stations' ? stations() : f.o;
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><input type="text" list="${id}-dl" autocomplete="off" ${attrs} value="${esc(v)}"><datalist id="${id}-dl">${opts.map(o => `<option value="${esc(o)}"></option>`).join('')}</datalist></div>`;
+    }
+    default:
+      return `<div class="field${w}"><label for="${id}">${esc(f.l)}</label><input type="text" ${attrs} value="${esc(v)}"${f.ph ? ` placeholder="${esc(f.ph)}"` : ''}></div>`;
+  }
+}
+
+function rowSummary(form, table, row, entry) {
+  const fs = Object.fromEntries(table.fields.map(f => [f.k, f]));
+  const title = table.sum.map(k => label(fs[k], row[k])).filter(Boolean).join(' · ') || '(belum diisi)';
+  const bits = [row.jam || row.tanggal && fmtDate(row.tanggal), row.koordinat || '', row.catatan].filter(Boolean);
+  computed(form, table, row, entry).forEach(([, l, v]) => bits.push(`${l} ${v}`));
+  const big = table.big && row[table.big] !== undefined && row[table.big] !== '' ? `${row[table.big]}${table.bigU || ''}` : '';
+  return { title, sub: bits.join(' · '), big };
+}
+
+function renderEntry() {
+  const e = S.entries[view.id];
+  if (!e) { go({ v: 'forms' }, true); return; }
+  const form = FORM[e.form];
+  const l = entryLabel(form, e);
+  setTitle(`Form ${form.id} · ${l.t}`, form.title);
+  let tallyHTML = '';
+  if (form.tally) {
+    const sums = {};
+    (e.tables[form.tally.table] || []).forEach(r => {
+      const n = num(r[form.tally.n]); if (!r[form.tally.by] || isNaN(n)) return;
+      const k = String(r[form.tally.by]).split(' — ')[0]; sums[k] = (sums[k] || 0) + n;
+    });
+    const list = Object.entries(sums).sort((a, b) => b[1] - a[1]);
+    if (list.length) tallyHTML = `<section class="section"><h2>Total per jenis (${list.length} jenis, ${list.reduce((a, b) => a + b[1], 0)} individu)</h2>
+      <div class="box"><table class="tally">${list.map(([k, n]) => `<tr><td>${esc(k)}</td><td>${n}</td></tr>`).join('')}</table></div></section>`;
+  }
+  app.innerHTML = `
+    <details class="legend"><summary>Petunjuk Form ${form.id}</summary><p>${esc(form.intro)}</p><p>${esc(form.legend)}</p></details>
+    <section class="section"><h2>Kepala lembar</h2>
+      <div class="fields" data-scope="h">${form.header.map(f => fieldHTML(f, e.header[f.k], 'h', { acc: e.header[f.k + 'Acc'] })).join('')}</div>
+    </section>
+    ${tallyHTML}
+    ${form.tables.map(t => {
+      const rows = e.tables[t.id] || [];
+      return `<section class="section">
+        <div class="tablehead"><h2>${esc(t.title)}</h2><span class="count">${rows.length} baris</span></div>
+        ${rows.length ? `<div class="rows">${rows.map((r, i) => {
+          const s = rowSummary(form, t, r, e);
+          return `<button type="button" class="rcard" data-act="openrow" data-t="${t.id}" data-i="${i}">
+            <span class="no">${i + 1}</span><span class="rt">${esc(s.title)}</span><span class="num">${esc(s.big)}</span>
+            ${s.sub ? `<span class="rs">${esc(s.sub)}</span>` : ''}</button>`;
+        }).join('')}</div>` : `<div class="empty">Belum ada baris.</div>`}
+        <button type="button" class="btn block" data-act="newrow" data-t="${t.id}">+ Tambah baris</button>
+      </section>`;
+    }).join('')}
+    <section class="section"><h2>Lembar ini</h2>
+      <div class="row">
+        <button type="button" class="btn ghost" data-act="dupentry">Salin kepala ke lembar baru</button>
+        <button type="button" class="btn danger" data-act="delentry">Hapus lembar</button>
+      </div>
+    </section>`;
+}
+
+function renderRow() {
+  const e = S.entries[view.id]; const form = e && FORM[e.form];
+  const t = form && form.tables.find(x => x.id === view.t);
+  const rows = t && e.tables[t.id];
+  const row = rows && rows[view.i];
+  if (!row) { go({ v: 'entry', id: view.id }, true); return; }
+  setTitle(`${t.title.replace(/\s*\(.*\)$/, '')} · baris ${view.i + 1}`, `Form ${form.id} · ${entryLabel(form, e).t}`);
+  const comp = computed(form, t, row, e);
+  app.innerHTML = `
+    <div class="fields" data-scope="r">${t.fields.map(f => fieldHTML(f, row[f.k], 'r', { acc: row[f.k + 'Acc'] })).join('')}
+      ${(form.id === 'D2' || form.id === 'F1') ? `<div class="field w"><span class="computed" id="computed">${comp.map(c => `${c[1]}: ${c[2]}`).join(' · ')}</span></div>` : ''}
+    </div>
+    <div class="sticky-actions">
+      <button type="button" class="btn" data-act="rowdone">Selesai</button>
+      <button type="button" class="btn ghost" data-act="rownext">Simpan + baris baru</button>
+    </div>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="rowdup">Duplikat baris</button>
+      <button type="button" class="btn danger" data-act="rowdel">Hapus baris</button>
+    </div>
+    <p class="note">Data tersimpan otomatis di HP setiap kali Anda mengetik.</p>`;
+}
+
+function kegStatus(code) { return (S.keg[code] || {}).status || 'Belum'; }
+function renderStatus() {
+  setTitle('Status kegiatan', 'Kegiatan & Metode · Persiapan Alat');
+  const groups = [...new Set(KEG.map(k => k.kel))];
+  const rek = groups.map(g => {
+    const ks = KEG.filter(k => k.kel === g);
+    const c = s => ks.filter(k => kegStatus(k.code) === s).length;
+    return [g, ks.length, c('Selesai'), c('Proses'), c('Belum')];
+  });
+  const tot = rek.reduce((a, r) => a.map((x, i) => i ? x + r[i] : x), ['Total', 0, 0, 0, 0]);
+  const p1 = KEG.filter(k => k.prio === 1), p1d = p1.filter(k => kegStatus(k.code) === 'Selesai').length;
+  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  app.innerHTML = `
+    <section class="section"><h2>Rekap status</h2>
+      <div class="box scroll"><table class="rekap">
+        <thead><tr><th>Kelompok</th><th>Jml</th><th>Selesai</th><th>Proses</th><th>Belum</th><th>%</th></tr></thead>
+        <tbody>${rek.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${pct(r[2], r[1])}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td>${tot[1]}</td><td>${tot[2]}</td><td>${tot[3]}</td><td>${tot[4]}</td><td>${pct(tot[2], tot[1])}</td></tr></tbody>
+      </table></div>
+      <div class="box"><div class="tablehead"><strong>Prioritas 1 selesai</strong><span class="count">${p1d}/${p1.length}</span></div>
+        <div class="meter" style="margin-top:8px"><i style="width:${pct(p1d, p1.length)}%"></i></div></div>
+    </section>
+    <section class="section"><h2>Kegiatan & metode</h2>
+      <p class="note">Prioritas 1 = wajib; 2 = penting bila waktu cukup; 3 = opsional/oportunistik.</p>
+      ${KEG.map(k => {
+        const st = S.keg[k.code] || {};
+        const fid = CODE_TO_FORM[k.code];
+        const nRows = entriesOf(fid).reduce((a, e) => a + rowCount(e), 0);
+        return `<div class="keg">
+          <div class="keg-top"><button type="button" class="code" data-act="openform" data-f="${fid}">${k.code}</button>
+            <div class="main"><strong>${esc(k.keg)}</strong><div class="keg-meta">${esc(k.waktu)} · ${esc(k.hari)} · Form ${fid}: ${nRows} baris</div></div>
+            <span class="prio p${k.prio}">P${k.prio}</span></div>
+          <div class="keg-ctl">
+            <div class="seg" role="group" aria-label="Status ${k.code}">${['Belum', 'Proses', 'Selesai'].map(s => `<button type="button" data-act="kegstatus" data-c="${k.code}" data-v="${s}" aria-pressed="${kegStatus(k.code) === s}">${s}</button>`).join('')}</div>
+            <input type="text" id="pic-${k.code}" placeholder="PIC" aria-label="PIC ${k.code}" value="${esc(st.pic || '')}" data-keg="${k.code}" data-k="pic">
+          </div>
+          <details><summary>Metode, data dicatat & catatan lapangan</summary>
+            <p><strong>Metode:</strong> ${esc(k.metode)}</p><p><strong>Data dicatat:</strong> ${esc(k.data)}</p>
+            <textarea id="cat-${k.code}" rows="2" placeholder="Catatan lapangan, mis. pasang tertinggi 2,6 m pukul 10.40" data-keg="${k.code}" data-k="catatan">${esc(st.catatan || '')}</textarea>
+          </details>
+        </div>`;
+      }).join('')}
+    </section>
+    <section class="section"><h2>Persiapan sebelum berangkat</h2>
+      <div class="list">${ALAT.map(([item, utk], i) => {
+        const st = S.alat[i] || {};
+        return `<div class="item" style="cursor:default;flex-wrap:wrap">
+          <label class="check" style="flex:1;min-width:0;align-items:flex-start"><input type="checkbox" id="alat-${i}" data-alat="${i}" data-k="siap" ${st.siap ? 'checked' : ''}>
+            <span><span class="t">${esc(item)}</span><br><span class="s">${esc(utk)}</span></span></label>
+          <input type="text" id="alatpic-${i}" placeholder="PIC" aria-label="PIC" style="width:110px;min-height:38px;padding:6px 10px" value="${esc(st.pic || '')}" data-alat="${i}" data-k="pic">
+        </div>`;
+      }).join('')}</div>
+    </section>`;
+}
+
+function renderData() {
+  setTitle('Data & ekspor', 'Simpan cadangan setiap malam');
+  const n = Object.keys(S.entries).length;
+  const nRows = Object.values(S.entries).reduce((a, e) => a + rowCount(e), 0);
+  app.innerHTML = `
+    <section class="section"><h2>Profil pencatat</h2>
+      <div class="fields" data-scope="p">
+        ${fieldHTML(F('nama', 'Nama pencatat (diisi otomatis di setiap lembar)', 'text', { w: 1 }), S.profile.nama, 'p')}
+        ${fieldHTML(F('gps', 'GPS (merek/unit)', 'text', { w: 1 }), S.profile.gps, 'p')}
+      </div>
+    </section>
+    <section class="section"><h2>Ekspor</h2>
+      <p class="note">${n} lembar, ${nRows} baris tersimpan di HP ini. Data hanya ada di browser HP ini sampai Anda mengekspornya; kirim cadangan ke WhatsApp/Drive setiap malam.</p>
+      <div class="row">
+        <button type="button" class="btn" data-act="share">Bagikan ZIP (WA/Drive)</button>
+        <button type="button" class="btn ghost" data-act="zip">Unduh ZIP (CSV + cadangan)</button>
+      </div>
+      <button type="button" class="btn ghost block" data-act="json">Unduh cadangan saja (.json)</button>
+      <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), CSV status kegiatan, dan file cadangan .json.</p>
+    </section>
+    <section class="section"><h2>Gabungkan data tim</h2>
+      <p class="note">Pilih file cadangan .json dari HP anggota tim lain. Lembar yang sama tidak terduplikasi; versi yang paling baru dipakai.</p>
+      <label class="btn ghost block" for="importFile">Pilih file cadangan…</label>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </section>
+    <section class="section"><h2>Hapus semua data</h2>
+      <p class="note">Hanya lakukan setelah ekspor tersimpan aman. Ketuk dua kali untuk mengonfirmasi.</p>
+      <button type="button" class="btn danger block" data-act="wipe">Hapus semua data di HP ini</button>
+    </section>
+    <p class="note">Tips: buka menu browser lalu pilih "Tambahkan ke layar utama" agar aplikasi bisa dibuka seperti aplikasi biasa, juga tanpa sinyal.</p>`;
+}
+
+/* ================= Interaksi ================= */
+function currentTarget() {
+  if (view.v === 'entry') { const e = S.entries[view.id]; return e && { obj: e.header, e }; }
+  if (view.v === 'row') { const e = S.entries[view.id]; const r = e && (e.tables[view.t] || [])[view.i]; return r && { obj: r, e }; }
+  if (view.v === 'data') return { obj: S.profile };
+  return null;
+}
+function touch(e) { if (e) e.updated = Date.now(); saveSoon(); }
+function refreshComputed() {
+  const el = document.getElementById('computed');
+  if (!el || view.v !== 'row') return;
+  const e = S.entries[view.id]; const form = FORM[e.form]; const t = form.tables.find(x => x.id === view.t);
+  el.textContent = computed(form, t, e.tables[t.id][view.i], e).map(c => `${c[1]}: ${c[2]}`).join(' · ');
+}
+function fieldDef(k) {
+  const e = S.entries[view.id]; if (!e) return null;
+  const form = FORM[e.form];
+  const list = view.v === 'row' ? form.tables.find(t => t.id === view.t).fields : form.header;
+  return list.find(f => f.k === k);
+}
+function markEdited(obj, k) { if (obj._auto) obj._auto = obj._auto.filter(x => x !== k); }
+
+app.addEventListener('input', ev => {
+  const el = ev.target; const k = el.dataset.k; if (!k) return;
+  if (el.dataset.jad != null) { const s = S.jadwal[el.dataset.jad] = S.jadwal[el.dataset.jad] || {}; s[k] = el.type === 'checkbox' ? el.checked : el.value; s.t = Date.now(); saveSoon(); if (k === 'cek') render(); return; }
+  if (el.dataset.keg) { const s = S.keg[el.dataset.keg] = S.keg[el.dataset.keg] || {}; s[k] = el.value; s.t = Date.now(); saveSoon(); return; }
+  if (el.dataset.alat != null) { const s = S.alat[el.dataset.alat] = S.alat[el.dataset.alat] || {}; s[k] = el.type === 'checkbox' ? el.checked : el.value; s.t = Date.now(); saveSoon(); return; }
+  const tg = currentTarget(); if (!tg) return;
+  tg.obj[k] = el.value; markEdited(tg.obj, k); touch(tg.e);
+  const f = view.v === 'data' ? null : fieldDef(k);
+  if (f && (f.min != null || f.max != null)) {
+    const w = app.querySelector(`[data-warn="${k}"]`); const n = num(el.value);
+    let msg = '';
+    if (el.value !== '') { if (isNaN(n)) msg = 'Bukan angka'; else if ((f.min != null && n < f.min) || (f.max != null && n > f.max)) msg = `Di luar kisaran wajar (${f.min}–${f.max})`; }
+    if (w) { w.textContent = msg; w.hidden = !msg; }
+  }
+  refreshComputed();
+});
+app.addEventListener('change', ev => { if (ev.target.id === 'importFile') importFile(ev.target.files[0]); else save(); });
+
+let armed = null;
+function arm(btn, key, text) {
+  if (armed === key) { armed = null; return true; }
+  armed = key; btn.classList.add('armed'); const old = btn.textContent; btn.textContent = text;
+  setTimeout(() => { if (armed === key) { armed = null; btn.classList.remove('armed'); btn.textContent = old; } }, 3500);
+  return false;
+}
+
+function newEntry(fid, from) {
+  const form = FORM[fid];
+  const e = { id: rid(), form: fid, created: Date.now(), updated: Date.now(), by: S.profile.device, header: {}, tables: {} };
+  form.header.forEach(f => { const d = from ? from.header[f.k] : defaultFor(f); if (d !== '' && d != null) e.header[f.k] = Array.isArray(d) ? [...d] : d; });
+  if (from) { form.header.forEach(f => { if (f.def === 'today') e.header[f.k] = today(); }); }
+  form.tables.forEach(t => { e.tables[t.id] = []; });
+  S.entries[e.id] = e; save();
+  return e;
+}
+function newRow(e, tid, base) {
+  const form = FORM[e.form]; const t = form.tables.find(x => x.id === tid);
+  const rows = e.tables[tid] = e.tables[tid] || [];
+  const r = { _id: rid(), _auto: [] };
+  t.fields.forEach(f => { const d = defaultFor(f); if (d) { r[f.k] = d; r._auto.push(f.k); } });
+  if (t.numbered) { r[t.numbered] = String(rows.length + 1); r._auto.push(t.numbered); }
+  if (base && t.carry) t.carry.forEach(k => { if (base[k]) { r[k] = Array.isArray(base[k]) ? [...base[k]] : base[k]; r._auto.push(k); } });
+  rows.push(r); touch(e); save();
+  pendingNew = { id: e.id, t: tid, rowId: r._id };
+  return rows.length - 1;
+}
+
+function getGPS(k, btn) {
+  if (!navigator.geolocation) { toast('GPS tidak tersedia di browser ini. Ketik koordinat dari unit GPS.'); return; }
+  const tg = currentTarget(); if (!tg) return;
+  btn.classList.add('busy'); btn.textContent = 'Mencari…';
+  navigator.geolocation.getCurrentPosition(p => {
+    const v = `${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`;
+    tg.obj[k] = v; tg.obj[k + 'Acc'] = Math.round(p.coords.accuracy); markEdited(tg.obj, k); touch(tg.e); save();
+    const inp = app.querySelector(`[data-k="${k}"]:not(button)`); if (inp) inp.value = v;
+    const h = app.querySelector(`[data-acc="${k}"]`); if (h) h.textContent = `Akurasi ±${Math.round(p.coords.accuracy)} m`;
+    btn.classList.remove('busy'); btn.textContent = 'Ambil GPS';
+    toast(`Koordinat tersimpan (±${Math.round(p.coords.accuracy)} m)`);
+  }, err => {
+    btn.classList.remove('busy'); btn.textContent = 'Ambil GPS';
+    toast(err.code === 1 ? 'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di pengaturan browser.' : 'Sinyal GPS belum didapat. Coba lagi di tempat terbuka atau ketik manual.');
+  }, { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 });
+}
+
+app.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act;
+  if (a === 'day') { S.profile.hari = b.dataset.v; save(); render(); }
+  else if (a === 'openform') { if (b.dataset.f) go({ v: 'entries', f: b.dataset.f }); }
+  else if (a === 'newentry') { const e = newEntry(b.dataset.f); go({ v: 'entry', id: e.id }); }
+  else if (a === 'openentry') go({ v: 'entry', id: b.dataset.id });
+  else if (a === 'quick') {
+    const fid = b.dataset.f; const form = FORM[fid];
+    const e = entriesOf(fid)[0] || newEntry(fid);
+    const i = newRow(e, form.tables[0].id);
+    go({ v: 'row', id: e.id, t: form.tables[0].id, i });
+  }
+  else if (a === 'newrow') { const e = S.entries[view.id]; const i = newRow(e, b.dataset.t); go({ v: 'row', id: e.id, t: b.dataset.t, i }); }
+  else if (a === 'openrow') go({ v: 'row', id: view.id, t: b.dataset.t, i: +b.dataset.i });
+  else if (a === 'sel' || a === 'multi') {
+    const tg = currentTarget(); if (!tg) return;
+    const k = b.dataset.k, v = b.dataset.v;
+    if (a === 'sel') {
+      tg.obj[k] = tg.obj[k] === v ? '' : v;
+      b.parentElement.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.v === tg.obj[k]));
+    } else {
+      const arr = Array.isArray(tg.obj[k]) ? tg.obj[k] : [];
+      tg.obj[k] = arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+      b.setAttribute('aria-pressed', tg.obj[k].includes(v));
+    }
+    markEdited(tg.obj, k); touch(tg.e); save();
+  }
+  else if (a === 'now') {
+    const tg = currentTarget(); if (!tg) return;
+    tg.obj[b.dataset.k] = nowTime(); markEdited(tg.obj, b.dataset.k); touch(tg.e); save();
+    const inp = app.querySelector(`input[data-k="${b.dataset.k}"]`); if (inp) inp.value = tg.obj[b.dataset.k];
+  }
+  else if (a === 'gps') getGPS(b.dataset.k, b);
+  else if (a === 'rowdone') { save(); history.back(); }
+  else if (a === 'rownext') {
+    const e = S.entries[view.id]; const prev = e.tables[view.t][view.i];
+    pendingNew = null;
+    const i = newRow(e, view.t, prev);
+    go({ v: 'row', id: e.id, t: view.t, i }, true); toast(`Baris ${view.i + 1} tersimpan`);
+  }
+  else if (a === 'rowdup') {
+    const e = S.entries[view.id]; const rows = e.tables[view.t];
+    const copy = JSON.parse(JSON.stringify(rows[view.i])); copy._id = rid(); copy._auto = [];
+    const t = FORM[e.form].tables.find(x => x.id === view.t);
+    if (t.numbered) copy[t.numbered] = String(rows.length + 1);
+    rows.push(copy); touch(e); save(); pendingNew = null;
+    go({ v: 'row', id: e.id, t: view.t, i: rows.length - 1 }, true); toast('Baris diduplikat. Ubah yang berbeda.');
+  }
+  else if (a === 'rowdel') {
+    if (!arm(b, 'rowdel', 'Ketuk lagi untuk menghapus')) return;
+    const e = S.entries[view.id]; e.tables[view.t].splice(view.i, 1); touch(e); save(); pendingNew = null;
+    history.back(); toast('Baris dihapus');
+  }
+  else if (a === 'dupentry') { const e = newEntry(S.entries[view.id].form, S.entries[view.id]); go({ v: 'entry', id: e.id }, true); toast('Lembar baru dibuat dari kepala lembar ini'); }
+  else if (a === 'delentry') {
+    if (!arm(b, 'delentry', 'Ketuk lagi untuk menghapus lembar')) return;
+    const f = S.entries[view.id].form; delete S.entries[view.id]; save();
+    go({ v: 'entries', f }, true); toast('Lembar dihapus');
+  }
+  else if (a === 'kegstatus') {
+    const s = S.keg[b.dataset.c] = S.keg[b.dataset.c] || {}; s.status = b.dataset.v; s.t = Date.now(); save(); render();
+  }
+  else if (a === 'zip') exportZip(false);
+  else if (a === 'share') exportZip(true);
+  else if (a === 'json') download(backupBlob(), fileBase() + '.json');
+  else if (a === 'wipe') {
+    if (!arm(b, 'wipe', 'Ketuk lagi: semua data akan hilang')) return;
+    const keep = S.profile; S = blank(); S.profile = keep; save(); render(); toast('Semua data dihapus');
+  }
+});
+
+document.getElementById('tabs').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-tab]'); if (!b) return;
+  cleanupEmptyRows(); go({ v: b.dataset.tab });
+});
+document.getElementById('backBtn').addEventListener('click', () => history.back());
+
+/* Tema: Otomatis → Terang → Malam */
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_LABEL = { auto: 'Otomatis', light: 'Terang', dark: 'Malam' };
+let theme = 'auto';
+try { theme = localStorage.getItem('survei-cemara-theme') || 'auto'; } catch (e) {}
+function applyTheme() {
+  if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeBtn').textContent = THEME_LABEL[theme];
+  const dark = theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name=theme-color]').content = dark ? '#1a1412' : '#1f4a3c';
+}
+document.getElementById('themeBtn').addEventListener('click', () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % 3];
+  try { localStorage.setItem('survei-cemara-theme', theme); } catch (e) {}
+  applyTheme(); toast(`Tema: ${THEME_LABEL[theme]}`);
+});
+
+function updateNet() {
+  const n = document.getElementById('net');
+  n.textContent = navigator.onLine ? 'Online' : 'Offline';
+}
+window.addEventListener('online', updateNet); window.addEventListener('offline', updateNet);
+
+/* ================= Ekspor ================= */
+function fileBase() {
+  const d = new Date();
+  const who = (S.profile.nama || 'tim').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tim';
+  return `survei_cemara_${today().replace(/-/g, '')}_${pad(d.getHours())}${pad(d.getMinutes())}_${who}`;
+}
+function csvCell(v) {
+  const s = v == null ? '' : String(v);
+  return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function toCSV(rows) { return '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n'; }
+function cellValue(f, v) {
+  if (v == null) return '';
+  if (Array.isArray(v)) return v.join('; ');
+  if ((f.t === 'num' || f.t === 'int') && v !== '') return String(v).replace(',', '.');
+  if (f.t === 'dt') return String(v).replace('T', ' ');
+  return v;
+}
+function splitCoord(v) {
+  const m = String(v || '').replace(/[()]/g, '').match(/(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)/);
+  return m ? [m[1], m[2]] : ['', ''];
+}
+function expandCols(fields, prefix) {
+  const cols = [];
+  fields.forEach(f => {
+    const name = prefix + f.k;
+    if (f.t === 'coord') cols.push({ h: name, f, get: o => o[f.k] }, { h: name + '_lat', get: o => splitCoord(o[f.k])[0] }, { h: name + '_lon', get: o => splitCoord(o[f.k])[1] }, { h: name + '_akurasi_m', get: o => o[f.k + 'Acc'] ?? '' });
+    else cols.push({ h: name, f, get: o => cellValue(f, o[f.k]) });
+  });
+  return cols;
+}
+function buildCSVs() {
+  const files = [];
+  FORMS.forEach(form => {
+    const es = entriesOf(form.id).reverse();
+    if (!es.length) return;
+    const hc = expandCols(form.header, 'h_');
+    form.tables.forEach(t => {
+      const rc = expandCols(t.fields, '');
+      const compKeys = [];
+      es.forEach(e => (e.tables[t.id] || []).forEach(r => computed(form, t, r, e).forEach(([k]) => { if (!compKeys.includes(k)) compKeys.push(k); })));
+      const head = ['form', 'lembar_id', ...hc.map(c => c.h), 'no', ...rc.map(c => c.h), ...compKeys];
+      const out = [head];
+      es.forEach(e => {
+        const rows = e.tables[t.id] || [];
+        const hv = hc.map(c => c.get(e.header));
+        if (!rows.length) return;
+        rows.forEach((r, i) => {
+          const comp = Object.fromEntries(computed(form, t, r, e).map(([k, , v]) => [k, v]));
+          out.push([form.id, e.id, ...hv, i + 1, ...rc.map(c => c.get(r)), ...compKeys.map(k => comp[k] ?? '')]);
+        });
+      });
+      if (out.length > 1) files.push([`Form_${form.id}_${t.id}.csv`, toCSV(out)]);
+    });
+  });
+  const keg = [['kode', 'kelompok', 'kegiatan', 'prioritas', 'hari', 'pic', 'status', 'catatan_lapangan']];
+  KEG.forEach(k => { const s = S.keg[k.code] || {}; keg.push([k.code, k.kel, k.keg, k.prio, k.hari, s.pic || '', s.status || 'Belum', s.catatan || '']); });
+  files.push(['Status_Kegiatan.csv', toCSV(keg)]);
+  const jad = [['hari', 'blok', 'jam', 'kegiatan', 'cek']];
+  JADWAL.forEach((j, i) => { const s = S.jadwal[i] || {}; jad.push([j[0], j[1], s.jam || '', j[2], s.cek ? 'Ya' : '']); });
+  files.push(['Jadwal.csv', toCSV(jad)]);
+  return files;
+}
+function backupBlob() { return new Blob([JSON.stringify({ app: 'survei-cemara', exported: new Date().toISOString(), data: S }, null, 1)], { type: 'application/json' }); }
+
+/* ZIP tanpa kompresi (metode store) agar tidak perlu pustaka luar. */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) {
+  const enc = new TextEncoder(); const parts = []; const central = []; let off = 0;
+  const d = new Date(); const dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF;
+  const dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+  files.forEach(([name, content]) => {
+    const nb = enc.encode(name); const data = typeof content === 'string' ? enc.encode(content) : content; const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, nb.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), nb, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), nb);
+    off += 30 + nb.length + data.length;
+  });
+  const csize = central.reduce((a, p) => a + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, csize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+function download(blob, name) {
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000); toast(`${name} diunduh`);
+}
+async function exportZip(share) {
+  save();
+  const base = fileBase();
+  const json = JSON.stringify({ app: 'survei-cemara', exported: new Date().toISOString(), data: S }, null, 1);
+  const zip = makeZip([...buildCSVs(), [base + '.json', json]]);
+  const name = base + '.zip';
+  if (share) {
+    const file = new File([zip], name, { type: 'application/zip' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: name, text: 'Data Survei Pantai Cemara' }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    toast('Browser ini tidak bisa berbagi file. ZIP diunduh sebagai gantinya.');
+  }
+  download(zip, name);
+}
+
+/* ================= Impor / gabung ================= */
+function importFile(file) {
+  if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const obj = JSON.parse(rd.result); const d = obj.data || obj;
+      if (!d.entries) throw new Error('format');
+      let add = 0, upd = 0;
+      Object.values(d.entries).forEach(e => {
+        const cur = S.entries[e.id];
+        if (!cur) { S.entries[e.id] = e; add++; }
+        else if ((e.updated || 0) > (cur.updated || 0)) { S.entries[e.id] = e; upd++; }
+      });
+      ['keg', 'jadwal', 'alat'].forEach(sec => Object.entries(d[sec] || {}).forEach(([k, v]) => {
+        if (!S[sec][k] || (v.t || 0) > (S[sec][k].t || 0)) S[sec][k] = v;
+      }));
+      save(); render(); toast(`Digabung: ${add} lembar baru, ${upd} diperbarui`);
+    } catch (e) { toast('File ini bukan cadangan Survei Cemara (.json). Pilih file hasil "Unduh cadangan".'); }
+  };
+  rd.readAsText(file);
+}
+
+/* ================= Mulai ================= */
+applyTheme(); updateNet(); render();
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

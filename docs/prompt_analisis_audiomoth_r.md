@@ -13,7 +13,9 @@ keanekaragaman hayati (soundscape ecology). Tolong buatkan skrip R
 lengkap untuk menghitung indeks akustik dari rekaman tersebut.
 
 KONTEKS DATA:
-- Lokasi folder rekaman: [ISI PATH FOLDER, mis. "data/raw/audiomoth/"]
+- Lokasi folder rekaman: "F:/Audiomoth/UT 2026" (path Windows asli:
+  F:\Audiomoth\UT 2026 -- pakai forward slash di R supaya tidak perlu
+  escape backslash)
 - Format file: .WAV mentah dari AudioMoth, nama file mengikuti konvensi
   bawaan AudioMoth: YYYYMMDD_HHMMSS.WAV (contoh: 20260115_060000.WAV)
 - Struktur folder: [JELASKAN, mis. "satu folder per lokasi/site, nama

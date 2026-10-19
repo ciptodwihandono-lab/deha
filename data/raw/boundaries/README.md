@@ -28,6 +28,15 @@ kerja skala kecil sebelum diperluas ke seluruh Indonesia.
   [superpikar/indonesia-geojson](https://github.com/superpikar/indonesia-geojson).
   Untuk batas provinsi terkini dan akurat, pakai sumber resmi BIG/GADM
   di bagian bawah halaman ini.
+- `geojson-political-indonesia/` — batas **negara, provinsi, dan
+  kabupaten/kota** (adm0/1/2) dari GADM, via
+  [rifani/geojson-political-indonesia](https://github.com/rifani/geojson-political-indonesia).
+  **Akurat & terkini** (sudah termasuk Kalimantan Utara, pemekaran
+  Papua 2022, dll) — dipakai untuk peta lokasi titik penelitian gaya
+  karya ilmiah (skala kab/kota, mis. `scripts/python/peta_lokasi_song_meter.py`).
+  Garis pantai relatif kasar untuk skala sangat detail (mis. zoom ke
+  level desa) — untuk jurnal/publikasi resmi tetap sebaiknya verifikasi
+  ulang dengan data RBI/BIG.
 
 ## Sumber data resmi untuk cakupan seluruh Indonesia
 

@@ -78,7 +78,7 @@ main { max-width: 720px; margin: 0 auto; padding: 14px 16px 24px; display: flex;
 
 nav.tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface);
-  border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 nav.tabs button {
@@ -257,6 +257,32 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 }
 .sticky-actions .btn { flex: 1 1 140px; }
 .computed { font-size: 13px; color: var(--tide); font-weight: 600; }
+/* Rekap tally sheet: matriks jenis x kolom, kolom pertama tetap saat digeser. */
+.rk-ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rk-ctl .field.w { grid-column: 1 / -1; }
+.rk-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.tallytab { border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; min-width: 100%; }
+.tallytab th, .tallytab td { padding: 6px 8px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; white-space: nowrap; vertical-align: middle; }
+.tallytab thead th { background: var(--surface-2); font-size: 12px; color: var(--muted); font-weight: 650; position: sticky; top: 0; }
+.tallytab th.sp, .tallytab td.sp { position: sticky; left: 0; background: var(--surface); text-align: left; white-space: normal; min-width: 132px; max-width: 170px; z-index: 1; }
+.tallytab thead th.sp { background: var(--surface-2); z-index: 2; }
+.tallytab td.sp i { display: block; font-size: 11px; color: var(--muted); }
+.tallytab td.n { font-family: var(--font-data); font-weight: 700; }
+.tallytab td.zero { color: var(--line); }
+.tallytab .tot { background: var(--accent-soft); font-weight: 700; }
+.tallytab tfoot td { font-weight: 700; background: var(--surface-2); }
+.tallytab tfoot td.sp { background: var(--surface-2); }
+.tm { display: block; margin: 2px auto 0; color: var(--fg); }
+@media print {
+  .topbar, nav.tabs, .no-print, .toast { display: none !important; }
+  body { padding: 0; background: #fff; color: #000; }
+  main { max-width: none; padding: 0; }
+  .rk-wrap { overflow: visible; border: 0; }
+  .tallytab th, .tallytab td { border-color: #999; }
+  .tallytab th.sp, .tallytab td.sp, .tallytab thead th { position: static; }
+  .print-head { display: block !important; }
+}
+.print-head { display: none; }
 @media (max-width: 420px) { .fields { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr 1fr 1fr; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -282,6 +308,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 <nav class="tabs" id="tabs">
   <button type="button" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18c3-2 6-2 9 0s6 2 9 0"/><path d="M12 3v9M8 7l4-4 4 4"/></svg>Hari ini</button>
   <button type="button" data-tab="forms"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Form</button>
+  <button type="button" data-tab="rekap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/><path d="M13 13v4M15.5 13v4M18 13v4"/></svg>Rekap</button>
   <button type="button" data-tab="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg>Status</button>
   <button type="button" data-tab="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Data</button>
 </nav>
@@ -682,7 +709,7 @@ function go(v, replace) {
 }
 window.addEventListener('popstate', e => { view = e.state || { v: 'home' }; cleanupEmptyRows(); render(); });
 history.replaceState(view, '');
-const TABS = { home: 'home', forms: 'forms', entries: 'forms', entry: 'forms', row: 'forms', status: 'status', data: 'data' };
+const TABS = { home: 'home', forms: 'forms', entries: 'forms', entry: 'forms', row: 'forms', rekap: 'rekap', status: 'status', data: 'data' };
 
 /* Baris baru yang ditinggal kosong dihapus agar lembar tetap rapi. */
 let pendingNew = null;
@@ -706,7 +733,7 @@ function setTitle(t, sub) {
 function render() {
   document.getElementById('backBtn').hidden = !['entries', 'entry', 'row'].includes(view.v);
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', TABS[view.v] === b.dataset.tab ? 'page' : 'false'));
-  ({ home: renderHome, forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, status: renderStatus, data: renderData }[view.v] || renderHome)();
+  ({ home: renderHome, forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, rekap: renderRekap, status: renderStatus, data: renderData }[view.v] || renderHome)();
   refreshTrackUI();
   if (updateReady && safeToReload()) setTimeout(() => { if (safeToReload()) applyUpdate(); }, 300);
 }
@@ -734,6 +761,7 @@ function renderHome() {
         <button type="button" class="btn ghost" data-act="quick" data-f="C2">+ Temuan ancaman (C3)</button>
         <button type="button" class="btn ghost" data-act="quick" data-f="F2">+ Perjumpaan primata (F6)</button>
       </div>
+      <button type="button" class="btn ghost block" data-act="gorekap" data-src="B1">Lihat rekap tally sheet burung (B1)</button>
     </section>
     <section class="section">
       <h2>Jadwal ${esc(day)}${day === 'H4' ? ' (opsional)' : ''}</h2>
@@ -951,6 +979,153 @@ function renderRow() {
 }
 
 function kegStatus(code) { return (S.keg[code] || {}).status || 'Belum'; }
+/* ================= Rekap ala tally sheet =================
+   Sumber = tabel yang punya kolom jenis + jumlah. Kolom rekap bisa dikelompokkan per
+   waktu, sektor/lokasi, aktivitas, atau tanggal. "Maks" = jumlah tertinggi dalam satu
+   kolom waktu/tanggal: perkiraan populasi yang tidak menghitung burung yang sama dua kali. */
+const RK_SOURCES = [
+  { id: 'B1', form: 'B1', table: 'hitung', label: 'Burung pantai: hitung pasang (B1)', sp: 'jenis', n: 'jumlah',
+    by: [['jam', 'Waktu'], ['r:sektor', 'Sektor / lokasi'], ['r:aktivitas', 'Aktivitas'], ['tanggal', 'Tanggal'], ['h:titik', 'Titik pengamatan']] },
+  { id: 'B3', form: 'B2', table: 'singgah', label: 'Persinggahan di luar intertidal (B3)', sp: 'jenis', n: 'jumlah',
+    by: [['r:kodeTitik', 'Kode titik'], ['r:habitat', 'Tipe habitat'], ['jam', 'Waktu'], ['r:aktivitas', 'Aktivitas'], ['tanggal', 'Tanggal']] },
+  { id: 'B4', form: 'B2', table: 'gangguan', label: 'Gangguan di mudflat (B4)', sp: 'jenis', n: 'jumlah', unit: 'kejadian',
+    by: [['r:respons', 'Respons burung'], ['jam', 'Waktu'], ['tanggal', 'Tanggal']] },
+  { id: 'F4', form: 'F3', table: 'ves', label: 'Herpetofauna malam (F4)', sp: 'jenis', n: 'jumlah',
+    by: [['r:mikro', 'Mikrohabitat'], ['jam', 'Waktu'], ['r:aktivitas', 'Aktivitas'], ['tanggal', 'Tanggal'], ['h:rute', 'Rute']] },
+  { id: 'F5', form: 'F3', table: 'buaya', label: 'Buaya muara (F5)', sp: 'kelas', n: 'jumlah',
+    by: [['r:posisi', 'Posisi'], ['tanggal', 'Tanggal'], ['jam', 'Waktu'], ['h:rute', 'Rute']] },
+  { id: 'F6', form: 'F2', table: 'jumpa', label: 'Primata (F1, F6)', sp: 'jenis', n: 'total',
+    by: [['tanggal', 'Tanggal'], ['r:aktivitas', 'Aktivitas'], ['jam', 'Waktu']] },
+  { id: 'E2', form: 'E2', table: 'ikan', label: 'Jenis ikan (E2)', sp: 'lokal', n: 'jumlah',
+    by: [['h:lokasiPendaratan', 'Lokasi pendaratan'], ['tanggal', 'Tanggal'], ['r:alat', 'Alat tangkap']] },
+];
+let RK = { src: 'B1', by: 'jam', step: 60, tgl: '', marks: true };
+try { Object.assign(RK, JSON.parse(localStorage.getItem('survei-cemara-rekap') || '{}')); } catch (e) {}
+function rkSave() { try { localStorage.setItem('survei-cemara-rekap', JSON.stringify(RK)); } catch (e) {} }
+
+function rkRows(src) {
+  const form = FORM[src.form], t = form.tables.find(x => x.id === src.table);
+  const out = [];
+  entriesOf(src.form).forEach(e => (e.tables[src.table] || []).forEach(r => {
+    const n = num(r[src.n]);
+    const sp = r[src.sp];
+    if (!sp || isNaN(n)) return;
+    out.push({ e, r, n, sp, form, t, tgl: r.tanggal || e.header.tanggal || e.header.tglPasang || '' });
+  }));
+  return out;
+}
+function rkKey(src, x) {
+  const by = RK.by;
+  if (by === 'tanggal') return x.tgl ? [x.tgl, fmtDate(x.tgl)] : ['', '(tanpa tanggal)'];
+  if (by === 'jam') {
+    const j = x.r.jam || '';
+    const m = j.match(/^(\d{1,2}):(\d{2})/); if (!m) return ['~', '(tanpa jam)'];
+    const mins = +m[1] * 60 + +m[2], st = Math.floor(mins / RK.step) * RK.step, en = st + RK.step - 1;
+    const hm = v => `${pad(Math.floor(v / 60))}.${pad(v % 60)}`;
+    return [pad(Math.floor(st / 60)) + pad(st % 60), `${hm(st)}–${hm(en)}`];
+  }
+  const [where, k] = by.split(':');
+  const obj = where === 'h' ? x.e.header : x.r;
+  const fdef = (where === 'h' ? x.form.header : x.t.fields).find(f => f.k === k);
+  const v = obj[k];
+  if (v == null || v === '') return ['~', '(kosong)'];
+  return [String(v), fdef ? label(fdef, v) : String(v)];
+}
+function rkSpecies(v) { const [a, b] = String(v).split(' — '); return { name: a, sci: b || '' }; }
+function rkBuild() {
+  const src = RK_SOURCES.find(x => x.id === RK.src) || RK_SOURCES[0];
+  if (!src.by.some(b => b[0] === RK.by)) RK.by = src.by[0][0];
+  let rows = rkRows(src);
+  const dates = [...new Set(rows.map(x => x.tgl).filter(Boolean))].sort();
+  if (RK.tgl && !dates.includes(RK.tgl)) RK.tgl = '';
+  if (RK.tgl && RK.by !== 'tanggal') rows = rows.filter(x => x.tgl === RK.tgl);
+  const spField = FORM[src.form].tables.find(t => t.id === src.table).fields.find(f => f.k === src.sp);
+  const cols = new Map(), mat = new Map();
+  // Per tanggal: jumlahkan dulu per selang waktu, lalu ambil yang tertinggi dalam hari itu,
+  // supaya kelompok yang sama yang dihitung ulang pada jam berbeda tidak dijumlahkan.
+  const slot = x => { const m = String(x.r.jam || '').match(/^(\d{1,2}):(\d{2})/); return m ? Math.floor((+m[1] * 60 + +m[2]) / RK.step) : 'x'; };
+  const sub = new Map();
+  rows.forEach(x => {
+    const [ck, cl] = rkKey(src, x); cols.set(ck, cl);
+    const spk = spField.t === 'sel' ? label(spField, x.sp) : String(x.sp);
+    if (!mat.has(spk)) mat.set(spk, new Map());
+    if (RK.by === 'tanggal') { const k = spk + '\u0000' + ck + '\u0000' + slot(x); sub.set(k, (sub.get(k) || 0) + x.n); }
+    else { const m = mat.get(spk); m.set(ck, (m.get(ck) || 0) + x.n); }
+  });
+  sub.forEach((v, k) => { const [spk, ck] = k.split('\u0000'); const m = mat.get(spk); m.set(ck, Math.max(m.get(ck) || 0, v)); });
+  const colKeys = [...cols.keys()].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+  const showMax = RK.by === 'jam' || RK.by === 'tanggal';
+  const species = [...mat.entries()].map(([sp, m]) => {
+    const vals = colKeys.map(k => m.get(k) || 0);
+    return { sp, vals, total: vals.reduce((a, b) => a + b, 0), max: Math.max(0, ...vals) };
+  }).sort((a, b) => (showMax ? b.max - a.max : 0) || b.total - a.total || a.sp.localeCompare(b.sp));
+  const colTot = colKeys.map((_, i) => species.reduce((a, s) => a + s.vals[i], 0));
+  return { src, dates, colKeys, colLabels: colKeys.map(k => cols.get(k)), species, colTot, showMax, nRows: rows.length };
+}
+function tallySVG(n) {
+  if (n <= 0 || n > 40) return '';
+  const groups = Math.floor(n / 5), rest = n % 5, gw = 22, h = 14;
+  const w = groups * gw + rest * 4 + 2;
+  let d = '';
+  for (let g = 0; g < groups; g++) {
+    const x0 = g * gw + 2;
+    for (let i = 0; i < 4; i++) d += `M${x0 + i * 4} 1V${h - 1}`;
+    d += `M${x0 - 2} ${h - 2}L${x0 + 14} 2`;
+  }
+  for (let i = 0; i < rest; i++) d += `M${groups * gw + 2 + i * 4} 1V${h - 1}`;
+  return `<svg class="tm" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>`;
+}
+function rkCSV(R) {
+  const head = ['jenis', ...R.colLabels, 'total', ...(R.showMax ? ['maks'] : [])];
+  const out = [head];
+  R.species.forEach(s => out.push([s.sp, ...s.vals, s.total, ...(R.showMax ? [s.max] : [])]));
+  out.push(['TOTAL', ...R.colTot, R.colTot.reduce((a, b) => a + b, 0), ...(R.showMax ? [R.species.reduce((a, sp) => a + sp.max, 0)] : [])]);
+  return toCSV(out);
+}
+function renderRekap() {
+  setTitle('Rekap tally sheet', 'Jenis × waktu, sektor, atau tanggal');
+  const R = rkBuild(); const src = R.src;
+  const byLabel = (src.by.find(b => b[0] === RK.by) || [, ''])[1];
+  const sumAll = R.species.reduce((a, s) => a + s.total, 0);
+  const maxSum = R.showMax ? R.species.reduce((a, s) => a + s.max, 0) : 0;
+  app.innerHTML = `
+    <section class="section no-print">
+      <div class="fields rk-ctl">
+        <div class="field w"><label for="rk-src">Data</label><select id="rk-src" data-rk="src">${RK_SOURCES.map(x => `<option value="${x.id}"${x.id === src.id ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></div>
+        <div class="field"><label for="rk-by">Kolom per</label><select id="rk-by" data-rk="by">${src.by.map(([k, l]) => `<option value="${k}"${k === RK.by ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+        ${RK.by === 'jam' || RK.by === 'tanggal' ? `<div class="field"><label for="rk-step">Selang waktu</label><select id="rk-step" data-rk="step">${[[15, '15 menit'], [30, '30 menit'], [60, '1 jam']].map(([v, l]) => `<option value="${v}"${v === +RK.step ? ' selected' : ''}>${l}</option>`).join('')}</select></div>` : '<div></div>'}
+        ${RK.by !== 'tanggal' ? `<div class="field w"><label for="rk-tgl">Tanggal</label><select id="rk-tgl" data-rk="tgl"><option value="">Semua tanggal</option>${R.dates.map(d => `<option value="${d}"${d === RK.tgl ? ' selected' : ''}>${esc(fmtDate(d))}</option>`).join('')}</select></div>` : ''}
+        <label class="check" style="grid-column: 1 / -1"><input type="checkbox" id="rk-marks" data-rk="marks" ${RK.marks ? 'checked' : ''}>Tampilkan garis tally (sampai 40)</label>
+      </div>
+    </section>
+    <div class="print-head"><h3>Rekap ${esc(src.label)} · per ${esc(byLabel.toLowerCase())}${RK.tgl && RK.by !== 'tanggal' ? ' · ' + esc(fmtDate(RK.tgl)) : ''}</h3><p class="note">KEE Mangrove Pantai Cemara · dicetak ${esc(fmtDate(today()))} ${nowTime()} · ${esc(S.profile.nama || '')}</p></div>
+    ${R.species.length ? `
+    <section class="stats" aria-label="Ringkasan rekap">
+      <div class="stat"><div class="v">${R.species.length}</div><div class="k">${src.id === 'B4' ? 'Jenis gangguan' : 'Jenis'}</div></div>
+      <div class="stat"><div class="v">${R.showMax ? maxSum : sumAll}</div><div class="k">${R.showMax ? 'Jumlah maks (perkiraan populasi)' : 'Jumlah total'}</div></div>
+      <div class="stat"><div class="v">${R.nRows}</div><div class="k">Baris data</div></div>
+    </section>
+    <div class="rk-wrap"><table class="tallytab">
+      <thead><tr><th class="sp">${src.id === 'B4' ? 'Jenis gangguan' : src.id === 'F5' ? 'Kelas ukuran' : 'Jenis'}</th>${R.colLabels.map(l => `<th>${esc(l)}</th>`).join('')}<th class="tot">Total</th>${R.showMax ? '<th class="tot">Maks</th>' : ''}</tr></thead>
+      <tbody>${R.species.map(s => { const sp = rkSpecies(s.sp); return `<tr><td class="sp">${esc(sp.name)}${sp.sci ? `<i>${esc(sp.sci)}</i>` : ''}</td>${s.vals.map(v =>
+        `<td class="${v ? 'n' : 'zero'}">${v ? `${v}${RK.marks ? tallySVG(v) : ''}` : '·'}</td>`).join('')}<td class="n tot">${s.total}</td>${R.showMax ? `<td class="n tot">${s.max}</td>` : ''}</tr>`; }).join('')}</tbody>
+      <tfoot><tr><td class="sp">Total</td>${R.colTot.map(v => `<td>${v}</td>`).join('')}<td class="tot">${sumAll}</td>${R.showMax ? `<td class="tot">${maxSum}</td>` : ''}</tr></tfoot>
+    </table></div>
+    ${R.showMax ? `<p class="note">${RK.by === 'tanggal' ? `Angka per tanggal = jumlah tertinggi dalam satu selang ${RK.step} menit pada hari itu, agar kelompok yang dihitung ulang tidak dijumlahkan. ` : ''}Untuk penghitungan berulang, pakai kolom <b>Maks</b> sebagai perkiraan populasi. Kolom <b>Total</b> bisa menghitung burung yang sama lebih dari sekali.</p>` : ''}
+    <div class="row no-print">
+      <button type="button" class="btn ghost" data-act="rkcsv">Unduh CSV</button>
+      <button type="button" class="btn ghost" data-act="rkprint">Cetak / simpan PDF</button>
+    </div>`
+    : `<div class="empty">Belum ada data ${esc(src.label)}${RK.tgl ? ' pada tanggal ini' : ''}. Isi lewat tab Form, lalu rekap muncul di sini.</div>`}`;
+}
+app.addEventListener('change', ev => {
+  const k = ev.target.dataset && ev.target.dataset.rk; if (!k || view.v !== 'rekap') return;
+  RK[k] = ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value;
+  if (k === 'src') { RK.by = (RK_SOURCES.find(x => x.id === RK.src) || RK_SOURCES[0]).by[0][0]; }
+  if (k === 'step') RK.step = +RK.step;
+  rkSave(); render();
+});
+
 function renderStatus() {
   setTitle('Status kegiatan', 'Kegiatan & Metode · Persiapan Alat');
   const groups = [...new Set(KEG.map(k => k.kel))];
@@ -1531,6 +1706,9 @@ app.addEventListener('click', ev => {
   else if (a === 'photo') openViewer(b.dataset.ph);
   else if (a === 'trkstart') startTrack();
   else if (a === 'trkupload') uploadTrack();
+  else if (a === 'gorekap') { RK.src = b.dataset.src; RK.by = (RK_SOURCES.find(x => x.id === RK.src) || RK_SOURCES[0]).by[0][0]; rkSave(); go({ v: 'rekap' }); }
+  else if (a === 'rkcsv') { const R = rkBuild(); download(new Blob([rkCSV(R)], { type: 'text/csv' }), `Rekap_${R.src.id}_per_${RK.by.replace(/^[rh]:/, '')}${RK.tgl && RK.by !== 'tanggal' ? '_' + RK.tgl : ''}.csv`); }
+  else if (a === 'rkprint') { try { window.print(); } catch (e) { toast('Cetak tidak tersedia di browser ini. Pakai Unduh CSV.'); } }
   else if (a === 'trkstop') stopTrack();
   else if (a === 'trktype') {
     const tg = currentTarget(); if (!tg) return;

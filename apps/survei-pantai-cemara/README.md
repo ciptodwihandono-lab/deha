@@ -10,7 +10,7 @@ setelah dibuka sekali, dan semua data tersimpan di HP.
 | Tab | Isi |
 | --- | --- |
 | **Hari ini** | Jadwal H1–H4 per blok pasang/surut (isi jam dan centang), tombol catat cepat untuk temuan ancaman (C3) dan primata (F6) |
-| **Form** | 12 formulir: A, B1, B2, C1, C2, D1, D2, E1, E2, F1, F2, F3. Setiap lembar punya kepala lembar dan tabel baris |
+| **Form** | 13 formulir: A, B1, B2, C1, C2, D1, D2, E1, E2, F1, F2, F3, dan G1 (KEHATI sekitar desa, pagi hari). Setiap lembar punya kepala lembar dan tabel baris |
 | **Rekap** | Tabel ala tally sheet: jenis × waktu, sektor, aktivitas, titik, atau tanggal, dengan garis tally, Total, dan Maks (perkiraan populasi). Untuk B1, B3, B4, F4, F5, F6, E2. Bisa diunduh CSV atau dicetak/simpan PDF |
 | **Status** | Kegiatan & Metode (status Belum/Proses/Selesai, PIC, catatan lapangan), rekap otomatis, checklist persiapan alat |
 | **Data** | Nama pencatat, ekspor ZIP (CSV per tabel + cadangan .json), bagikan ke WhatsApp/Drive, gabungkan data tim |

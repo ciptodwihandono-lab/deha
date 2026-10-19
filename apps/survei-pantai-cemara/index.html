@@ -353,6 +353,9 @@ const C = {
   kelas: [['I','< 1 m'],['II','1–2 m'],['III','2–3 m'],['IV','> 3 m'],['MO','Hanya mata']],
   posisi: [['AI','Di air'],['TP','Tepian'],['DR','Darat']],
   reaksi: [['0','Tidak bereaksi'],['1','Menyelam/menjauh']],
+  taksa: [['BU','Burung'],['MA','Mamalia'],['RE','Reptil'],['AM','Amfibi'],['KC','Kupu-kupu/capung'],['TU','Tumbuhan'],['LN','Lainnya']],
+  cara: [['L','Lihat'],['D','Dengar'],['J','Jejak/tanda'],['W','Info warga']],
+  habDesa: [['PK','Pekarangan/permukiman'],['KB','Kebun/ladang'],['SW','Sawah'],['TB','Tambak'],['SM','Semak/belukar'],['HM','Hutan/mangrove'],['SG','Sungai/parit']],
 };
 
 const BIRDS = [
@@ -369,6 +372,17 @@ const BIRDS = [
   'Kuntul besar — Ardea alba','Cangak abu — Ardea cinerea','Bangau bluwok — Mycteria cinerea',
   'Dara-laut kumis — Chlidonias hybrida','Dara-laut sayap-putih — Chlidonias leucopterus','Dara-laut kecil — Sternula albifrons',
   'Dara-laut tiram — Gelochelidon nilotica','Dara-laut jambul — Thalasseus bergii',
+];
+// Burung yang umum di kebun, sawah, dan permukiman pesisir Sumatra (saran ketik untuk G1; tetap bisa diketik bebas).
+const BIRDS_DESA = [
+  'Burung-gereja erasia — Passer montanus','Cucak kutilang — Pycnonotus aurigaster','Merbah cerukcuk — Pycnonotus goiavier',
+  'Tekukur biasa — Spilopelia chinensis','Perkutut jawa — Geopelia striata','Bondol peking — Lonchura punctulata','Bondol haji — Lonchura maja',
+  'Cinenen pisang — Orthotomus sutorius','Kipasan belang — Rhipidura javanica','Burung-madu sriganti — Cinnyris jugularis',
+  'Burung-madu kelapa — Anthreptes malacensis','Cabai jawa — Dicaeum trochileum','Wiwik kelabu — Cacomantis merulinus','Bubut alang-alang — Centropus bengalensis',
+  'Bubut besar — Centropus sinensis','Cekakak sungai — Todiramphus chloris','Kuntul kerbau — Bubulcus ibis','Blekok sawah — Ardeola speciosa',
+  'Kokokan laut — Butorides striata','Walet sarang-putih — Aerodramus fuciphagus','Layang-layang batu — Hirundo tahitica','Kapinis rumah — Apus nipalensis',
+  'Elang bondol — Haliastur indus','Kerak kerbau — Acridotheres javanicus','Perenjak rawa — Prinia flaviventris','Cipoh kacat — Aegithina tiphia',
+  'Kacamata laut — Zosterops chloris','Gagak hutan — Corvus enca','Pelatuk besi — Dinopium javanense','Kangkok ranting — Hierococcyx vagans',
 ];
 const FISH = ['Kurau','Kakap putih','Senangin','Manyung','Sembilang','Baung','Gerut','Belanak','Gulama','Malong'];
 
@@ -394,6 +408,7 @@ const KEG = [
   ['F','Mamalia & herpetofauna','F4','VES malam herpetofauna','Susuri genangan, parit, tepi mangrove.','Jenis, jumlah, titik, mikrohabitat','Malam','H1–H2',3],
   ['F','Mamalia & herpetofauna','F5','Spotlight buaya muara','Susuri sungai atau kuala dengan senter.','Jumlah, perkiraan ukuran, lokasi','Malam','H1 atau H2',3],
   ['F','Mamalia & herpetofauna','F6','Kelompok primata','Setiap kali berjumpa lutung atau monyet ekor-panjang.','Jumlah dan komposisi kelompok (jantan, betina, anak), titik GPS','Sepanjang survei','H1–H4',3],
+  ['G','Sekitar desa','G1','Pengamatan KEHATI sekitar desa','Pagi hari dalam perjalanan ke Pantai Cemara (survei burung pantai dan anveg dilakukan sore). Jalan pelan menyusuri rute desa: pekarangan, kebun, sawah, tambak, parit. Catat semua jenis yang terlihat atau terdengar; rekam track rute sebagai upaya survei. Info warga dicatat terpisah dengan kode W.','Kelompok taksa, jenis, jumlah, cara perjumpaan, habitat, titik GPS, foto','Pagi, sebelum ke pantai','H1–H4',2],
 ].map(([g,kel,code,keg,metode,data,waktu,hari,prio]) => ({g,kel,code,keg,metode,data,waktu,hari,prio}));
 const KEG_CODES = KEG.map(k => [k.code, k.keg]);
 
@@ -415,6 +430,11 @@ const JADWAL = [
   ['H3','Malam','Rekap dan cek kelengkapan data (lembar Kegiatan & Metode)'],
   ['H4','Pasang tinggi','B1, B2, B4 hari terakhir; B3 bila belum'],
   ['H4','Siang','F3 serah terima kamera jebak ke pengelola/warga; pelengkap data yang kurang'],
+  // Ditambahkan kemudian: tampil paling atas tiap hari (urutan -1). Disisipkan di akhir agar jam/centang yang sudah tersimpan tidak bergeser.
+  ['H1','Pagi (perjalanan)','G1 pengamatan KEHATI sekitar desa sebelum ke Pantai Cemara', -1],
+  ['H2','Pagi (perjalanan)','G1 pengamatan KEHATI sekitar desa sebelum ke Pantai Cemara', -1],
+  ['H3','Pagi (perjalanan)','G1 pengamatan KEHATI sekitar desa sebelum ke Pantai Cemara', -1],
+  ['H4','Pagi (perjalanan)','G1 pengamatan KEHATI sekitar desa (bila waktu cukup)', -1],
 ];
 
 /* ================= Lembar "Persiapan Alat" ================= */
@@ -431,6 +451,7 @@ const ALAT = [
   ['Kesepakatan pengambilan kamera jebak dengan pengelola/warga (nama, kontak, tanggal)','F3'],
   ['Senter/headlamp untuk survei malam','F4–F5'],
   ['Label kode, spidol tahan air, kantong plastik','D3, E1'],
+  ['Binokuler kecil dan buku panduan lapangan burung/satwa untuk pengamatan pagi di desa','G1'],
 ];
 
 /* ================= Definisi formulir =================
@@ -603,6 +624,20 @@ const FORMS = [
       { id: 'buaya', title: 'Spotlight buaya muara (F5)', sum: ['kelas', 'posisi'], big: 'jumlah', fields: [
         JAM, F('jumlah', 'Jumlah', 'int'), COORD, F('kelas', 'Kelas ukuran', 'sel', { o: C.kelas, w: 1 }),
         F('posisi', 'Posisi', 'sel', { o: C.posisi, w: 1 }), F('reaksi', 'Reaksi', 'sel', { o: C.reaksi, w: 1 }), CAT ] }] },
+
+  { id: 'G1', title: 'Pengamatan KEHATI Sekitar Desa', keg: ['G1'], kegLabel: 'G1', quick: true,
+    intro: 'Pagi hari dalam perjalanan ke Pantai Cemara. Satu lembar per pagi/rute; satu baris per jenis per perjumpaan.',
+    legend: 'Kelompok: BU burung · MA mamalia · RE reptil · AM amfibi · KC kupu-kupu/capung · TU tumbuhan · LN lainnya. Cara: L lihat · D dengar · J jejak/tanda (kotoran, sarang, bekas makan) · W info warga. Rekam track rute agar upaya survei (panjang rute, durasi) tercatat.',
+    key: 'lokasi',
+    header: [TGL, F('lokasi', 'Desa / lokasi'), F('rute', 'Rute (mis. desa → dermaga)', 'text', { w: 1 }),
+      F('mulai', 'Jam mulai', 'time', { def: 'now' }), F('selesai', 'Jam selesai', 'time'),
+      F('rekam', 'Rekam track rute', 'track', { w: 1, len: 'panjang', start: 'mulai', end: 'selesai', fmt: 'num' }),
+      F('panjang', 'Panjang rute (m)', 'num'), pengamat(), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 })],
+    tables: [{ id: 'jumpa', title: 'Perjumpaan jenis', sum: ['jenis', 'kelompok'], big: 'jumlah', carry: ['kelompok', 'habitat'], fields: [
+      JAM, F('jumlah', 'Jumlah', 'int'), F('kelompok', 'Kelompok', 'sel', { o: C.taksa, w: 1 }),
+      F('jenis', 'Jenis (nama lokal / ilmiah)', 'list', { o: [...BIRDS_DESA, ...BIRDS], w: 1 }),
+      F('cara', 'Cara perjumpaan', 'sel', { o: C.cara, w: 1 }), F('habitat', 'Habitat', 'sel', { o: C.habDesa, w: 1 }),
+      COORD, FOTO, CAT ] }] },
 ];
 const FORM = Object.fromEntries(FORMS.map(f => [f.id, f]));
 const CODE_TO_FORM = {};
@@ -741,7 +776,7 @@ function render() {
 function renderHome() {
   const day = S.profile.hari || 'H1';
   setTitle('Survei Pantai Cemara', `KEE Mangrove · ${S.profile.nama || 'isi nama di tab Data'}`);
-  const blocks = JADWAL.map((j, i) => ({ j, i })).filter(x => x.j[0] === day);
+  const blocks = JADWAL.map((j, i) => ({ j, i })).filter(x => x.j[0] === day).sort((a, b) => (a.j[3] || 0) - (b.j[3] || 0));
   const total = KEG.length, done = KEG.filter(k => kegStatus(k.code) === 'Selesai').length;
   const p1 = KEG.filter(k => k.prio === 1), p1done = p1.filter(k => kegStatus(k.code) === 'Selesai').length;
   const nRows = Object.values(S.entries).reduce((n, e) => n + rowCount(e), 0);
@@ -760,6 +795,7 @@ function renderHome() {
       <div class="row">
         <button type="button" class="btn ghost" data-act="quick" data-f="C2">+ Temuan ancaman (C3)</button>
         <button type="button" class="btn ghost" data-act="quick" data-f="F2">+ Perjumpaan primata (F6)</button>
+        <button type="button" class="btn ghost" data-act="quick" data-f="G1">+ KEHATI sekitar desa (G1)</button>
       </div>
       <button type="button" class="btn ghost block" data-act="gorekap" data-src="B1">Lihat rekap tally sheet burung (B1)</button>
     </section>
@@ -768,7 +804,7 @@ function renderHome() {
       <p class="note">Isi jam tiap blok dari tabel pasang surut. Ketuk kode kegiatan untuk membuka formulirnya.</p>
       ${blocks.map(({ j, i }) => {
         const st = S.jadwal[i] || {};
-        const codes = [...new Set((j[2].match(/\b[A-F][1-6]\b/g) || []))];
+        const codes = [...new Set((j[2].match(/\b[A-G][1-6]\b/g) || []))];
         return `<div class="blk${st.cek ? ' done' : ''}">
           <div class="blk-head">
             <span class="when">${esc(j[1])}</span>
@@ -784,8 +820,8 @@ function renderHome() {
 }
 
 function renderForms() {
-  setTitle('Formulir', '12 lembar data lapangan');
-  const groups = { A: 'Upaya survei', B: 'Burung pantai', C: 'Data ancaman', D: 'Perairan & epifauna', E: 'Dokumentasi', F: 'Mamalia & herpetofauna' };
+  setTitle('Formulir', `${FORMS.length} lembar data lapangan`);
+  const groups = { A: 'Upaya survei', B: 'Burung pantai', C: 'Data ancaman', D: 'Perairan & epifauna', E: 'Dokumentasi', F: 'Mamalia & herpetofauna', G: 'Sekitar desa (pagi)' };
   app.innerHTML = Object.entries(groups).map(([g, name]) => `
     <section class="section"><h2>${g}. ${esc(name)}</h2>
       <div class="list">${FORMS.filter(f => f.id[0] === g).map(f => {
@@ -996,6 +1032,8 @@ const RK_SOURCES = [
     by: [['r:posisi', 'Posisi'], ['tanggal', 'Tanggal'], ['jam', 'Waktu'], ['h:rute', 'Rute']] },
   { id: 'F6', form: 'F2', table: 'jumpa', label: 'Primata (F1, F6)', sp: 'jenis', n: 'total',
     by: [['tanggal', 'Tanggal'], ['r:aktivitas', 'Aktivitas'], ['jam', 'Waktu']] },
+  { id: 'G1', form: 'G1', table: 'jumpa', label: 'KEHATI sekitar desa (G1)', sp: 'jenis', n: 'jumlah',
+    by: [['r:habitat', 'Habitat'], ['r:kelompok', 'Kelompok'], ['r:cara', 'Cara perjumpaan'], ['jam', 'Waktu'], ['tanggal', 'Tanggal'], ['h:lokasi', 'Desa / lokasi']] },
   { id: 'E2', form: 'E2', table: 'ikan', label: 'Jenis ikan (E2)', sp: 'lokal', n: 'jumlah',
     by: [['h:lokasiPendaratan', 'Lokasi pendaratan'], ['tanggal', 'Tanggal'], ['r:alat', 'Alat tangkap']] },
 ];

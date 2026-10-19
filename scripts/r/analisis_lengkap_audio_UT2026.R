@@ -201,62 +201,57 @@ buat_plot_tren <- function(df, kode_lokasi) {
 }
 
 # ======================= BAGIAN B: IDENTIFIKASI SPESIES ========================
-
-standardisasi_kolom_birdnet <- function(df) {
-  nama_asli <- names(df)
-  cari_kolom <- function(pola) {
-    idx <- grep(pola, nama_asli, ignore.case = TRUE)
-    if (length(idx) == 0) NA_character_ else nama_asli[idx[1]]
-  }
-
-  peta <- list(
-    file_asli = cari_kolom("^input$|file|path"),
-    waktu_mulai = cari_kolom("start"),
-    waktu_selesai = cari_kolom("end"),
-    nama_ilmiah = cari_kolom("scientific"),
-    nama_umum = cari_kolom("common"),
-    confidence = cari_kolom("confidence|score")
-  )
-
-  hilang_wajib <- "confidence"[is.na(unlist(peta["confidence"]))]
-  if (length(hilang_wajib) > 0) {
-    stop(
-      "Tidak menemukan kolom penting (confidence) secara otomatis.\n",
-      "Kolom yang tersedia di hasil BirdNET: ", paste(nama_asli, collapse = ", "), "\n",
-      "Sesuaikan fungsi standardisasi_kolom_birdnet() secara manual memakai daftar kolom di atas."
-    )
-  }
-
-  hasil <- data.frame(row.names = seq_len(nrow(df)))
-  for (nm in names(peta)) hasil[[nm]] <- if (!is.na(peta[[nm]])) df[[peta[[nm]]]] else NA
-
-  if (anyNA(hasil$nama_ilmiah) && anyNA(hasil$nama_umum)) {
-    message("  (Catatan: kolom nama_ilmiah/nama_umum tidak terdeteksi otomatis -- ",
-            "cek kolom asli berikut dan sesuaikan manual: ", paste(nama_asli, collapse = ", "), ")")
-  }
-
-  hasil
-}
+# Kolom hasil predict_species_from_audio_file() terkonfirmasi lewat tes
+# langsung di data asli: start, end, scientific_name, common_name, confidence
+# (satu panggilan = satu file, keep_empty=TRUE menyisakan baris NA untuk
+# jendela 3 detik yang tidak ada deteksi di atas ambang min_confidence).
 
 proses_spesies_lokasi <- function(kode_lokasi, file_df, model) {
   message("\n== [Identifikasi spesies] Lokasi: ", kode_lokasi, " (", nrow(file_df), " file) ==")
 
-  hasil <- tryCatch({
-    prediksi <- predict(model, files = file_df$path_file, min_confidence = min_confidence, progress = "progress")
-    df_standar <- standardisasi_kolom_birdnet(as.data.frame(prediksi))
-    df_standar$kode_lokasi <- kode_lokasi
-    df_standar$id_alat <- id_alat
-    df_standar
-  }, error = function(e) {
-    message("  GAGAL memproses lokasi ", kode_lokasi, ": ", conditionMessage(e))
-    NULL
-  })
+  hasil_semua <- list()
+  gagal_semua <- list()
 
-  if (!is.null(hasil)) {
-    write.csv(hasil, file.path(dir_output, paste0("hasil_identifikasi_spesies_", kode_lokasi, ".csv")), row.names = FALSE)
-    message("  -> ", nrow(hasil), " deteksi disimpan.")
+  for (i in seq_len(nrow(file_df))) {
+    path_file <- file_df$path_file[i]
+    nama_file <- basename(path_file)
+    if (i %% 10 == 0 || i == nrow(file_df)) message("  [", kode_lokasi, "] file ", i, "/", nrow(file_df))
+
+    waktu_file <- parse_timestamp_dari_nama(nama_file)
+
+    hasil_file <- tryCatch({
+      deteksi <- predict_species_from_audio_file(model, path_file, min_confidence = min_confidence)
+      data.frame(
+        kode_lokasi = kode_lokasi, id_alat = id_alat, nama_file = nama_file,
+        waktu_mulai_detik = deteksi$start, waktu_selesai_detik = deteksi$end,
+        timestamp = waktu_file + deteksi$start,
+        nama_ilmiah = deteksi$scientific_name, nama_umum = deteksi$common_name,
+        confidence = deteksi$confidence,
+        stringsAsFactors = FALSE
+      )
+    }, error = function(e) {
+      message("    GAGAL: ", nama_file, " -- ", conditionMessage(e))
+      gagal_semua[[length(gagal_semua) + 1]] <<- data.frame(
+        kode_lokasi = kode_lokasi, nama_file = nama_file, pesan_error = conditionMessage(e)
+      )
+      NULL
+    })
+
+    if (!is.null(hasil_file)) hasil_semua[[length(hasil_semua) + 1]] <- hasil_file
   }
-  hasil
+
+  df_hasil <- do.call(rbind, hasil_semua)
+  df_gagal <- if (length(gagal_semua) > 0) do.call(rbind, gagal_semua) else NULL
+
+  if (!is.null(df_hasil)) {
+    write.csv(df_hasil, file.path(dir_output, paste0("hasil_identifikasi_spesies_", kode_lokasi, ".csv")), row.names = FALSE)
+    message("  -> ", sum(!is.na(df_hasil$nama_ilmiah)), " deteksi spesies (dari ", nrow(df_hasil), " jendela 3-detik) disimpan.")
+  }
+  if (!is.null(df_gagal)) {
+    write.csv(df_gagal, file.path(dir_output, paste0("spesies_file_gagal_", kode_lokasi, ".csv")), row.names = FALSE)
+  }
+
+  df_hasil
 }
 
 buat_plot_top_spesies <- function(df, kode_lokasi) {
@@ -299,8 +294,8 @@ if (!is.null(df_indeks_semua)) {
 }
 
 message("\n########## BAGIAN B: IDENTIFIKASI SPESIES (BirdNET) ##########")
-message("Memuat model BirdNET -- percobaan pertama bisa lama (unduh Python & model)...")
-model_birdnet <- load_birdnet(type = "acoustic")
+message("Memuat model BirdNET -- percobaan pertama bisa mengunduh file model dulu...")
+model_birdnet <- birdnet_model_protobuf()
 message("Model siap.")
 
 spesies_gabungan <- list()

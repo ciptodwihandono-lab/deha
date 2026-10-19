@@ -18,9 +18,10 @@ KONTEKS DATA:
   escape backslash)
 - Format file: .WAV mentah dari AudioMoth, nama file mengikuti konvensi
   bawaan AudioMoth: YYYYMMDD_HHMMSS.WAV (contoh: 20260115_060000.WAV)
-- Struktur folder: [JELASKAN, mis. "satu folder per lokasi/site, nama
-  folder = kode lokasi" ATAU "semua file dalam satu folder, lokasi
-  dibedakan dari prefix nama file"]
+- Struktur folder: satu subfolder per lokasi/site di dalam
+  "F:/Audiomoth/UT 2026" (nama subfolder = kode/nama lokasi). **Tiap
+  lokasi harus diolah dan dilaporkan TERPISAH, jangan digabung jadi
+  satu angka nasional/rata-rata semua lokasi.**
 - Durasi tiap rekaman: [ISI, mis. "60 detik per file" atau "durasi
   bervariasi, mis. rekaman kontinu per jam"]
 - Sample rate: [ISI JIKA TAHU, mis. "48000 Hz" -- kalau tidak tahu,
@@ -48,15 +49,23 @@ YANG DIBUTUHKAN DARI SKRIP:
    seluruh proses (AudioMoth kadang menghasilkan file WAV korup saat
    baterai lemah) -- file yang gagal dicatat terpisah, bukan
    menghentikan skrip.
-4. Gabungkan hasil jadi satu data frame: nama_file, timestamp, tanggal,
-   jam, [kode_lokasi jika ada dari struktur folder], lalu nilai keenam
-   indeks.
-5. Simpan hasil ke CSV.
-6. Buat 2 visualisasi pakai ggplot2:
-   a. Pola diel (rata-rata tiap indeks per jam dalam sehari, 0-23) --
-      untuk melihat puncak aktivitas suara (mis. chorus subuh/senja).
-   b. Tren indeks dari waktu ke waktu (time series harian), dengan
-      garis terpisah per lokasi kalau ada lebih dari satu lokasi.
+4. Gabungkan hasil jadi satu data frame dengan kolom: nama_file,
+   kode_lokasi (ambil otomatis dari nama subfolder), timestamp,
+   tanggal, jam, lalu nilai keenam indeks.
+5. Simpan hasil ke CSV -- **satu file CSV per lokasi** (mis.
+   `hasil_indeks_akustik_[kode_lokasi].csv`), bukan satu CSV gabungan
+   semua lokasi. Kalau mau tetap ada CSV gabungan untuk rekap, buat
+   sebagai tambahan, bukan pengganti file per-lokasi.
+6. Buat visualisasi pakai ggplot2, dibuat **terpisah per lokasi**
+   (bukan satu grafik gabungan semua lokasi jadi satu garis rata-rata):
+   a. Pola diel per lokasi (rata-rata tiap indeks per jam dalam sehari,
+      0-23) -- untuk melihat puncak aktivitas suara (mis. chorus
+      subuh/senja) di masing-masing lokasi.
+   b. Tren indeks dari waktu ke waktu (time series harian) per lokasi.
+   c. (Opsional) satu grafik pembanding antar-lokasi berdampingan
+      (facet_wrap per lokasi di ggplot2) supaya tetap bisa dibandingkan
+      visual, tapi tetap dengan panel terpisah per lokasi -- bukan
+      dirata-rata jadi satu angka.
 7. Tulis kode dengan komentar singkat per bagian, modular (fungsi
    terpisah untuk: baca file, hitung indeks, plot), dan tangani path
    file secara relatif memakai `here::here()` kalau project pakai

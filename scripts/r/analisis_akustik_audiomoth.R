@@ -1,8 +1,23 @@
-## Analisis Indeks Akustik Soundscape dari Data AudioMoth
+## Analisis Indeks Akustik Soundscape dari Data Song Meter Micro 2
 ##
-## Data: rekaman .WAV mentah AudioMoth, satu subfolder per lokasi di
-## dalam folder utama (default: F:/Audiomoth/UT 2026). Nama file
-## mengikuti konvensi AudioMoth: YYYYMMDD_HHMMSS.WAV.
+## Data: rekaman .WAV dari perekam Wildlife Acoustics Song Meter Micro
+## 2, satu subfolder per lokasi di dalam folder utama (default:
+## F:/Audiomoth/UT 2026). Nama file mengandung timestamp format
+## YYYYMMDD_HHMMSS (diambil dari bagian mana pun di nama file, jadi
+## tidak masalah ada prefix nama/ID alat di depannya).
+##
+## Setting perekam di lapangan (dari pengaturan Song Meter Micro 2):
+##   - Sample rate       : 32000 Hz
+##   - Gain              : 18 dB
+##   - Panjang rekam maks : 1 menit per file
+##   - Duty cycle        : rekam 1 menit, jeda 4 menit (siklus 5 menit)
+##   - Jam aktif          : 00:00 - 23:59 (sepanjang hari, ~288 file/hari/lokasi)
+## Karena panjang rekam maksimal sudah 1 menit, parameter
+## durasi_segmen_detik di bawah (60 detik) secara praktis tidak akan
+## memotong file sama sekali -- tiap file sudah jadi satu segmen utuh.
+## Parameter default indeks akustik (ADI/AEI/NDSI/BI) dari package
+## soundecology semuanya memakai frekuensi di bawah Nyquist 16000 Hz
+## (= 32000/2), jadi aman dipakai langsung tanpa penyesuaian.
 ##
 ## Tiap lokasi diproses dan disimpan TERPISAH (CSV & grafik per
 ## lokasi), plus satu CSV rekap gabungan untuk referensi.
@@ -14,8 +29,8 @@
 
 base_path         <- "F:/Audiomoth/UT 2026"   # folder utama berisi subfolder per lokasi
 dir_output         <- file.path(dirname(base_path), "hasil_analisis_akustik_UT2026")
-durasi_segmen_detik <- 60   # rekaman dipecah per 60 detik sebelum hitung indeks
-durasi_segmen_min   <- 30   # sisa potongan < 30 detik di akhir file dibuang
+durasi_segmen_detik <- 60   # = panjang rekam maksimal alat (1 menit), lihat catatan di atas
+durasi_segmen_min   <- 30   # sisa potongan < 30 detik di akhir file dibuang (jarang terpakai)
 
 # ============================== PACKAGE ======================================
 
@@ -64,7 +79,9 @@ cari_file_wav <- function(base_path) {
   do.call(rbind, daftar)
 }
 
-# Parse timestamp dari nama file AudioMoth (format YYYYMMDD_HHMMSS).
+# Parse timestamp dari nama file (format YYYYMMDD_HHMMSS, di mana pun
+# posisinya dalam nama file -- cocok untuk Song Meter Micro 2 maupun
+# perekam lain dengan konvensi penamaan serupa).
 parse_timestamp_audiomoth <- function(nama_file) {
   m <- regmatches(nama_file, regexpr("\\d{8}_\\d{6}", nama_file))
   if (length(m) == 0) return(as.POSIXct(NA))

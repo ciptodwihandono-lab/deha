@@ -1,31 +1,42 @@
-# Prompt: Analisis Indeks Akustik Soundscape dari Data AudioMoth (R)
+# Prompt: Analisis Indeks Akustik Soundscape dari Data Song Meter Micro 2 (R)
 
 *Prompt siap pakai untuk AI assistant di RStudio (atau ChatGPT/Claude
-versi lain), ditulis berdasarkan konteks proyek biodiversitas di repo
-`deha`. Isi bagian [DALAM KURUNG SIKU] sebelum paste, lalu tempel
-seluruh teks di bawah ini ke AI assistant-mu.*
+versi lain), sudah terisi lengkap sesuai data Song Meter Micro 2 di
+"F:/Audiomoth/UT 2026" -- tinggal salin teks di bawah ini apa adanya
+ke AI assistant-mu. (Catatan: repo ini juga sudah punya skrip R jadi
+siap pakai di `scripts/r/analisis_akustik_audiomoth.R`, jadi prompt ini
+sifatnya cadangan/referensi kalau mau generate ulang atau modifikasi
+lewat AI lain.)*
 
 ---
 
 ```
-Saya punya data rekaman suara dari perangkat AudioMoth untuk pemantauan
-keanekaragaman hayati (soundscape ecology). Tolong buatkan skrip R
-lengkap untuk menghitung indeks akustik dari rekaman tersebut.
+Saya punya data rekaman suara dari perekam Wildlife Acoustics Song
+Meter Micro 2 untuk pemantauan keanekaragaman hayati (soundscape
+ecology). Tolong buatkan skrip R lengkap untuk menghitung indeks
+akustik dari rekaman tersebut.
 
 KONTEKS DATA:
 - Lokasi folder rekaman: "F:/Audiomoth/UT 2026" (path Windows asli:
   F:\Audiomoth\UT 2026 -- pakai forward slash di R supaya tidak perlu
-  escape backslash)
-- Format file: .WAV mentah dari AudioMoth, nama file mengikuti konvensi
-  bawaan AudioMoth: YYYYMMDD_HHMMSS.WAV (contoh: 20260115_060000.WAV)
+  escape backslash; nama folder "Audiomoth" hanya penamaan folder
+  pribadi, bukan nama alat -- alatnya Song Meter Micro 2)
+- Format file: .WAV, nama file mengandung timestamp format
+  YYYYMMDD_HHMMSS di suatu bagian nama file (boleh ada prefix ID/nama
+  alat di depannya)
 - Struktur folder: satu subfolder per lokasi/site di dalam
   "F:/Audiomoth/UT 2026" (nama subfolder = kode/nama lokasi). **Tiap
   lokasi harus diolah dan dilaporkan TERPISAH, jangan digabung jadi
   satu angka nasional/rata-rata semua lokasi.**
-- Durasi tiap rekaman: [ISI, mis. "60 detik per file" atau "durasi
-  bervariasi, mis. rekaman kontinu per jam"]
-- Sample rate: [ISI JIKA TAHU, mis. "48000 Hz" -- kalau tidak tahu,
-  minta skrip membaca otomatis dari header WAV]
+- Setting perekam (Song Meter Micro 2):
+  - Sample rate: 32000 Hz
+  - Gain: 18 dB
+  - Panjang rekam maksimal: 1 menit per file
+  - Duty cycle: rekam 1 menit, jeda 4 menit (siklus 5 menit), aktif
+    00:00-23:59 (jadi sekitar 288 file/hari/lokasi)
+  Karena tiap file sudah pendek (maks 1 menit), skrip tidak perlu logic
+  pemecahan segmen yang rumit -- cukup antisipasi kalau suatu saat ada
+  file lebih panjang dari 1 menit.
 
 TUJUAN ANALISIS:
 Hitung indeks akustik keragaman (acoustic diversity indices) standar
@@ -46,7 +57,7 @@ YANG DIBUTUHKAN DARI SKRIP:
    kolom POSIXct menggunakan `lubridate`.
 3. Loop/fungsi yang menghitung keenam indeks di atas untuk tiap file,
    dibungkus try/catch supaya file korup/rusak tidak menghentikan
-   seluruh proses (AudioMoth kadang menghasilkan file WAV korup saat
+   seluruh proses (perekam kadang menghasilkan file WAV korup saat
    baterai lemah) -- file yang gagal dicatat terpisah, bukan
    menghentikan skrip.
 4. Gabungkan hasil jadi satu data frame dengan kolom: nama_file,
@@ -72,11 +83,11 @@ YANG DIBUTUHKAN DARI SKRIP:
    RStudio Project / .Rproj.
 
 CATATAN PENTING:
-- Rekaman AudioMoth bisa berdurasi panjang (kontinu per jam) -- kalau
-  durasi file lebih dari ~2-3 menit, pecah dulu jadi segmen pendek
-  (mis. per 1 menit) sebelum hitung indeks, karena sebagian indeks
-  akustik (ACI dkk) didesain untuk rekaman pendek. Tolong tambahkan
-  opsi parameter `durasi_segmen_detik` di skrip untuk ini.
+- Rekaman Song Meter Micro 2 saya sudah pendek (maks 1 menit per file,
+  sesuai setting alat), jadi tidak wajib dipecah lagi. Tapi tetap
+  tambahkan opsi parameter `durasi_segmen_detik` (default 60 detik)
+  untuk jaga-jaga kalau suatu saat ada file lebih panjang, karena
+  sebagian indeks akustik (ACI dkk) didesain untuk rekaman pendek.
 - Kalau folder berisi file dalam jumlah besar (ratusan/ribuan), proses
   bisa lama -- tambahkan progress bar (`pbapply` atau cukup
   `cat()`/`message()` progress tiap N file) supaya saya tahu skrip
@@ -89,13 +100,11 @@ CATATAN PENTING:
 
 ## Cara pakai
 
-1. Isi bagian `[DALAM KURUNG SIKU]` di atas sesuai struktur data
-   AudioMoth-mu (lokasi folder, apakah per-lokasi, durasi rekaman).
-2. Salin seluruh blok kode di atas (dari `Saya punya data...` sampai
-   akhir).
-3. Tempel ke AI assistant di dalam RStudio (atau ChatGPT/Claude lain
+1. Salin seluruh blok kode di atas (dari `Saya punya data...` sampai
+   akhir) -- tidak ada lagi bagian yang perlu diisi manual.
+2. Tempel ke AI assistant di dalam RStudio (atau ChatGPT/Claude lain
    yang kamu pakai untuk menulis kode R).
-4. Review kode yang dihasilkan sebelum dijalankan -- terutama path
+3. Review kode yang dihasilkan sebelum dijalankan -- terutama path
    folder dan nama kolom, karena AI assistant generate berdasarkan
    asumsi dari isi prompt ini.
 

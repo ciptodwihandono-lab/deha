@@ -7,6 +7,7 @@
 ## tidak masalah ada prefix nama/ID alat di depannya).
 ##
 ## Setting perekam di lapangan (dari pengaturan Song Meter Micro 2):
+##   - SN (nomor seri)    : 2MM27997
 ##   - Sample rate       : 32000 Hz
 ##   - Gain              : 18 dB
 ##   - Panjang rekam maks : 1 menit per file
@@ -31,6 +32,7 @@ base_path         <- "F:/Audiomoth/UT 2026"   # folder utama berisi subfolder pe
 dir_output         <- file.path(dirname(base_path), "hasil_analisis_akustik_UT2026")
 durasi_segmen_detik <- 60   # = panjang rekam maksimal alat (1 menit), lihat catatan di atas
 durasi_segmen_min   <- 30   # sisa potongan < 30 detik di akhir file dibuang (jarang terpakai)
+id_alat             <- "2MM27997"   # SN Song Meter Micro 2 -- dicatat di tiap baris hasil untuk provenance
 
 # ============================== PACKAGE ======================================
 
@@ -161,6 +163,7 @@ proses_satu_lokasi <- function(kode_lokasi, file_df) {
         cbind(
           data.frame(
             kode_lokasi = kode_lokasi,
+            id_alat = id_alat,
             nama_file = nama_file,
             offset_detik = seg$offset_detik,
             timestamp = waktu_segmen,

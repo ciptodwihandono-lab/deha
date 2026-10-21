@@ -1,0 +1,218 @@
+# Laporan Sementara: Pemantauan Bioakustik dengan Song Meter Micro 2
+
+*Laporan sementara (interim) untuk mendukung dokumen proposal/laporan
+proyek pemantauan keanekaragaman hayati akustik. Bagian METODE dan
+TEMUAN QUALITY CONTROL sudah final; bagian HASIL masih berisi data
+placeholder yang perlu diisi dari file CSV hasil pemrosesan -- lihat
+catatan "[DATA BELUM DIISI]" di tiap bagian.*
+
+## 1. Ringkasan
+
+Pemantauan bioakustik dilakukan di 2 lokasi di Jawa Timur menggunakan
+perekam otomatis Wildlife Acoustics Song Meter Micro 2, dengan dua
+jalur analisis: (1) indeks akustik soundscape (ACI, ADI, AEI, NDSI, BI,
+H) dan (2) identifikasi spesies otomatis memakai model BirdNET. Total
+**1.162 baris data indeks akustik** dan **23.225 deteksi spesies**
+(ambang keyakinan confidence >= 0,5) berhasil diproses dari kedua
+lokasi gabungan.
+
+Satu temuan metodologis penting: proses quality control menemukan
+indikasi kuat salah identifikasi untuk setidaknya satu spesies (lihat
+Bagian 5), sehingga seluruh daftar spesies hasil BirdNET perlu melalui
+tahap validasi sebaran geografis sebelum dipakai sebagai data final.
+
+## 2. Latar Belakang
+
+[Konteks proyek -- tujuan pemantauan, kaitan dengan program KEHATI
+atau unit kerja terkait, DATA BELUM DIISI: tambahkan detail spesifik
+tujuan studi sesuai konteks internal yang belum disampaikan ke saya.]
+
+## 3. Lokasi dan Waktu Pemasangan
+
+| Kode | Lokasi | Kecamatan | Kab./Kota | Koordinat (WGS 84) | Tipe habitat | Tanggal pasang |
+| --- | --- | --- | --- | --- | --- | --- |
+| SM-01 | Gunung Anyar Tambak | Kec. Gunung Anyar | Kota Surabaya | -7.329565, 112.821176 | Mangrove/tambak pesisir | 13-10-2026 |
+| SM-02 | Sumbergondo | Kec. Bumiaji | Kota Batu | -7.802615, 112.553300 | Hutan dataran tinggi | 15-10-2026 |
+
+Koordinat diambil dari geotag foto lapangan (bukan estimasi). Peta
+lokasi gaya karya ilmiah (skala kab/kota, inset, legenda, tabel)
+tersedia terpisah: `outputs/figures/peta_lokasi_song_meter.png` / `.pdf`.
+
+## 4. Metode
+
+### 4.1 Perekaman
+
+- **Alat**: Wildlife Acoustics Song Meter Micro 2, SN 2MM27997.
+- **Setting**: sample rate 32.000 Hz, gain 18 dB, panjang rekam maksimal
+  1 menit/file, duty cycle rekam 1 menit / jeda 4 menit (siklus 5
+  menit), aktif 00:00-23:59 (±288 file/hari/lokasi).
+- Nama file mengikuti konvensi timestamp (YYYYMMDD_HHMMSS), dipakai
+  untuk merekonstruksi waktu absolut tiap deteksi.
+
+### 4.2 Indeks Akustik Soundscape
+
+Enam indeks dihitung per file (1 menit = 1 segmen, sesuai durasi rekam
+alat) memakai package R `soundecology` dan `seewave`:
+
+| Indeks | Interpretasi singkat |
+| --- | --- |
+| ACI (Acoustic Complexity Index) | Kompleksitas variasi amplitudo spektral -- proxy aktivitas biologis |
+| ADI (Acoustic Diversity Index) | Keragaman energi akustik antar-pita frekuensi |
+| AEI (Acoustic Evenness Index) | Kemerataan energi akustik antar-pita frekuensi |
+| NDSI (Normalized Difference Soundscape Index) | Rasio dominasi suara alami (biofoni) vs antropogenik (antropofoni) |
+| BI (Bioacoustic Index) | Area di bawah kurva spektrum pada pita frekuensi biologis |
+| H (Acoustic Entropy) | Entropi Shannon gabungan temporal-spektral |
+
+Skrip: `scripts/r/analisis_lengkap_audio_UT2026.R` (Bagian A).
+
+### 4.3 Identifikasi Spesies Otomatis
+
+Memakai package R `birdnetR` (wrapper resmi model BirdNET, Cornell Lab
+/ Chemnitz University -- model dilatih antara lain dari data
+xeno-canto.org). Fungsi `predict_species_from_audio_file()` dipanggil
+per file dengan **ambang confidence minimum 0,5** (default package
+0,1 dianggap terlalu longgar). Tiap jendela analisis 3 detik bisa
+menghasilkan lebih dari satu kandidat spesies; untuk perhitungan
+kekayaan/komposisi spesies, hanya kandidat **confidence tertinggi per
+jendela** yang dipakai (menghindari hitung ganda kandidat alternatif).
+
+Skrip: `scripts/r/analisis_lengkap_audio_UT2026.R` (Bagian B),
+`scripts/r/rekap_spesies_song_meter.R` (pembersihan & rekap).
+
+### 4.4 Quality Control: Validasi Sebaran Geografis
+
+Setiap spesies yang terdeteksi disilang-cek terhadap daftar spesies
+yang dianggap *plausible* oleh model lokasi BirdNET sendiri
+(`birdnet_model_meta()` + `predict_species_at_location_and_time()`,
+dipanggil dengan koordinat presisi tiap lokasi, tanpa filter musim).
+Spesies yang terdeteksi tapi tidak masuk daftar plausible ditandai
+"MENCURIGAKAN" untuk verifikasi manual lebih lanjut -- lihat Bagian 5.
+
+Skrip: `scripts/r/validasi_sebaran_geografis_song_meter.R`.
+
+### 4.5 Verifikasi Visual (Spektrogram)
+
+Untuk tiap kombinasi (lokasi, spesies), satu contoh deteksi dengan
+confidence tertinggi dipotong dari file WAV asli dan dibuat
+spektrogram + oscillogram, untuk mendukung verifikasi visual manual
+(dibandingkan referensi literatur/xeno-canto).
+
+Skrip: `scripts/r/spektrogram_per_spesies_song_meter.R`.
+
+## 5. Temuan Quality Control: Indikasi Salah Identifikasi
+
+Saat peninjauan awal hasil, ditemukan deteksi atas nama **Takur
+Warna-warni** (*Psilopogon mystacophanos*, nama Inggris Red-throated
+Barbet) di lokasi SM-01 (Gunung Anyar Tambak, Surabaya). Sebaran alami
+spesies ini dikenal ke arah Sumatra dan Kalimantan, bukan Jawa --
+sehingga dicurigai sebagai salah identifikasi (kemungkinan tertukar
+dengan takur sejenis yang memang ada di Jawa, mengingat kemiripan
+panggilan antar-spesies *Psilopogon*).
+
+**Verifikasi lewat model lokasi BirdNET sendiri mengonfirmasi
+kecurigaan ini**: dari 369 spesies yang dianggap *plausible* muncul di
+koordinat SM-01 (dihitung model `birdnet_model_meta()`), *Psilopogon
+mystacophanos* **tidak termasuk** di dalamnya.
+
+**Implikasi metodologis**: seluruh daftar spesies hasil BirdNET di
+laporan ini WAJIB melalui tahap validasi sebaran geografis (Bagian
+4.4) sebelum dipakai sebagai data final -- deteksi otomatis tanpa
+validasi berisiko memuat kesalahan identifikasi seperti kasus ini.
+
+## 6. Hasil
+
+### 6.1 Ringkasan Volume Data
+
+| Variabel | Nilai |
+| --- | --- |
+| Total baris indeks akustik (semua lokasi) | 1.162 |
+| Total deteksi spesies (confidence >= 0,5, sebelum dedup kandidat) | 23.225 |
+| Jumlah lokasi | 2 |
+
+### 6.2 Kekayaan & Keragaman Spesies per Lokasi
+
+**[DATA BELUM DIISI]** -- isi dari `ringkasan_kekayaan_spesies.csv`
+(hasil `rekap_spesies_song_meter.R`): kekayaan spesies (S), total
+deteksi bersih, indeks Shannon-Wiener (H'), evenness (J) per lokasi.
+
+| Lokasi | Kekayaan spesies (S) | Total deteksi (bersih) | Shannon-H' | Evenness (J) |
+| --- | --- | --- | --- | --- |
+| SM-01 Gunung Anyar Tambak | *(isi)* | *(isi)* | *(isi)* | *(isi)* |
+| SM-02 Sumbergondo | *(isi)* | *(isi)* | *(isi)* | *(isi)* |
+
+### 6.3 Daftar Spesies Teridentifikasi
+
+**[DATA BELUM DIISI]** -- isi dari `tabel_spesies_lengkap_semua_lokasi.csv`
+(hasil `tabel_spesies_per_lokasi.R`). **Setelah divalidasi** lewat
+`validasi_sebaran_geografis_song_meter.R` -- tandai spesies
+"MENCURIGAKAN" secara eksplisit di tabel final, jangan dihapus diam-diam.
+
+### 6.4 Perbandingan Antar Lokasi
+
+**[DATA BELUM DIISI]** -- isi dari `hasil_uji_perbandingan_lokasi.csv`
+(hasil `perbandingan_lokasi_song_meter.R`): median tiap indeks akustik
+& kekayaan spesies per lokasi, hasil uji Wilcoxon (p-value, signifikan
+atau tidak).
+
+### 6.5 Korelasi Indeks Akustik vs Kekayaan Spesies
+
+**[DATA BELUM DIISI]** -- isi dari `hasil_korelasi_indeks_kekayaan.csv`
+(hasil `korelasi_indeks_kekayaan_song_meter.R`): koefisien Spearman
+per indeks, apakah signifikan sebagai proxy biodiversitas.
+
+### 6.6 Pola Aktivitas Diel
+
+**[DATA BELUM DIISI]** -- ringkasan naratif dari
+`heatmap_diel_<lokasi>.png` (hasil `pola_diel_spesies_song_meter.R`):
+jam aktivitas puncak per lokasi, spesies dominan di tiap periode.
+
+### 6.7 Kurva Akumulasi Spesies & Sensitivitas Ambang
+
+**[DATA BELUM DIISI]** -- ringkasan dari
+`kurva_akumulasi_spesies.csv`/`.png` dan
+`sensitivitas_ambang_confidence.csv`/`.png` (hasil
+`analisis_lanjutan_song_meter.R`): apakah durasi survei sudah cukup
+menangkap kekayaan spesies, dan seberapa sensitif hasil terhadap
+pemilihan ambang confidence.
+
+## 7. Keterbatasan
+
+- **Durasi survei pendek** (deployment baru dimulai 13 & 15 Oktober
+  2026) -- hasil di laporan ini bersifat sementara/awal, bukan
+  representasi tahunan/musiman penuh.
+- **BirdNET tidak punya nama umum Bahasa Indonesia** -- nama Indonesia
+  di tabel spesies dicocokkan dari referensi 235 spesies burung
+  air/pantai proyek lain (cakupan terbatas, banyak spesies hutan di
+  SM-02 kemungkinan tidak ketemu padanannya).
+- **Deteksi otomatis berpotensi salah** (lihat Bagian 5) -- validasi
+  sebaran geografis adalah mitigasi, bukan jaminan 100% akurat; untuk
+  publikasi formal, spesies penting/baru-tercatat sebaiknya
+  diverifikasi manual lewat spektrogram + referensi audio.
+- **NDSI yang dipakai adalah nilai gabungan**, bukan komponen biofoni/
+  antropofoni terpisah.
+- Hanya 2 lokasi -- uji statistik antar-lokasi (Bagian 6.4) punya
+  kekuatan terbatas untuk generalisasi ke skala lebih luas.
+
+## 8. Rencana Lanjutan
+
+1. Lengkapi Bagian 6 dengan data CSV aktual dari komputer lapangan.
+2. Verifikasi manual semua spesies berstatus "MENCURIGAKAN" lewat
+   spektrogram + perbandingan xeno-canto.
+3. Lanjutkan pemantauan untuk memperpanjang durasi survei (lihat kurva
+   akumulasi spesies, Bagian 6.7).
+4. Pertimbangkan menambah lokasi untuk memperkuat perbandingan
+   antar-habitat.
+
+## 9. Lampiran: Skrip & Berkas Terkait
+
+- `scripts/r/analisis_lengkap_audio_UT2026.R` -- indeks akustik + identifikasi spesies (proses utama)
+- `scripts/r/rekap_spesies_song_meter.R` -- pembersihan & rekap kekayaan/keragaman
+- `scripts/r/pola_diel_spesies_song_meter.R` -- heatmap aktivitas diel
+- `scripts/r/perbandingan_lokasi_song_meter.R` -- uji Wilcoxon antar lokasi
+- `scripts/r/korelasi_indeks_kekayaan_song_meter.R` -- korelasi Spearman
+- `scripts/r/analisis_lanjutan_song_meter.R` -- akumulasi spesies, sensitivitas ambang, pola NDSI per jam
+- `scripts/r/tabel_spesies_per_lokasi.R` -- tabel nama ilmiah/Indonesia/Inggris
+- `scripts/r/validasi_sebaran_geografis_song_meter.R` -- quality control sebaran geografis
+- `scripts/r/spektrogram_per_spesies_song_meter.R` -- spektrogram verifikasi visual
+- `scripts/python/peta_lokasi_song_meter.py` -- peta lokasi titik pemasangan
+- `outputs/figures/peta_lokasi_song_meter.png` / `.pdf` -- peta lokasi

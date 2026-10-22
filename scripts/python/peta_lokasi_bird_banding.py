@@ -107,9 +107,46 @@ xlim = (min(xs) - pad, max(xs) + pad)
 ylim = (min(ys) - pad, max(ys) + pad)
 axA.set_xlim(xlim); axA.set_ylim(ylim)
 axA.set_aspect("equal")
-axA.set_facecolor("#eef5ea")
+axA.set_facecolor("#e8e0c8")  # dasar tanah/lumpur tambak
 axA.add_patch(Rectangle((xlim[0], ylim[0]), xlim[1] - xlim[0], ylim[1] - ylim[0],
-                         facecolor="#eef5ea", edgecolor="none", zorder=0))
+                         facecolor="#e8e0c8", edgecolor="none", zorder=0))
+
+# -- Sketsa ILUSTRATIF (bukan hasil survei/GPS track) berdasarkan foto lapangan:
+# area tambak/perairan di sisi barat (terlihat di foto KRMMA02-1 & KRMMA04),
+# kanopi mangrove di sekitar jalur, dan jalur setapak penghubung titik
+# (digambar lewat minimum spanning tree antar titik -- bukan rekaman jalur asli).
+rng = np.random.default_rng(42)
+
+# area tambak (poligon tak-beraturan, ilustratif)
+tambak_pts = np.array([
+    [xlim[0] + 5, ylim[0] + 5], [xlim[0] + 5, -5], [-70, -15], [-75, 20],
+    [-60, 45], [-20, 30], [-10, 5], [-5, ylim[0] + 5],
+])
+axA.add_patch(plt.Polygon(tambak_pts, closed=True, facecolor="#a9c9d6",
+                           edgecolor="#7fa6b5", lw=0.6, alpha=0.75, zorder=1))
+axA.text(-65, -65, "area tambak/\nperairan\n(ilustratif)", fontsize=6.5, ha="center",
+         va="center", color="#355", style="italic", zorder=2)
+
+# kanopi mangrove (blob hijau acak di sekeliling jalur, bukan di area tambak)
+for _ in range(220):
+    cx = rng.uniform(xlim[0], xlim[1]); cy = rng.uniform(ylim[0], ylim[1])
+    # hindari area tambak (kasar: sisi barat-tengah bawah)
+    if -75 < cx < -5 and ylim[0] < cy < 45:
+        continue
+    r = rng.uniform(3, 9)
+    shade = rng.choice(["#6b8f5a", "#5a7d4a", "#7fa06a", "#4f6e40"])
+    axA.add_patch(plt.Circle((cx, cy), r, facecolor=shade, edgecolor="none",
+                              alpha=0.55, zorder=2))
+
+# jalur setapak ilustratif (minimum spanning tree antar titik)
+edges_mst = [("KRMMA03", "KRMMA04"), ("KRMMA02-1", "KRMMA03"), ("KRMMA01", "KRMMA04")]
+pos = {t["id"]: (t["x_m"], t["y_m"]) for t in TITIK}
+for a, b2 in edges_mst:
+    (x1, y1), (x2, y2) = pos[a], pos[b2]
+    axA.plot([x1, x2], [y1, y2], color="#b08968", lw=5.5, solid_capstyle="round",
+              alpha=0.85, zorder=3)
+    axA.plot([x1, x2], [y1, y2], color="#8a6648", lw=0.8, linestyle=(0, (1, 3)),
+              alpha=0.85, zorder=3)
 
 warna_kec = {"Kec. Gunung Anyar": "#1565c0", "Kec. Rungkut": "#2e7d32"}
 for t in TITIK:
@@ -122,8 +159,8 @@ for t in TITIK:
 axA.set_xlabel("Jarak timur-barat dari titik tengah (meter)", fontsize=8.5)
 axA.set_ylabel("Jarak utara-selatan dari titik tengah (meter)", fontsize=8.5)
 axA.tick_params(labelsize=7.5)
-axA.grid(True, color="#b9c9b2", lw=0.4, ls=(0, (4, 3)), alpha=0.7)
-axA.set_title("A. Peta Situasi -- Posisi Relatif Titik Jaring", fontsize=10.5, fontweight="bold", loc="left")
+axA.grid(True, color="#ffffff", lw=0.4, ls=(0, (4, 3)), alpha=0.5, zorder=4)
+axA.set_title("A. Peta Situasi -- Sketsa Ilustratif Jalur & Titik Jaring", fontsize=10.5, fontweight="bold", loc="left")
 
 # skala batang (meter)
 sb_len = 50
@@ -134,8 +171,12 @@ axA.text(sb_x0 + sb_len / 2, sb_y0 + (ylim[1] - ylim[0]) * 0.018, f"{sb_len} m",
          ha="center", fontsize=8, path_effects=halo, zorder=21)
 north_arrow(axA, 0.93, 0.80, 0.10)
 
-axA.text(0.985, 0.02, "Posisi relatif dari koordinat GPS\n(bukan basemap citra/jalan)",
-         transform=axA.transAxes, fontsize=6.8, color="#555", ha="right", va="bottom")
+axA.text(0.985, 0.02,
+         "Titik: posisi relatif dari koordinat GPS (akurat).\n"
+         "Kanopi/tambak/jalur: sketsa ILUSTRATIF dari foto\n"
+         "lapangan (bukan hasil survei/GPS track/citra satelit).",
+         transform=axA.transAxes, fontsize=6.5, color="#333", ha="right", va="bottom",
+         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#999", alpha=0.85))
 
 # ---------- Panel B: inset konteks Jawa Timur / Surabaya ----------
 axB = fig.add_axes([0.535, 0.645, 0.20, 0.20])

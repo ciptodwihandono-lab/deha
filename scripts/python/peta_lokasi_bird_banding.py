@@ -94,7 +94,7 @@ def north_arrow(ax, x, y, size, fontsize=9):
 
 
 # ================= FIGURE =================
-fig = plt.figure(figsize=(16.5, 11.5), dpi=200)
+fig = plt.figure(figsize=(16.5, 11.5), dpi=300)
 fig.suptitle(JUDUL, fontsize=15, fontweight="bold", y=0.985)
 fig.text(0.5, 0.945, "Kegiatan pendukung program KEHATI PROPER -- 14 Oktober 2026",
          fontsize=10, ha="center", style="italic", color="#444")
@@ -113,47 +113,30 @@ axA.add_patch(Rectangle((xlim[0], ylim[0]), xlim[1] - xlim[0], ylim[1] - ylim[0]
                          facecolor="#f4f1e8", edgecolor="none", zorder=0))
 
 # -- Elemen ILUSTRATIF (bukan hasil survei/GPS track/citra satelit) berdasarkan
-# foto lapangan: area tambak/perairan (terlihat di foto KRMMA02-1 & KRMMA04),
-# vegetasi mangrove (simbol titik sistematis gaya peta topografi -- bukan
-# tekstur blob), dan jalur setapak penghubung titik (minimum spanning tree
-# antar titik, bukan rekaman jalur asli).
+# foto lapangan: vegetasi mangrove (simbol titik sistematis gaya peta
+# topografi -- bukan tekstur blob).
 
-tambak_pts = np.array([
-    [xlim[0] + 5, ylim[0] + 5], [xlim[0] + 5, -5], [-70, -15], [-75, 20],
-    [-60, 45], [-20, 30], [-10, 5], [-5, ylim[0] + 5],
-])
-tambak_path = MplPath(tambak_pts)
-axA.add_patch(plt.Polygon(tambak_pts, closed=True, facecolor="#d6e9f5",
-                           edgecolor="#6f94a8", lw=0.7, hatch="----", zorder=1))
-axA.text(-65, -65, "area tambak/\nperairan\n(ilustratif)", fontsize=6.5, ha="center",
-         va="center", color="#355", style="italic", zorder=2)
-
-# simbol vegetasi mangrove: titik sistematis (grid + jitter kecil) di luar area
-# tambak -- konvensi kartografi topografi standar untuk vegetasi/woodland.
+# simbol vegetasi mangrove: titik sistematis (grid + jitter kecil) di seluruh
+# area -- konvensi kartografi topografi standar untuk vegetasi/woodland.
 rng = np.random.default_rng(7)
 gx, gy = np.meshgrid(np.arange(xlim[0], xlim[1], 9), np.arange(ylim[0], ylim[1], 9))
 gx = gx + rng.uniform(-2.5, 2.5, gx.shape)
 gy = gy + rng.uniform(-2.5, 2.5, gy.shape)
-grid_pts = np.column_stack([gx.ravel(), gy.ravel()])
-di_tambak = tambak_path.contains_points(grid_pts)
-veg_pts = grid_pts[~di_tambak]
-axA.scatter(veg_pts[:, 0], veg_pts[:, 1], s=5, marker="o", color="#2e7d32",
+veg_pts = np.column_stack([gx.ravel(), gy.ravel()])
+axA.scatter(veg_pts[:, 0], veg_pts[:, 1], s=6, marker="o", color="#2e7d32",
             alpha=0.85, zorder=1.5, linewidths=0)
 
 # -- legenda ringkas di dalam panel (pojok kanan-atas, di luar jangkauan titik)
-lx0, ly0, lw_, lh_ = 0.565, 0.73, 0.33, 0.21
+lx0, ly0, lw_, lh_ = 0.565, 0.78, 0.33, 0.16
 axA.add_patch(Rectangle((lx0, ly0), lw_, lh_, transform=axA.transAxes,
                          facecolor="white", edgecolor="#999", lw=0.6, alpha=0.94, zorder=15))
 axA.text(lx0 + 0.02, ly0 + lh_ - 0.025, "LEGENDA", transform=axA.transAxes,
          fontsize=7, fontweight="bold", va="top", zorder=16)
 axA.scatter([lx0 + 0.04], [ly0 + lh_ - 0.085], s=18, marker="o", color="#2e7d32", transform=axA.transAxes, zorder=16)
 axA.text(lx0 + 0.085, ly0 + lh_ - 0.085, "Vegetasi mangrove*", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
-axA.add_patch(Rectangle((lx0 + 0.02, ly0 + lh_ - 0.155), 0.04, 0.035, transform=axA.transAxes,
-                         facecolor="#d6e9f5", edgecolor="#6f94a8", hatch="----", lw=0.5, zorder=16))
-axA.text(lx0 + 0.085, ly0 + lh_ - 0.138, "Tambak/perairan*", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
-axA.scatter([lx0 + 0.04], [ly0 + lh_ - 0.195], s=70, marker="^", color=PT, edgecolor="white",
+axA.scatter([lx0 + 0.04], [ly0 + lh_ - 0.145], s=70, marker="^", color=PT, edgecolor="white",
             transform=axA.transAxes, zorder=16)
-axA.text(lx0 + 0.085, ly0 + lh_ - 0.195, "Titik jaring", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
+axA.text(lx0 + 0.085, ly0 + lh_ - 0.145, "Titik jaring", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
 
 warna_kec = {"Kec. Gunung Anyar": "#1565c0", "Kec. Rungkut": "#2e7d32"}
 for t in TITIK:
@@ -240,6 +223,6 @@ fig.text(0.02, 0.012, "Sistem koordinat: Geografis, Datum WGS 84  |  "
          "Sumber batas administrasi: GADM (via rifani/geojson-political-indonesia)  |  "
          "Dibuat: Oktober 2026", fontsize=7, color="#333")
 
-fig.savefig(OUTPUT + ".png", dpi=200, bbox_inches=None)
+fig.savefig(OUTPUT + ".png", dpi=300, bbox_inches=None)
 fig.savefig(OUTPUT + ".pdf", bbox_inches=None)
 print("Tersimpan:", OUTPUT + ".png / .pdf")

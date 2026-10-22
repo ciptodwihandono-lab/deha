@@ -87,5 +87,13 @@ di bawah dengan kode ARJ03. Foto lama KRMMA03 sudah dihapus dari
    — 15 Oktober 2026, 10:21:25. Titik jaring kabut di jalur hutan.
    *(Awalnya sempat tercatat keliru sebagai KRMMA03 di klaster
    Surabaya -- dikoreksi user jadi ARJ03.)*
+4. **ARJ04** — Jalan Tanpa Nama, Bulukerto (-7.804833, 112.551181)
+   — 15 Oktober 2026 (jam tidak tercatat). Titik jaring kabut; koordinat
+   dari GPS manual (DMS: 7°48'17.40"S 112°33'4.25"E), **belum ada foto**.
+5. **ARJ05** — Jalan Tanpa Nama, Bulukerto (-7.804858, 112.551128)
+   — 15 Oktober 2026 (jam tidak tercatat). Titik jaring kabut; koordinat
+   dari GPS manual (DMS: 7°48'17.49"S 112°33'4.06"E), **belum ada foto**.
+   *(Hanya ~3 m dari ARJ04 -- kemungkinan 2 bacaan GPS berdekatan, bukan
+   typo; dikonfirmasi user sebagai 2 titik terpisah.)*
 
 *(tambahkan titik baru di sini dan di CSV/GeoJSON setiap ada foto lokasi baru)*

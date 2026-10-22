@@ -44,5 +44,10 @@ bird banding setelah semua titik terkumpul).
    Catatan: titik jaring kabut di jalur mangrove tepi tambak, ±100 m
    dari KRMMA01 (sama-sama area Gunung Anyar/Medokan Ayu, kecamatan
    administratif beda: Gunung Anyar vs Rungkut).
+3. **KRMMA04** — Gunung Anyar Tambak, Kec. Gunung Anyar, Kota Surabaya,
+   Jawa Timur (-7.32826062, 112.82044359) — 14 Oktober 2026, 09:04:53.
+   Catatan: titik jaring kabut di jalur mangrove tepi tambak, satu
+   kawasan dengan KRMMA01. (KRMMA03 belum diterima -- nomor urut
+   melompat dari 02 ke 04, bukan kesalahan pencatatan di sini.)
 
 *(tambahkan titik baru di sini dan di CSV setiap ada foto lokasi baru)*

@@ -7,6 +7,16 @@ lokasi gaya karya ilmiah dibuat (lihat
 untuk titik Song Meter Micro 2 -- nanti dibuat skrip senada untuk titik
 bird banding setelah semua titik terkumpul).
 
+> **PERMINTAAN KHUSUS UNTUK PETA INI (beda dari peta Song Meter)**:
+> peta bird banding harus menampilkan **foto jaring/lokasi sebagai
+> inset/panel foto di tiap titik** (gaya jurnal ilmiah / layout QGIS
+> dengan foto lapangan), bukan cuma simbol titik polos seperti peta
+> Song Meter sebelumnya. Perlu file foto asli (bukan cuma nama
+> filenya) tersedia saat peta dibuat -- kalau sesi kerja ini sudah
+> berakhir sebelum peta dibuat, foto perlu diupload ulang ke chat.
+
+## File
+
 ## File
 
 - `lokasi_bird_banding.csv` — tabel titik lokasi: kode, nama lokasi,

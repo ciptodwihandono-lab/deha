@@ -4,8 +4,9 @@ Titik lokasi kegiatan bird banding (penangkapan-penandaan burung) untuk
 mendukung program KEHATI PROPER. Disiapkan dulu di sini sebelum peta
 lokasi gaya karya ilmiah dibuat (lihat
 `scripts/python/peta_lokasi_song_meter.py` sebagai contoh skrip serupa
-untuk titik Song Meter Micro 2 -- nanti dibuat skrip senada untuk titik
-bird banding setelah semua titik terkumpul).
+untuk titik Song Meter Micro 2; `scripts/python/peta_lokasi_bird_banding.py`
+untuk klaster KRMMA -- perlu diperluas/dibuat terpisah untuk klaster ARJ
+karena lokasinya jauh berbeda, lihat catatan di bagian Klaster Lokasi).
 
 > **PERMINTAAN KHUSUS UNTUK PETA INI (beda dari peta Song Meter)**:
 > peta bird banding harus menampilkan **foto jaring/lokasi sebagai
@@ -17,11 +18,10 @@ bird banding setelah semua titik terkumpul).
 
 ## File
 
-## File
-
-- `lokasi_bird_banding.csv` — tabel titik lokasi: kode, nama lokasi,
-  kecamatan, kab/kota, provinsi, koordinat (WGS 84, dari geotag foto
-  lapangan), tanggal, nama file foto, catatan singkat kondisi lokasi.
+- `lokasi_bird_banding.csv` / `lokasi_bird_banding.geojson` — tabel
+  titik lokasi: kode, nama lokasi, kecamatan, kab/kota, provinsi,
+  koordinat (WGS 84, dari geotag foto lapangan), tanggal, nama file
+  foto, catatan singkat kondisi lokasi. GeoJSON siap drag-drop ke QGIS.
 - `photos/` — foto lapangan dengan nama file sama seperti kolom
   `nama_file_foto`. **Tidak di-commit ke git** (lihat `.gitignore`,
   sama seperti `data/raw/observations/photos/`) karena ukurannya besar
@@ -32,7 +32,7 @@ bird banding setelah semua titik terkumpul).
 
 | Kolom | Isi |
 | --- | --- |
-| `kode_lokasi` | Kode unik titik (mis. KRMMA01) |
+| `kode_lokasi` | Kode unik titik (mis. KRMMA01, ARJ01) |
 | `nama_lokasi` | Nama lokasi/desa |
 | `kecamatan`, `kab_kota`, `provinsi` | Wilayah administratif |
 | `lat`, `lon` | Koordinat WGS 84, **dari geotag foto lapangan** (bukan estimasi) |
@@ -40,29 +40,47 @@ bird banding setelah semua titik terkumpul).
 | `nama_file_foto` | Nama file foto di `photos/` (atau Google Drive) |
 | `catatan` | Catatan kondisi lokasi/alat |
 
-## Titik yang sudah tercatat
+## Klaster lokasi
 
-1. **KRMMA01** — Gunung Anyar Tambak, Kec. Gunung Anyar, Kota Surabaya,
-   Jawa Timur (-7.32896386, 112.82101954) — 14 Oktober 2026, 08:03:41.
-   Catatan: titik jaring kabut, tim sedang memeriksa jaring & kantong
-   burung di lokasi.
+Dua klaster terpisah jauh (~50 km, beda kota) -- jangan digabung dalam
+satu peta "posisi relatif meter" seperti `peta_lokasi_bird_banding.py`
+yang ada sekarang (itu cuma untuk klaster KRMMA). Klaster ARJ perlu
+peta terpisah atau pakai pendekatan koordinat asli (bukan jarak
+relatif) kalau mau digabung jadi satu peta nasional/provinsi.
+
+### Klaster KRMMA — Gunung Anyar Tambak / Medokan Ayu, Kota Surabaya
+
+1. **KRMMA01** — Gunung Anyar Tambak, Kec. Gunung Anyar (-7.32896386,
+   112.82101954) — 14 Oktober 2026, 08:03:41. Titik jaring kabut, tim
+   memeriksa jaring & kantong burung.
 2. **KRMMA02-1** — Jalan Tambak Medokan Ayu Gang XI, Medokan Ayu,
-   Kec. Rungkut, Kota Surabaya, Jawa Timur (-7.32881932, 112.81977516)
-   — 14 Oktober 2026, 08:11:41.
-   Catatan: titik jaring kabut di jalur mangrove tepi tambak, ±100 m
-   dari KRMMA03 (sama-sama area Gunung Anyar/Medokan Ayu, kecamatan
-   administratif beda: Gunung Anyar vs Rungkut).
-3. **KRMMA03** — Gunung Anyar Tambak, Kec. Gunung Anyar, Kota Surabaya,
-   Jawa Timur (-7.32801374, 112.81985045) — 14 Oktober 2026, 08:09:57.
-   Catatan: lokasi pemasangan jaring kabut (mist net), ±500 m dari
-   titik Song Meter Micro 2 SM-01 di lokasi yang sama (Gunung Anyar
-   Tambak) -- berguna untuk integrasi data akustik vs bird banding
-   (lihat `docs/laporan_sementara_song_meter_micro2.md` Bagian 2 & 8).
-   *(Awalnya tercatat sebagai KRMMA01, dikoreksi jadi KRMMA03 setelah
-   KRMMA01 yang asli diterima.)*
-4. **KRMMA04** — Gunung Anyar Tambak, Kec. Gunung Anyar, Kota Surabaya,
-   Jawa Timur (-7.32826062, 112.82044359) — 14 Oktober 2026, 09:04:53.
-   Catatan: titik jaring kabut di jalur mangrove tepi tambak, satu
-   kawasan dengan KRMMA03.
+   Kec. Rungkut (-7.32881932, 112.81977516) — 14 Oktober 2026, 08:11:41.
+   Titik jaring kabut di jalur mangrove tepi tambak.
+3. **KRMMA04** — Gunung Anyar Tambak, Kec. Gunung Anyar (-7.32826062,
+   112.82044359) — 14 Oktober 2026, 09:04:53. Titik jaring kabut di
+   jalur mangrove tepi tambak.
 
-*(tambahkan titik baru di sini dan di CSV setiap ada foto lokasi baru)*
+Berguna untuk integrasi data akustik vs bird banding (klaster ini
+±100-500 m dari titik Song Meter Micro 2 SM-01, lihat
+`docs/laporan_sementara_song_meter_micro2.md` Bagian 2 & 8).
+
+*(Kode KRMMA03 sempat dipakai untuk titik di klaster ini lalu dicabut
+-- titik itu ternyata salah catat, lokasi sebenarnya ada di klaster ARJ
+di bawah dengan kode ARJ03. Foto lama KRMMA03 sudah dihapus dari
+`photos/`.)*
+
+### Klaster ARJ — Bulukerto, Kec. Bumiaji, Kota Batu
+
+Dekat dengan titik Song Meter Micro 2 SM-02 (Sumbergondo, Kec. Bumiaji,
+Kota Batu).
+
+1. **ARJ01** — Jalan Tanpa Nama, Bulukerto (-7.80382128, 112.55224873)
+   — 15 Oktober 2026, 10:26:24. Titik jaring kabut di jalur hutan.
+2. **ARJ02** — Jalan Tanpa Nama, Bulukerto (-7.80373312, 112.55238674)
+   — 15 Oktober 2026, 10:25:47. Titik jaring kabut di jalur hutan.
+3. **ARJ03** — Jalan Tanpa Nama, Bulukerto (-7.80274849, 112.55313883)
+   — 15 Oktober 2026, 10:21:25. Titik jaring kabut di jalur hutan.
+   *(Awalnya sempat tercatat keliru sebagai KRMMA03 di klaster
+   Surabaya -- dikoreksi user jadi ARJ03.)*
+
+*(tambahkan titik baru di sini dan di CSV/GeoJSON setiap ada foto lokasi baru)*

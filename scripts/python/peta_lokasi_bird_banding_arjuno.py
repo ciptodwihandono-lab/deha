@@ -204,22 +204,19 @@ axT.text(0.06, 0.02, "Datum WGS 84. Koordinat dari geotag foto lapangan / GPS ma
          fontsize=5.6, style="italic", color="#555", transform=axT.transAxes, va="bottom")
 
 # ---------- Panel foto jaring per titik (baris bawah) ----------
-n = len(TITIK)
+# hanya titik yang sudah ada foto lapangan yang ditampilkan di sini
+TITIK_FOTO = [t for t in TITIK if t["foto"] is not None]
+n = len(TITIK_FOTO)
 gap = 0.015
 pw = (1 - 0.06 - gap * (n - 1)) / n
-for i, t in enumerate(TITIK):
+for i, t in enumerate(TITIK_FOTO):
     x0 = 0.03 + i * (pw + gap)
     axP = fig.add_axes([x0, 0.075, pw, 0.265])
-    if t["foto"] is not None:
-        try:
-            img = mpimg.imread(t["foto"])
-            axP.imshow(img)
-        except Exception as e:
-            axP.text(0.5, 0.5, f"Foto tidak dapat dimuat:\n{e}", ha="center", va="center", fontsize=7, wrap=True)
-    else:
-        axP.set_facecolor("#eeeeee")
-        axP.text(0.5, 0.5, "Foto belum\ntersedia", ha="center", va="center", fontsize=9,
-                  color="#777", style="italic")
+    try:
+        img = mpimg.imread(t["foto"])
+        axP.imshow(img)
+    except Exception as e:
+        axP.text(0.5, 0.5, f"Foto tidak dapat dimuat:\n{e}", ha="center", va="center", fontsize=7, wrap=True)
     axP.set_xticks([]); axP.set_yticks([])
     for s in axP.spines.values():
         s.set_linewidth(1.1); s.set_edgecolor(PT)

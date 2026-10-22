@@ -50,6 +50,11 @@ relatif) kalau mau digabung jadi satu peta nasional/provinsi.
 
 ### Klaster KRMMA — Gunung Anyar Tambak / Medokan Ayu, Kota Surabaya
 
+> **STATUS: TIDAK AKTIF DIPAKAI.** Atas instruksi user, klaster ini
+> tetap disimpan di data (CSV/GeoJSON/foto) tapi **tidak dipakai** untuk
+> peta/laporan saat ini -- fokus kerja sekarang di klaster ARJ
+> (Arjuno) di bawah.
+
 1. **KRMMA01** — Gunung Anyar Tambak, Kec. Gunung Anyar (-7.32896386,
    112.82101954) — 14 Oktober 2026, 08:03:41. Titik jaring kabut, tim
    memeriksa jaring & kantong burung.
@@ -69,10 +74,10 @@ Berguna untuk integrasi data akustik vs bird banding (klaster ini
 di bawah dengan kode ARJ03. Foto lama KRMMA03 sudah dihapus dari
 `photos/`.)*
 
-### Klaster ARJ — Bulukerto, Kec. Bumiaji, Kota Batu
+### Klaster ARJ (Arjuno) — Bulukerto, Kec. Bumiaji, Kota Batu
 
-Dekat dengan titik Song Meter Micro 2 SM-02 (Sumbergondo, Kec. Bumiaji,
-Kota Batu).
+**Klaster aktif saat ini.** Dekat dengan titik Song Meter Micro 2 SM-02
+(Sumbergondo, Kec. Bumiaji, Kota Batu), kawasan lereng Gunung Arjuno.
 
 1. **ARJ01** — Jalan Tanpa Nama, Bulukerto (-7.80382128, 112.55224873)
    — 15 Oktober 2026, 10:26:24. Titik jaring kabut di jalur hutan.

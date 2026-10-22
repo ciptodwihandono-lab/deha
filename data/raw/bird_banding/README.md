@@ -32,22 +32,22 @@ bird banding setelah semua titik terkumpul).
 
 ## Titik yang sudah tercatat
 
-1. **KRMMA01** — Gunung Anyar Tambak, Kec. Gunung Anyar, Kota Surabaya,
+1. **KRMMA02-1** — Jalan Tambak Medokan Ayu Gang XI, Medokan Ayu,
+   Kec. Rungkut, Kota Surabaya, Jawa Timur (-7.32881932, 112.81977516)
+   — 14 Oktober 2026, 08:11:41.
+   Catatan: titik jaring kabut di jalur mangrove tepi tambak, ±100 m
+   dari KRMMA03 (sama-sama area Gunung Anyar/Medokan Ayu, kecamatan
+   administratif beda: Gunung Anyar vs Rungkut).
+2. **KRMMA03** — Gunung Anyar Tambak, Kec. Gunung Anyar, Kota Surabaya,
    Jawa Timur (-7.32801374, 112.81985045) — 14 Oktober 2026, 08:09:57.
    Catatan: lokasi pemasangan jaring kabut (mist net), ±500 m dari
    titik Song Meter Micro 2 SM-01 di lokasi yang sama (Gunung Anyar
    Tambak) -- berguna untuk integrasi data akustik vs bird banding
    (lihat `docs/laporan_sementara_song_meter_micro2.md` Bagian 2 & 8).
-2. **KRMMA02-1** — Jalan Tambak Medokan Ayu Gang XI, Medokan Ayu,
-   Kec. Rungkut, Kota Surabaya, Jawa Timur (-7.32881932, 112.81977516)
-   — 14 Oktober 2026, 08:11:41.
-   Catatan: titik jaring kabut di jalur mangrove tepi tambak, ±100 m
-   dari KRMMA01 (sama-sama area Gunung Anyar/Medokan Ayu, kecamatan
-   administratif beda: Gunung Anyar vs Rungkut).
+   *(Awalnya tercatat sebagai KRMMA01, dikoreksi jadi KRMMA03.)*
 3. **KRMMA04** — Gunung Anyar Tambak, Kec. Gunung Anyar, Kota Surabaya,
    Jawa Timur (-7.32826062, 112.82044359) — 14 Oktober 2026, 09:04:53.
    Catatan: titik jaring kabut di jalur mangrove tepi tambak, satu
-   kawasan dengan KRMMA01. (KRMMA03 belum diterima -- nomor urut
-   melompat dari 02 ke 04, bukan kesalahan pencatatan di sini.)
+   kawasan dengan KRMMA03.
 
 *(tambahkan titik baru di sini dan di CSV setiap ada foto lokasi baru)*

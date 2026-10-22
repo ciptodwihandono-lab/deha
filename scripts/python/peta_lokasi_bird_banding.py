@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 import matplotlib.image as mpimg
 from matplotlib.patches import Rectangle, FancyArrowPatch
+from matplotlib.path import Path as MplPath
 from shapely.geometry import Point
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -111,30 +112,60 @@ axA.set_facecolor("#f4f1e8")  # dasar netral, selaras palet peta lain di proyek 
 axA.add_patch(Rectangle((xlim[0], ylim[0]), xlim[1] - xlim[0], ylim[1] - ylim[0],
                          facecolor="#f4f1e8", edgecolor="none", zorder=0))
 
-# -- Elemen ILUSTRATIF (bukan hasil survei/GPS track) berdasarkan foto lapangan:
-# area tambak/perairan di sisi barat (terlihat di foto KRMMA02-1 & KRMMA04) dan
-# jalur setapak penghubung titik (minimum spanning tree antar titik -- bukan
-# rekaman jalur asli). Versi ini sengaja dibuat bersih/teknis, tanpa tekstur
-# kanopi, supaya lebih mudah dibaca.
+# -- Elemen ILUSTRATIF (bukan hasil survei/GPS track/citra satelit) berdasarkan
+# foto lapangan: area tambak/perairan (terlihat di foto KRMMA02-1 & KRMMA04),
+# vegetasi mangrove (simbol titik sistematis gaya peta topografi -- bukan
+# tekstur blob), dan jalur setapak penghubung titik (minimum spanning tree
+# antar titik, bukan rekaman jalur asli).
 
-# area tambak (poligon tak-beraturan, ilustratif)
 tambak_pts = np.array([
     [xlim[0] + 5, ylim[0] + 5], [xlim[0] + 5, -5], [-70, -15], [-75, 20],
     [-60, 45], [-20, 30], [-10, 5], [-5, ylim[0] + 5],
 ])
+tambak_path = MplPath(tambak_pts)
 axA.add_patch(plt.Polygon(tambak_pts, closed=True, facecolor="#d6e9f5",
-                           edgecolor="#8a9fab", lw=0.7, zorder=1))
+                           edgecolor="#6f94a8", lw=0.7, hatch="----", zorder=1))
 axA.text(-65, -65, "area tambak/\nperairan\n(ilustratif)", fontsize=6.5, ha="center",
          va="center", color="#355", style="italic", zorder=2)
+
+# simbol vegetasi mangrove: titik sistematis (grid + jitter kecil) di luar area
+# tambak -- konvensi kartografi topografi standar untuk vegetasi/woodland.
+rng = np.random.default_rng(7)
+gx, gy = np.meshgrid(np.arange(xlim[0], xlim[1], 9), np.arange(ylim[0], ylim[1], 9))
+gx = gx + rng.uniform(-2.5, 2.5, gx.shape)
+gy = gy + rng.uniform(-2.5, 2.5, gy.shape)
+grid_pts = np.column_stack([gx.ravel(), gy.ravel()])
+di_tambak = tambak_path.contains_points(grid_pts)
+veg_pts = grid_pts[~di_tambak]
+axA.scatter(veg_pts[:, 0], veg_pts[:, 1], s=5, marker="o", color="#2e7d32",
+            alpha=0.85, zorder=1.5, linewidths=0)
 
 # jalur setapak ilustratif (minimum spanning tree antar titik), garis tunggal bersih
 edges_mst = [("KRMMA03", "KRMMA04"), ("KRMMA02-1", "KRMMA03"), ("KRMMA01", "KRMMA04")]
 pos = {t["id"]: (t["x_m"], t["y_m"]) for t in TITIK}
 for a, b2 in edges_mst:
     (x1, y1), (x2, y2) = pos[a], pos[b2]
-    axA.plot([x1, x2], [y1, y2], color="#b08968", lw=2.2, linestyle=(0, (6, 3)),
+    axA.plot([x1, x2], [y1, y2], color="#f4f1e8", lw=4.5, solid_capstyle="round", zorder=2.5)
+    axA.plot([x1, x2], [y1, y2], color="#8a6648", lw=1.8, linestyle=(0, (6, 3)),
               solid_capstyle="round", zorder=3)
-axA.plot([], [], color="#b08968", lw=2.2, linestyle=(0, (6, 3)), label="Jalur setapak (ilustratif)")
+
+# -- legenda ringkas di dalam panel (pojok kanan-atas, di luar jangkauan titik)
+lx0, ly0, lw_, lh_ = 0.565, 0.685, 0.33, 0.255
+axA.add_patch(Rectangle((lx0, ly0), lw_, lh_, transform=axA.transAxes,
+                         facecolor="white", edgecolor="#999", lw=0.6, alpha=0.94, zorder=15))
+axA.text(lx0 + 0.02, ly0 + lh_ - 0.025, "LEGENDA", transform=axA.transAxes,
+         fontsize=7, fontweight="bold", va="top", zorder=16)
+axA.scatter([lx0 + 0.04], [ly0 + lh_ - 0.085], s=18, marker="o", color="#2e7d32", transform=axA.transAxes, zorder=16)
+axA.text(lx0 + 0.085, ly0 + lh_ - 0.085, "Vegetasi mangrove*", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
+axA.add_patch(Rectangle((lx0 + 0.02, ly0 + lh_ - 0.155), 0.04, 0.035, transform=axA.transAxes,
+                         facecolor="#d6e9f5", edgecolor="#6f94a8", hatch="----", lw=0.5, zorder=16))
+axA.text(lx0 + 0.085, ly0 + lh_ - 0.138, "Tambak/perairan*", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
+axA.plot([lx0 + 0.02, lx0 + 0.06], [ly0 + lh_ - 0.195, ly0 + lh_ - 0.195], color="#8a6648", lw=1.8,
+          linestyle=(0, (4, 2)), transform=axA.transAxes, zorder=16)
+axA.text(lx0 + 0.085, ly0 + lh_ - 0.195, "Jalur setapak*", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
+axA.scatter([lx0 + 0.04], [ly0 + lh_ - 0.235], s=70, marker="^", color=PT, edgecolor="white",
+            transform=axA.transAxes, zorder=16)
+axA.text(lx0 + 0.085, ly0 + lh_ - 0.235, "Titik jaring", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
 
 warna_kec = {"Kec. Gunung Anyar": "#1565c0", "Kec. Rungkut": "#2e7d32"}
 for t in TITIK:
@@ -160,9 +191,9 @@ axA.text(sb_x0 + sb_len / 2, sb_y0 + (ylim[1] - ylim[0]) * 0.018, f"{sb_len} m",
 north_arrow(axA, 0.93, 0.80, 0.10)
 
 axA.text(0.985, 0.02,
-         "Titik: posisi relatif dari koordinat GPS (akurat).\n"
-         "Area tambak & jalur: ILUSTRATIF dari foto lapangan\n"
-         "(bukan hasil survei/GPS track/citra satelit).",
+         "Titik jaring: posisi relatif dari koordinat GPS (akurat).\n"
+         "*Elemen bertanda bintang: ILUSTRATIF dari foto lapangan,\n"
+         "bukan hasil survei/GPS track/citra satelit.",
          transform=axA.transAxes, fontsize=6.5, color="#333", ha="right", va="bottom",
          bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#999", alpha=0.85))
 

@@ -34,3 +34,7 @@ data/raw/observations/photos/*
 # masing-masing folder untuk versi anonim yang aman untuk git.
 data/raw/awc_indonesia_2026/Verifikasi_Data_AWC_Indonesia_2026_FINAL.xlsx
 data/raw/iwc_indonesia_2020_2025/iwc-export_2020-2025.csv
+
+# Foto lapangan bird banding -- simpan di Google Drive, cukup rujuk nama file di CSV
+data/raw/bird_banding/photos/*
+!data/raw/bird_banding/photos/.gitkeep

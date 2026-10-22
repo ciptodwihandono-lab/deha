@@ -1,10 +1,14 @@
 # Laporan Sementara: Pemantauan Bioakustik dengan Song Meter Micro 2
+## Kegiatan Pendukung Data Bird Banding -- Program KEHATI PROPER
 
-*Laporan sementara (interim) untuk mendukung dokumen proposal/laporan
-proyek pemantauan keanekaragaman hayati akustik. Bagian METODE dan
-TEMUAN QUALITY CONTROL sudah final; bagian HASIL masih berisi data
-placeholder yang perlu diisi dari file CSV hasil pemrosesan -- lihat
-catatan "[DATA BELUM DIISI]" di tiap bagian.*
+*Laporan sementara (interim) sebagai kegiatan pendukung (supporting
+activity) untuk data bird banding dalam program keanekaragaman hayati
+(KEHATI) perusahaan, untuk keperluan PROPER (Program Penilaian
+Peringkat Kinerja Perusahaan dalam Pengelolaan Lingkungan Hidup,
+Kementerian Lingkungan Hidup/KLHK). Bagian METODE dan TEMUAN QUALITY
+CONTROL sudah final; bagian HASIL masih berisi data placeholder yang
+perlu diisi dari file CSV hasil pemrosesan -- lihat catatan "[DATA
+BELUM DIISI]" di tiap bagian.*
 
 ## 1. Ringkasan
 
@@ -23,9 +27,47 @@ tahap validasi sebaran geografis sebelum dipakai sebagai data final.
 
 ## 2. Latar Belakang
 
-[Konteks proyek -- tujuan pemantauan, kaitan dengan program KEHATI
-atau unit kerja terkait, DATA BELUM DIISI: tambahkan detail spesifik
-tujuan studi sesuai konteks internal yang belum disampaikan ke saya.]
+Program PROPER (Program Penilaian Peringkat Kinerja Perusahaan dalam
+Pengelolaan Lingkungan Hidup, Kementerian Lingkungan Hidup/KLHK) menilai
+kinerja pengelolaan lingkungan perusahaan, termasuk kriteria tambahan
+untuk peringkat Hijau/Emas berupa program konservasi keanekaragaman
+hayati (KEHATI) yang terdokumentasi dengan data pemantauan yang dapat
+diverifikasi.
+
+Salah satu metode pemantauan burung yang sudah berjalan dalam program
+KEHATI adalah **bird banding** (penangkapan-penandaan burung), yang
+memberi data langsung berupa identitas individu, kondisi fisik, dan
+data ulang-tangkap (recapture). Metode ini punya keterbatasan cakupan
+waktu (hanya terekam saat sesi penangkapan berlangsung) dan berisiko
+tidak menangkap spesies yang jarang terjebak jaring/perangkap (mis.
+spesies yang terbang tinggi, aktif malam, atau sangat waspada).
+
+**Pemantauan bioakustik dengan Song Meter Micro 2** pada laporan ini
+dirancang sebagai **kegiatan pendukung** (bukan pengganti) data bird
+banding, dengan kontribusi yang saling melengkapi:
+
+- **Cakupan waktu kontinu** -- alat merekam otomatis sepanjang hari
+  (00:00-23:59) setiap hari, termasuk jam-jam di luar sesi bird banding
+  (mis. aktivitas malam/subuh yang biasanya tidak tercakup sesi
+  penangkapan siang hari).
+- **Non-invasif** -- tidak perlu menangkap burung, cocok untuk
+  memantau spesies yang sensitif terhadap jaring/perangkap atau untuk
+  lokasi yang sulit dipasangi jaring kabut.
+- **Deteksi berbasis suara** -- bisa mencatat kehadiran spesies yang
+  bersuara tapi jarang/tidak pernah tertangkap bird banding (mis.
+  spesies arboreal tinggi, burung malam).
+- **Data kuantitatif tambahan** -- indeks akustik soundscape (ACI,
+  ADI, AEI, NDSI, BI, H) memberi ukuran aktivitas/keragaman akustik
+  keseluruhan di luar daftar spesies per individu, berguna sebagai
+  indikator kualitas habitat yang melengkapi data bird banding.
+
+**Catatan integrasi dengan data bird banding**: laporan ini BELUM
+memuat analisis silang langsung dengan data hasil bird banding (mis.
+perbandingan daftar spesies, overlap/komplemen antar metode) karena
+dataset bird banding belum tersedia untuk saya proses. Begitu data
+bird banding (daftar spesies, lokasi, tanggal) tersedia, bagian
+pembanding itu bisa ditambahkan sebagai Bagian 6.8 -- lihat Bagian 8
+(Rencana Lanjutan).
 
 ## 3. Lokasi dan Waktu Pemasangan
 
@@ -202,6 +244,11 @@ pemilihan ambang confidence.
    akumulasi spesies, Bagian 6.7).
 4. Pertimbangkan menambah lokasi untuk memperkuat perbandingan
    antar-habitat.
+5. **Integrasikan dengan data bird banding** (Bagian 2): bandingkan
+   daftar spesies hasil akustik vs hasil penangkapan -- identifikasi
+   spesies yang hanya terekam salah satu metode (saling melengkapi)
+   vs yang terekam keduanya (saling menguatkan/validasi silang), untuk
+   memperkuat bukti pemantauan KEHATI pada dokumen PROPER.
 
 ## 9. Lampiran: Skrip & Berkas Terkait
 

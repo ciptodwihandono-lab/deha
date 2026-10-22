@@ -1,0 +1,98 @@
+{
+  "type": "FeatureCollection",
+  "name": "lokasi_bird_banding_KRMMA",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.82101954,
+          -7.32896386
+        ]
+      },
+      "properties": {
+        "kode_lokasi": "KRMMA01",
+        "nama_lokasi": "Gunung Anyar Tambak",
+        "kecamatan": "Kec. Gunung Anyar",
+        "kab_kota": "Kota Surabaya",
+        "provinsi": "Jawa Timur",
+        "lat": -7.32896386,
+        "lon": 112.82101954,
+        "tanggal": "2026-10-14",
+        "waktu": "08:03:41",
+        "catatan": "Tim memeriksa jaring & kantong burung",
+        "nama_file_foto": "KRMMA01.jpg"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.81977516,
+          -7.32881932
+        ]
+      },
+      "properties": {
+        "kode_lokasi": "KRMMA02-1",
+        "nama_lokasi": "Jl. Tambak Medokan Ayu Gang XI",
+        "kecamatan": "Kec. Rungkut",
+        "kab_kota": "Kota Surabaya",
+        "provinsi": "Jawa Timur",
+        "lat": -7.32881932,
+        "lon": 112.81977516,
+        "tanggal": "2026-10-14",
+        "waktu": "08:11:41",
+        "catatan": "Titik jaring di jalur mangrove tepi tambak",
+        "nama_file_foto": "KRMMA02-1.jpg"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.81985045,
+          -7.32801374
+        ]
+      },
+      "properties": {
+        "kode_lokasi": "KRMMA03",
+        "nama_lokasi": "Gunung Anyar Tambak",
+        "kecamatan": "Kec. Gunung Anyar",
+        "kab_kota": "Kota Surabaya",
+        "provinsi": "Jawa Timur",
+        "lat": -7.32801374,
+        "lon": 112.81985045,
+        "tanggal": "2026-10-14",
+        "waktu": "08:09:57",
+        "catatan": "Pemasangan jaring kabut (mist net)",
+        "nama_file_foto": "KRMMA03.jpg"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.82044359,
+          -7.32826062
+        ]
+      },
+      "properties": {
+        "kode_lokasi": "KRMMA04",
+        "nama_lokasi": "Gunung Anyar Tambak",
+        "kecamatan": "Kec. Gunung Anyar",
+        "kab_kota": "Kota Surabaya",
+        "provinsi": "Jawa Timur",
+        "lat": -7.32826062,
+        "lon": 112.82044359,
+        "tanggal": "2026-10-14",
+        "waktu": "09:04:53",
+        "catatan": "Titik jaring di jalur mangrove tepi tambak",
+        "nama_file_foto": "KRMMA04.jpg"
+      }
+    }
+  ]
+}

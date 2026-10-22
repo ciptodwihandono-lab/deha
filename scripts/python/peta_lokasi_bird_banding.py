@@ -140,17 +140,8 @@ veg_pts = grid_pts[~di_tambak]
 axA.scatter(veg_pts[:, 0], veg_pts[:, 1], s=5, marker="o", color="#2e7d32",
             alpha=0.85, zorder=1.5, linewidths=0)
 
-# jalur setapak ilustratif (minimum spanning tree antar titik), garis tunggal bersih
-edges_mst = [("KRMMA03", "KRMMA04"), ("KRMMA02-1", "KRMMA03"), ("KRMMA01", "KRMMA04")]
-pos = {t["id"]: (t["x_m"], t["y_m"]) for t in TITIK}
-for a, b2 in edges_mst:
-    (x1, y1), (x2, y2) = pos[a], pos[b2]
-    axA.plot([x1, x2], [y1, y2], color="#f4f1e8", lw=4.5, solid_capstyle="round", zorder=2.5)
-    axA.plot([x1, x2], [y1, y2], color="#8a6648", lw=1.8, linestyle=(0, (6, 3)),
-              solid_capstyle="round", zorder=3)
-
 # -- legenda ringkas di dalam panel (pojok kanan-atas, di luar jangkauan titik)
-lx0, ly0, lw_, lh_ = 0.565, 0.685, 0.33, 0.255
+lx0, ly0, lw_, lh_ = 0.565, 0.73, 0.33, 0.21
 axA.add_patch(Rectangle((lx0, ly0), lw_, lh_, transform=axA.transAxes,
                          facecolor="white", edgecolor="#999", lw=0.6, alpha=0.94, zorder=15))
 axA.text(lx0 + 0.02, ly0 + lh_ - 0.025, "LEGENDA", transform=axA.transAxes,
@@ -160,12 +151,9 @@ axA.text(lx0 + 0.085, ly0 + lh_ - 0.085, "Vegetasi mangrove*", transform=axA.tra
 axA.add_patch(Rectangle((lx0 + 0.02, ly0 + lh_ - 0.155), 0.04, 0.035, transform=axA.transAxes,
                          facecolor="#d6e9f5", edgecolor="#6f94a8", hatch="----", lw=0.5, zorder=16))
 axA.text(lx0 + 0.085, ly0 + lh_ - 0.138, "Tambak/perairan*", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
-axA.plot([lx0 + 0.02, lx0 + 0.06], [ly0 + lh_ - 0.195, ly0 + lh_ - 0.195], color="#8a6648", lw=1.8,
-          linestyle=(0, (4, 2)), transform=axA.transAxes, zorder=16)
-axA.text(lx0 + 0.085, ly0 + lh_ - 0.195, "Jalur setapak*", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
-axA.scatter([lx0 + 0.04], [ly0 + lh_ - 0.235], s=70, marker="^", color=PT, edgecolor="white",
+axA.scatter([lx0 + 0.04], [ly0 + lh_ - 0.195], s=70, marker="^", color=PT, edgecolor="white",
             transform=axA.transAxes, zorder=16)
-axA.text(lx0 + 0.085, ly0 + lh_ - 0.235, "Titik jaring", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
+axA.text(lx0 + 0.085, ly0 + lh_ - 0.195, "Titik jaring", transform=axA.transAxes, fontsize=6.3, va="center", zorder=16)
 
 warna_kec = {"Kec. Gunung Anyar": "#1565c0", "Kec. Rungkut": "#2e7d32"}
 for t in TITIK:

@@ -76,9 +76,14 @@ pembanding itu bisa ditambahkan sebagai Bagian 6.8 -- lihat Bagian 8
 | SM-01 | Gunung Anyar Tambak | Kec. Gunung Anyar | Kota Surabaya | -7.329565, 112.821176 | Mangrove/tambak pesisir | 13-10-2026 |
 | SM-02 | Sumbergondo | Kec. Bumiaji | Kota Batu | -7.802615, 112.553300 | Hutan dataran tinggi | 15-10-2026 |
 
-Koordinat diambil dari geotag foto lapangan (bukan estimasi). Peta
-lokasi gaya karya ilmiah (skala kab/kota, inset, legenda, tabel)
-tersedia terpisah: `outputs/figures/peta_lokasi_song_meter.png` / `.pdf`.
+Koordinat diambil dari geotag foto lapangan (bukan estimasi).
+
+![Peta lokasi pemasangan Song Meter Micro 2](../outputs/figures/peta_lokasi_song_meter.png)
+
+*Gambar 1. Peta lokasi pemasangan Song Meter Micro 2 di Jawa Timur
+(gaya karya ilmiah: peta provinsi, panel detail per lokasi, inset
+Indonesia, legenda, tabel koordinat). Versi vektor (PDF, cocok untuk
+cetak/lampiran dokumen resmi): `outputs/figures/peta_lokasi_song_meter.pdf`.*
 
 ## 4. Metode
 

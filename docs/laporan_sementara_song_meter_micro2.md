@@ -162,7 +162,6 @@ umum) supaya proses bisa direproduksi persis:
 | Panjang jendela analisis | 3 detik (bawaan model BirdNET, tidak bisa diubah) | 1 file rekaman 1 menit di lapangan menghasilkan ±20 jendela analisis berurutan. |
 | `week` (filter musim) pada `predict_species_at_location_and_time()` | **Tidak diisi / NULL** (sengaja dikosongkan) | Supaya daftar spesies "plausible" per lokasi mencakup kemungkinan sepanjang tahun, bukan hanya musim saat perekaman -- menghindari menyaring terlalu ketat spesies migran yang mungkin memang sedang lewat. |
 | Koordinat lokasi untuk validasi sebaran geografis | Koordinat presisi tiap lokasi (lihat tabel Bagian 3) | Dipakai persis sebagai argumen `latitude`/`longitude` ke `predict_species_at_location_and_time()`. |
-| Bahasa nama umum (`common_name`) hasil deteksi | Inggris (`en_us`, bawaan package) | Dicek lewat `available_languages()`: BirdNET **tidak mendukung Bahasa Indonesia** (daftar bahasa yang didukung: af, ar, cs, da, de, en_uk, en_us, es, fi, fr, hu, it, ja, ko, nl, no, pl, pt, ro, ru, sk, sl, sv, th, tr, uk, zh). Nama Indonesia di Bagian 6.3 dicocokkan manual dari tabel referensi terpisah (lihat Keterbatasan). |
 | Parameter lain package (mis. `overlap`, `sensitivity`, daftar spesies kustom) | **Tidak diubah -- nilai default package** | Skrip tidak meng-override parameter ini secara eksplisit; nilai persisnya mengikuti versi `birdnetR` yang terpasang saat proses dijalankan (lihat rekomendasi reproduksibilitas di bawah). |
 
 **Rekomendasi untuk reproduksibilitas**: catat `packageVersion("birdnetR")`

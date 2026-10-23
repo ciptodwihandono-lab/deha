@@ -146,6 +146,36 @@ spektrogram + oscillogram, untuk mendukung verifikasi visual manual
 
 Skrip: `scripts/r/spektrogram_per_spesies_song_meter.R`.
 
+### 4.6 Rincian Pengaturan (Parameter) BirdNET
+
+Tabel berikut merangkum seluruh parameter BirdNET yang dipakai di
+laporan ini, dikumpulkan dari skrip aktual (bukan dari dokumentasi
+umum) supaya proses bisa direproduksi persis:
+
+| Parameter | Nilai yang dipakai | Keterangan |
+| --- | --- | --- |
+| Package | `birdnetR` (R) | Wrapper resmi model BirdNET -- Cornell Lab of Ornithology / Chemnitz University. Memanggil model Python di baliknya lewat `reticulate`. |
+| Model deteksi spesies | `birdnet_model_protobuf()` | Model akustik BirdNET standar (klasifikasi suara -> spesies per jendela 3 detik). |
+| Model validasi sebaran geografis | `birdnet_model_meta()` | Model terpisah (metadata lokasi/musim), dipakai hanya untuk quality control Bagian 4.4 -- bukan untuk deteksi spesies dari audio. |
+| Fungsi pemanggil deteksi | `predict_species_from_audio_file(model, path_file, min_confidence = ...)` | Dipanggil satu kali per file `.wav`; kolom hasil terkonfirmasi lewat uji langsung ke data asli: `start`, `end`, `scientific_name`, `common_name`, `confidence`. |
+| **Ambang keyakinan minimum (`min_confidence`)** | **0,5** | Default bawaan package adalah 0,1 (dianggap terlalu longgar/banyak false positive) -- dinaikkan ke 0,5 sebagai titik awal yang lebih aman untuk menyaring deteksi. Ambang ini memengaruhi langsung jumlah & komposisi spesies yang lolos (lihat sensitivitas di Bagian 6.7). |
+| Panjang jendela analisis | 3 detik (bawaan model BirdNET, tidak bisa diubah) | 1 file rekaman 1 menit di lapangan menghasilkan ±20 jendela analisis berurutan. |
+| `week` (filter musim) pada `predict_species_at_location_and_time()` | **Tidak diisi / NULL** (sengaja dikosongkan) | Supaya daftar spesies "plausible" per lokasi mencakup kemungkinan sepanjang tahun, bukan hanya musim saat perekaman -- menghindari menyaring terlalu ketat spesies migran yang mungkin memang sedang lewat. |
+| Koordinat lokasi untuk validasi sebaran geografis | Koordinat presisi tiap lokasi (lihat tabel Bagian 3) | Dipakai persis sebagai argumen `latitude`/`longitude` ke `predict_species_at_location_and_time()`. |
+| Bahasa nama umum (`common_name`) hasil deteksi | Inggris (`en_us`, bawaan package) | Dicek lewat `available_languages()`: BirdNET **tidak mendukung Bahasa Indonesia** (daftar bahasa yang didukung: af, ar, cs, da, de, en_uk, en_us, es, fi, fr, hu, it, ja, ko, nl, no, pl, pt, ro, ru, sk, sl, sv, th, tr, uk, zh). Nama Indonesia di Bagian 6.3 dicocokkan manual dari tabel referensi terpisah (lihat Keterbatasan). |
+| Parameter lain package (mis. `overlap`, `sensitivity`, daftar spesies kustom) | **Tidak diubah -- nilai default package** | Skrip tidak meng-override parameter ini secara eksplisit; nilai persisnya mengikuti versi `birdnetR` yang terpasang saat proses dijalankan (lihat rekomendasi reproduksibilitas di bawah). |
+
+**Rekomendasi untuk reproduksibilitas**: catat `packageVersion("birdnetR")`
+dan tanggal unduh model (model BirdNET bisa diperbarui dari waktu ke
+waktu oleh pengembang) saat proses akhir dijalankan di komputer
+lapangan, lalu cantumkan di laporan final -- supaya hasil bisa
+dibandingkan apple-to-apple kalau analisis diulang di masa depan
+dengan versi model yang berbeda.
+
+Skrip sumber kedua pemanggilan di atas: `scripts/r/analisis_lengkap_audio_UT2026.R`
+(Bagian B, deteksi spesies) dan `scripts/r/validasi_sebaran_geografis_song_meter.R`
+(validasi sebaran geografis).
+
 ## 5. Temuan Quality Control: Indikasi Salah Identifikasi
 
 Saat peninjauan awal hasil, ditemukan deteksi atas nama **Takur

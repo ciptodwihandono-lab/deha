@@ -3,7 +3,7 @@
 const CACHE = 'peta-survei';
 const TILES = 'peta-tiles';
 const TILE_MAX = 6000;   // batas jumlah tile tersimpan (± 100–150 MB)
-const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './vendor/leaflet.js', './vendor/leaflet.css'];
+const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './vendor/leaflet.js', './vendor/leaflet.css', './vendor/sql-wasm.js', './vendor/sql-wasm.wasm'];
 const SCOPE = self.registration.scope;
 const INDEX = new URL('./index.html', SCOPE).href;
 const OWN = new Set(FILES.map((f) => new URL(f, SCOPE).href));

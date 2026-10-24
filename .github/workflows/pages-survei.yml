@@ -1,11 +1,13 @@
-# Menerbitkan aplikasi survei lapangan ke GitHub Pages.
+# Menerbitkan aplikasi lapangan ke GitHub Pages:
+#   /deha/       -> apps/survei-pantai-cemara (formulir survei)
+#   /deha/peta/  -> apps/peta-survei (pemetaan habitat)
 # Aktifkan sekali di Settings → Pages → Source: "GitHub Actions".
 name: Terbitkan aplikasi survei
 
 on:
   push:
     branches: [claude/claude-rc-9bhjno]
-    paths: ['apps/survei-pantai-cemara/**']
+    paths: ['apps/survei-pantai-cemara/**', 'apps/peta-survei/**', '.github/workflows/pages-survei.yml']
   workflow_dispatch:
 
 permissions:
@@ -26,8 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Susun situs
+        run: |
+          mkdir -p _site/peta
+          cp -r apps/survei-pantai-cemara/. _site/
+          cp -r apps/peta-survei/. _site/peta/
+          rm -f _site/README.md _site/peta/README.md
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/survei-pantai-cemara
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

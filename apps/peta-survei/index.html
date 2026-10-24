@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Peta Survei Pantai Cemara</title>
+<meta name="description" content="Pemetaan lapangan: titik, jalur, dan area habitat dengan foto lokasi. Bekerja tanpa sinyal.">
+<meta name="theme-color" content="#173f4f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+/* Layout: peta memenuhi layar di antara bar atas dan navigasi bawah; formulir objek muncul sebagai lembar dari bawah. */
+:root {
+  --bg: #e8eef0;
+  --surface: #ffffff;
+  --surface-2: #f2f6f7;
+  --fg: #12232a;
+  --muted: #546a72;
+  --line: #c9d6da;
+  --accent: #17606f;       /* biru-hijau muara */
+  --accent-fg: #ffffff;
+  --accent-soft: #d3e9ed;
+  --bar: #173f4f;
+  --bar-fg: #eef6f8;
+  --ok: #2b7a4b;
+  --warn: #a8670f;
+  --bad: #b03636;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+  --font-data: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --r: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1416; --surface: #162024; --surface-2: #1c292e; --fg: #e3eef1; --muted: #9db3ba;
+    --line: #2c3c42; --accent: #5fb6c6; --accent-fg: #0b1b1f; --accent-soft: #1d3a41;
+    --bar: #101b1f; --bar-fg: #e3eef1; --ok: #8fc79a; --warn: #e3a64e; --bad: #ff7b6e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1416; --surface: #162024; --surface-2: #1c292e; --fg: #e3eef1; --muted: #9db3ba;
+  --line: #2c3c42; --accent: #5fb6c6; --accent-fg: #0b1b1f; --accent-soft: #1d3a41;
+  --bar: #101b1f; --bar-fg: #e3eef1; --ok: #8fc79a; --warn: #e3a64e; --bad: #ff7b6e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 16px; line-height: 1.45;
+  display: flex; flex-direction: column; -webkit-tap-highlight-color: transparent; overflow: hidden;
+}
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.topbar { background: var(--bar); color: var(--bar-fg); padding: calc(env(safe-area-inset-top, 0px) + 9px) 16px 9px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: none; z-index: 1001; }
+.topbar h1 { font-size: 17px; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; }
+.pill { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor; opacity: .9; }
+.iconbtn { background: none; border: 1px solid color-mix(in srgb, var(--bar-fg) 40%, transparent); color: var(--bar-fg); border-radius: 8px; padding: 5px 9px; font-size: 13px; cursor: pointer; }
+.bandbar { flex-basis: 100%; margin: 4px -16px -9px; display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 14px; font-weight: 600; color: #fff; }
+.bandbar .grow { flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; }
+.bandbar button.b { background: rgba(255,255,255,.95); color: #222; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+.recbar { background: var(--bad); }
+.updbar { background: #2463a6; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1.2s infinite; flex: none; }
+@keyframes blink { 50% { opacity: .25; } }
+
+main { flex: 1; min-height: 0; position: relative; }
+.view { position: absolute; inset: 0; overflow: auto; }
+.page { max-width: 720px; margin: 0 auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+#mapView { overflow: hidden; }
+#map { position: absolute; inset: 0; background: var(--surface-2); }
+
+nav.tabs { flex: none; background: var(--surface); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 1001; }
+nav.tabs button { background: none; border: 0; padding: 8px 4px 9px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; color: var(--muted); cursor: pointer; min-height: 56px; }
+nav.tabs svg { width: 24px; height: 24px; }
+nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 650; }
+
+/* Kontrol di atas peta */
+.mapctl { position: absolute; z-index: 800; display: flex; gap: 8px; }
+.mapctl.tl { top: 10px; left: 10px; right: 10px; flex-wrap: wrap; }
+.mapctl.br { right: 10px; bottom: 132px; flex-direction: column; }
+.mapctl.bottom { left: 10px; right: 10px; bottom: 12px; }
+.seg { display: inline-flex; background: var(--surface); border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.25); overflow: hidden; }
+.seg button { border: 0; background: none; padding: 8px 11px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.fab { width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--surface); color: var(--fg); box-shadow: 0 1px 5px rgba(0,0,0,.3); display: grid; place-items: center; cursor: pointer; }
+.fab svg { width: 24px; height: 24px; }
+.fab[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.actbtn { flex: 1; min-height: 50px; border-radius: 12px; border: 0; background: var(--accent); color: var(--accent-fg); font-weight: 700; font-size: 15px; box-shadow: 0 2px 6px rgba(0,0,0,.3); cursor: pointer; padding: 6px 8px; }
+.actbtn.alt { background: var(--surface); color: var(--accent); }
+.actbtn.rec { background: var(--bad); color: #fff; }
+.menu { position: absolute; z-index: 900; left: 10px; right: 10px; bottom: 72px; background: var(--surface); border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.3); display: flex; flex-direction: column; overflow: hidden; }
+.menu button { border: 0; border-top: 1px solid var(--line); background: none; padding: 14px 16px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.menu button:first-child { border-top: 0; }
+.menu b { font-size: 15px; } .menu span { font-size: 13px; color: var(--muted); }
+.drawbar { position: absolute; z-index: 850; left: 10px; right: 10px; top: 10px; background: var(--surface); border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.3); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.drawbar .info { font-size: 14px; } .drawbar .info b { font-family: var(--font-data); }
+.drawbar .row { display: flex; gap: 8px; }
+.drawbar .row button { flex: 1; min-height: 42px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); font-weight: 650; cursor: pointer; }
+.drawbar .row button.go { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.legend { position: absolute; z-index: 800; left: 10px; top: 58px; max-width: 62%; background: var(--surface); border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.25); font-size: 12px; padding: 6px 10px; max-height: 40%; overflow: auto; }
+.legend summary { cursor: pointer; font-weight: 650; font-size: 13px; }
+.legend ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.sw { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); vertical-align: -1px; margin-right: 6px; flex: none; }
+.gpsinfo { position: absolute; z-index: 800; right: 66px; bottom: 146px; background: var(--surface); border-radius: 8px; padding: 4px 8px; font-size: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; }
+.leaflet-container { font-family: var(--font-ui); }
+.leaflet-bottom { bottom: 70px; }
+.leaflet-top.leaflet-right { top: 58px; }
+.leaflet-tooltip.kode { background: rgba(255,255,255,.92); border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.3); font-weight: 700; font-size: 11px; padding: 1px 5px; color: #12232a; }
+
+/* Lembar formulir objek */
+.sheet { position: fixed; inset: 0; z-index: 1500; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(0,0,0,.35); }
+.sheet .panel { background: var(--bg); max-height: 88%; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; box-shadow: 0 -4px 16px rgba(0,0,0,.25); }
+.sheet .head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface); border-radius: 16px 16px 0 0; }
+.sheet .head h2 { font-size: 17px; margin: 0; flex: 1; min-width: 0; text-transform: none; letter-spacing: 0; color: var(--fg); }
+.sheet .body { overflow: auto; padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; font-weight: 650; }
+.section { display: flex; flex-direction: column; gap: 10px; }
+.note { font-size: 14px; color: var(--muted); margin: 0; }
+.hint { font-size: 12px; color: var(--muted); }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field.w { grid-column: 1 / -1; }
+.field > label, .field > .lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
+input[type=text], input[type=search], select, textarea { width: 100%; min-height: 46px; padding: 10px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); min-width: 0; }
+textarea { min-height: 70px; resize: vertical; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; background: var(--surface); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 7px 12px; min-height: 38px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 650; cursor: pointer; text-align: center; }
+.btn.ghost { background: var(--surface); color: var(--accent); }
+.btn.danger { background: var(--surface); color: var(--bad); border-color: var(--bad); }
+.btn.danger.armed { background: var(--bad); color: var(--surface); }
+.btn.block { width: 100%; }
+.btn.sm { min-height: 38px; padding: 6px 12px; font-size: 14px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > .btn { flex: 1 1 140px; }
+.geo { font-family: var(--font-data); font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.photos button { padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--surface-2); cursor: pointer; max-width: 100%; }
+.photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photos .missing { font-size: 11px; color: var(--muted); padding: 4px; display: grid; place-items: center; height: 100%; }
+.list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: 0; border-top: 1px solid var(--line); background: none; text-align: left; width: 100%; cursor: pointer; min-height: 56px; color: var(--fg); }
+.item:first-child { border-top: 0; }
+.item .main { flex: 1; min-width: 0; }
+.item .t { font-weight: 650; } .item .s { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.item .k { font-family: var(--font-data); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.empty { border: 1px dashed var(--line); border-radius: var(--r); padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
+.sumtab { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sumtab th, .sumtab td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+.sumtab th:first-child, .sumtab td:first-child { text-align: left; }
+.sumtab th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); }
+.viewer { position: fixed; inset: 0; z-index: 2000; background: #000; display: flex; flex-direction: column; }
+.viewer img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+.viewer .vbar { display: flex; gap: 8px; align-items: center; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); color: #fff; font-size: 13px; flex-wrap: wrap; }
+.viewer .vbar .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.viewer .vbar button { background: none; color: #fff; border: 1px solid rgba(255,255,255,.6); border-radius: 8px; padding: 8px 12px; font-weight: 650; cursor: pointer; }
+.viewer .vbar button.armed { background: #c0392b; border-color: #c0392b; }
+.toast { position: fixed; left: 50%; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 3000; max-width: calc(100% - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+@media (max-width: 400px) { .fields { grid-template-columns: 1fr; } .seg button { padding: 8px 9px; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <h1 id="title">Peta Survei<span class="sub">KEE Mangrove Pantai Cemara</span></h1>
+  <span class="pill" id="net">Offline</span>
+  <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
+  <div class="bandbar updbar" id="updbar" hidden><span class="grow">Versi baru aplikasi sudah siap.</span><button type="button" class="b" id="updBtn">Perbarui</button></div>
+  <div class="bandbar recbar" id="recbar" hidden><span class="dot" aria-hidden="true"></span><span class="grow" id="recText">Merekam jalur…</span><button type="button" class="b" id="recStop">Hentikan</button></div>
+</header>
+
+<main>
+  <section class="view" id="mapView">
+    <div id="map" aria-label="Peta"></div>
+    <div class="mapctl tl" id="baseCtl">
+      <div class="seg" role="group" aria-label="Peta dasar">
+        <button type="button" data-base="sat">Satelit</button>
+        <button type="button" data-base="osm">Jalan</button>
+        <button type="button" data-base="none">Polos</button>
+      </div>
+    </div>
+    <div class="drawbar" id="drawbar" hidden>
+      <div class="info" id="drawInfo"></div>
+      <div class="row">
+        <button type="button" id="drawUndo">Urungkan</button>
+        <button type="button" id="drawCancel">Batal</button>
+        <button type="button" class="go" id="drawDone">Selesai</button>
+      </div>
+    </div>
+    <details class="legend" id="legend"><summary>Legenda habitat</summary><ul id="legendList"></ul></details>
+    <div class="gpsinfo" id="gpsInfo" hidden></div>
+    <div class="mapctl br">
+      <button type="button" class="fab" id="locBtn" aria-label="Ke posisi saya" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      <button type="button" class="fab" id="fitBtn" aria-label="Tampilkan semua objek"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div class="menu" id="addMenu" hidden>
+      <button type="button" data-add="gps"><b>Titik di posisi saya (GPS)</b><span>Berdiri di lokasi, tunggu akurasi GPS terbaik, lalu tersimpan.</span></button>
+      <button type="button" data-add="point"><b>Titik dengan ketuk peta</b><span>Untuk lokasi yang terlihat di citra tapi tidak didatangi.</span></button>
+      <button type="button" data-add="line"><b>Garis (ketuk peta)</b><span>Sungai, parit, jalan, tepi mangrove, garis pantai.</span></button>
+      <button type="button" data-add="area"><b>Area / poligon (ketuk peta)</b><span>Petak habitat; luas dihitung otomatis.</span></button>
+    </div>
+    <div class="mapctl bottom">
+      <button type="button" class="actbtn" id="addBtn">+ Tandai</button>
+      <button type="button" class="actbtn alt" id="trackBtn">Rekam jalur</button>
+    </div>
+  </section>
+
+  <section class="view" id="listView" hidden><div class="page" id="listPage"></div></section>
+  <section class="view" id="dataView" hidden><div class="page" id="dataPage"></div></section>
+</main>
+
+<nav class="tabs" id="tabs">
+  <button type="button" data-tab="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Peta</button>
+  <button type="button" data-tab="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Daftar</button>
+  <button type="button" data-tab="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Data</button>
+</nav>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="head"><h2 id="sheetTitle">Objek</h2><button type="button" class="btn sm" id="sheetClose">Selesai</button></div>
+    <div class="body" id="sheetBody"></div>
+  </div>
+</div>
+<div class="viewer" id="viewer" hidden>
+  <img id="viewerImg" alt="">
+  <div class="vbar"><span class="grow" id="viewerCap"></span><button type="button" id="viewerDel">Hapus foto</button><button type="button" id="viewerClose">Tutup</button></div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+<input type="file" id="galIn" accept="image/*" multiple hidden>
+<input type="file" id="importIn" hidden>
+<input type="file" id="refIn" hidden>
+
+<script src="vendor/leaflet.js"></script>
+<script>
+'use strict';
+
+/* ================= Kode habitat & atribut ================= */
+const HABITAT = [
+  ['MG', 'Mangrove', '#1b7f4b'], ['MF', 'Mudflat / hamparan lumpur', '#9c6b3c'], ['PP', 'Pantai pasir', '#e0c060'],
+  ['VP', 'Vegetasi pantai (cemara, pandan)', '#5aa35a'], ['TB', 'Tambak', '#3fa7c9'], ['SW', 'Sawah', '#b5d334'],
+  ['KB', 'Kebun / ladang', '#8a9a2a'], ['KS', 'Kebun kelapa / sawit', '#c98d1f'], ['PM', 'Permukiman', '#d0453f'],
+  ['SG', 'Sungai / parit / kuala', '#2a63c9'], ['RW', 'Rawa / genangan', '#6c8fd6'], ['SM', 'Semak belukar', '#7fbf7f'],
+  ['HT', 'Hutan', '#0f5a35'], ['LT', 'Lahan terbuka', '#b9a48a'], ['LN', 'Lainnya', '#8a6fb0'],
+];
+const HAB = Object.fromEntries(HABITAT.map(([k, l, c]) => [k, { l, c }]));
+const KONDISI = [['B', 'Baik'], ['S', 'Sedang'], ['R', 'Rusak / terganggu']];
+const ANCAMAN = [['SM', 'Sampah'], ['AB', 'Abrasi'], ['KV', 'Konversi lahan'], ['TB', 'Penebangan'], ['BR', 'Perburuan'], ['IP', 'Ipomoea / invasif'], ['LN', 'Lainnya']];
+const TIPE = { point: 'Titik', line: 'Garis', area: 'Area' };
+const PREFIX = { point: 'P', line: 'G', area: 'A' };
+const DEFAULT_VIEW = { lat: -1.17, lon: 104.37, z: 12 };   // pesisir timur Jambi; peta pindah ke posisi Anda saat GPS didapat
+
+/* ================= Penyimpanan ================= */
+const KEY = 'peta-survei-v1';
+let S = load();
+function blank() { return { v: 1, profile: { nama: '' }, features: {}, seq: { point: 0, line: 0, area: 0 } }; }
+function load() { try { const r = localStorage.getItem(KEY); if (r) return Object.assign(blank(), JSON.parse(r)); } catch (e) {} return blank(); }
+let saveTimer = null;
+function save() { clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Gagal menyimpan: memori browser penuh. Ekspor data lalu hapus objek lama.'); } }
+function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
+window.addEventListener('pagehide', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+const pref = (k, d) => { try { const v = localStorage.getItem('peta-survei-' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
+const setPref = (k, v) => { try { localStorage.setItem('peta-survei-' + k, JSON.stringify(v)); } catch (e) {} };
+
+/* ================= Utilitas ================= */
+const pad = n => String(n).padStart(2, '0');
+function rid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function today() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function fmtTime(sec) { const d = new Date(sec * 1000); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtLen(m) { return m >= 1000 ? `${(m / 1000).toFixed(2).replace('.', ',')} km` : `${Math.round(m)} m`; }
+function fmtHa(ha) { return `${ha.toFixed(ha < 10 ? 2 : 1).replace('.', ',')} ha`; }
+let toastTimer;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2800); }
+function hav(a, b) {
+  const R = 6371008.8, r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+function lineLen(pts, closed) { let L = 0; for (let i = 1; i < pts.length; i++) L += hav(pts[i - 1], pts[i]); if (closed && pts.length > 2) L += hav(pts[pts.length - 1], pts[0]); return L; }
+function areaM2(pts) {
+  if (pts.length < 3) return 0;
+  const lat0 = pts.reduce((a, p) => a + p[0], 0) / pts.length * Math.PI / 180, R = 6371008.8, r = Math.PI / 180;
+  const xy = pts.map(p => [R * p[1] * r * Math.cos(lat0), R * p[0] * r]); let s = 0;
+  for (let i = 0; i < xy.length; i++) { const j = (i + 1) % xy.length; s += xy[i][0] * xy[j][1] - xy[j][0] * xy[i][1]; }
+  return Math.abs(s) / 2;
+}
+function stats(f) {
+  if (f.type === 'point') return { lat: f.coords[0], lon: f.coords[1] };
+  const pts = f.coords; const c = pts.reduce((a, p) => [a[0] + p[0] / pts.length, a[1] + p[1] / pts.length], [0, 0]);
+  return { lat: c[0], lon: c[1], len: lineLen(pts, f.type === 'area'), ha: f.type === 'area' ? areaM2(pts) / 10000 : 0, n: pts.length };
+}
+function nextKode(type) { S.seq[type] = (S.seq[type] || 0) + 1; return PREFIX[type] + String(S.seq[type]).padStart(3, '0'); }
+function habColor(k) { return (HAB[k] || { c: '#777' }).c; }
+function habLabel(k) { return HAB[k] ? HAB[k].l : 'Habitat belum dipilih'; }
+
+/* ================= Foto (IndexedDB) ================= */
+const PHOTO_MAX = 2560, PHOTO_Q = 0.88, THUMB_MAX = 320;
+let dbp = null;
+function pdb() {
+  if (!dbp) dbp = new Promise((ok, fail) => {
+    const r = indexedDB.open('peta-survei-foto', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('foto'); r.result.createObjectStore('thumb'); r.result.createObjectStore('ref'); };
+    r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error);
+  });
+  return dbp;
+}
+async function pdbDo(store, mode, fn) {
+  const db = await pdb();
+  return new Promise((ok, fail) => { const tx = db.transaction(store, mode); const req = fn(tx.objectStore(store)); tx.oncomplete = () => ok(req && req.result); tx.onerror = () => fail(tx.error); tx.onabort = () => fail(tx.error); });
+}
+const pdbGet = (s, k) => pdbDo(s, 'readonly', st => st.get(k));
+const pdbPut = (s, k, v) => pdbDo(s, 'readwrite', st => st.put(v, k));
+const pdbDel = (s, k) => pdbDo(s, 'readwrite', st => st.delete(k));
+const pdbAll = s => pdbDo(s, 'readonly', st => st.getAll());
+const pdbKeys = s => pdbDo(s, 'readonly', st => st.getAllKeys());
+async function deletePhotos(list) { for (const ph of list || []) { try { await pdbDel('foto', ph.id); await pdbDel('thumb', ph.id); } catch (e) {} } }
+async function shrink(file, max) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch (e) { bmp = await new Promise((ok, fail) => { const im = new Image(); im.onload = () => ok(im); im.onerror = fail; im.src = URL.createObjectURL(file); }); }
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return { blob: await new Promise(ok => c.toBlob(ok, 'image/jpeg', PHOTO_Q)), w: c.width, h: c.height };
+}
+
+/* ================= Peta ================= */
+const savedView = pref('view', DEFAULT_VIEW);
+const map = L.map('map', { zoomControl: false, attributionControl: true, tap: true }).setView([savedView.lat, savedView.lon], savedView.z);
+L.control.zoom({ position: 'topright' }).addTo(map);
+L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+map.attributionControl.setPrefix(false);
+map.on('moveend', () => { const c = map.getCenter(); setPref('view', { lat: +c.lat.toFixed(6), lon: +c.lng.toFixed(6), z: map.getZoom() }); });
+
+function makeBase(kind, cors) {
+  if (kind === 'sat') return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 20, maxNativeZoom: 18, attribution: 'Citra: Esri, Maxar, Earthstar Geographics', crossOrigin: cors ? 'anonymous' : undefined });
+  if (kind === 'osm') return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom: 20, maxNativeZoom: 19, attribution: '© OpenStreetMap contributors', crossOrigin: cors ? 'anonymous' : undefined });
+  return null;
+}
+let base = null, baseKind = pref('base', 'sat'), baseCors = true, tileErrors = 0;
+function setBase(kind) {
+  if (base) map.removeLayer(base);
+  baseKind = kind; setPref('base', kind); tileErrors = 0;
+  base = makeBase(kind, baseCors);
+  if (base) {
+    base.addTo(map); base.bringToBack();
+    // Bila server tidak mengizinkan CORS, ulangi tanpa crossOrigin (tile tetap tampil, hanya tidak bisa disimpan offline).
+    base.on('tileerror', () => { if (navigator.onLine && baseCors && ++tileErrors > 12) { baseCors = false; setBase(baseKind); } });
+  }
+  document.querySelectorAll('[data-base]').forEach(b => b.setAttribute('aria-pressed', b.dataset.base === kind));
+}
+document.getElementById('baseCtl').addEventListener('click', ev => { const b = ev.target.closest('[data-base]'); if (b) setBase(b.dataset.base); });
+setBase(baseKind);
+
+const featLayer = L.featureGroup().addTo(map);
+const refLayer = L.featureGroup().addTo(map);
+const drawLayer = L.featureGroup().addTo(map);
+const trackLayer = L.featureGroup().addTo(map);
+const layers = {};   // id -> layer
+
+function drawFeature(f) {
+  if (layers[f.id]) { featLayer.removeLayer(layers[f.id]); delete layers[f.id]; }
+  const c = habColor(f.habitat);
+  let ly;
+  if (f.type === 'point') ly = L.circleMarker([f.coords[0], f.coords[1]], { radius: 9, color: '#fff', weight: 2.5, fillColor: c, fillOpacity: 1 });
+  else if (f.type === 'line') ly = L.polyline(f.coords.map(p => [p[0], p[1]]), { color: c, weight: 5, opacity: .95 });
+  else ly = L.polygon(f.coords.map(p => [p[0], p[1]]), { color: c, weight: 3, fillColor: c, fillOpacity: .28 });
+  ly.bindTooltip(f.kode || '', { permanent: map.getZoom() >= 16, direction: f.type === 'point' ? 'right' : 'center', className: 'kode', offset: f.type === 'point' ? [8, 0] : [0, 0] });
+  ly.on('click', ev => { if (DRAW) { onMapTap(ev); return; } L.DomEvent.stop(ev); openSheet(f.id); });
+  ly.addTo(featLayer); layers[f.id] = ly;
+}
+function drawAll() { featLayer.clearLayers(); Object.keys(layers).forEach(k => delete layers[k]); Object.values(S.features).forEach(drawFeature); renderLegend(); }
+map.on('zoomend', () => { const perm = map.getZoom() >= 16; Object.values(layers).forEach(l => { const t = l.getTooltip(); if (t && t.options.permanent !== perm) { const c = t.getContent(), o = { ...t.options, permanent: perm }; l.unbindTooltip(); l.bindTooltip(c, o); } }); });
+function renderLegend() {
+  const counts = {}; Object.values(S.features).forEach(f => { const k = f.habitat || '-'; counts[k] = (counts[k] || 0) + 1; });
+  const used = HABITAT.filter(([k]) => counts[k]);
+  document.getElementById('legend').hidden = !Object.keys(counts).length;
+  document.getElementById('legendList').innerHTML = (used.length ? used : HABITAT).map(([k, l, c]) => `<li><span class="sw" style="background:${c}"></span>${esc(l)}${counts[k] ? ` (${counts[k]})` : ''}</li>`).join('')
+    + (counts['-'] ? `<li><span class="sw" style="background:#777"></span>Belum dipilih (${counts['-']})</li>` : '');
+}
+document.getElementById('fitBtn').addEventListener('click', () => {
+  const g = L.featureGroup([...featLayer.getLayers(), ...refLayer.getLayers()]);
+  if (g.getLayers().length) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 17 }); else toast('Belum ada objek di peta.');
+});
+
+/* ================= Posisi saya ================= */
+const posListeners = new Set();
+let lastPos = null;   // satu watchPosition untuk semua: titik GPS, rekam jalur, penanda posisi
+let me = null, meMarker = null, meCircle = null, follow = false, firstFix = !pref('hadFix', false), watchId = null;
+function startWatch() {
+  if (!navigator.geolocation || watchId != null) return;
+  watchId = navigator.geolocation.watchPosition(p => {
+    lastPos = p;
+    me = { lat: p.coords.latitude, lon: p.coords.longitude, acc: Math.round(p.coords.accuracy), t: Math.round(p.timestamp / 1000) };
+    const ll = [me.lat, me.lon];
+    if (!meMarker) {
+      meCircle = L.circle(ll, { radius: me.acc, color: '#1a73e8', weight: 1, fillColor: '#1a73e8', fillOpacity: .12, interactive: false }).addTo(map);
+      meMarker = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 3, fillColor: '#1a73e8', fillOpacity: 1, interactive: false }).addTo(map);
+    } else { meMarker.setLatLng(ll); meCircle.setLatLng(ll).setRadius(me.acc); }
+    const gi = document.getElementById('gpsInfo'); gi.hidden = false; gi.textContent = `GPS ±${me.acc} m`;
+    if (firstFix) { firstFix = false; setPref('hadFix', true); map.setView(ll, 16); }
+    else if (follow) map.panTo(ll);
+    onTrackPos(p);
+    posListeners.forEach(fn => fn(p));
+  }, err => {
+    const gi = document.getElementById('gpsInfo'); gi.hidden = false;
+    gi.textContent = err.code === 1 ? 'Izin lokasi ditolak' : 'Mencari GPS…';
+  }, { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 });
+}
+document.getElementById('locBtn').addEventListener('click', ev => {
+  startWatch();
+  follow = !follow; ev.currentTarget.setAttribute('aria-pressed', follow);
+  if (me) map.setView([me.lat, me.lon], Math.max(map.getZoom(), 17));
+  else toast('Mencari sinyal GPS…');
+  if (follow) toast('Peta mengikuti posisi Anda. Ketuk lagi untuk berhenti.');
+});
+map.on('dragstart', () => { if (follow) { follow = false; document.getElementById('locBtn').setAttribute('aria-pressed', 'false'); } });
+
+/* ================= Tambah objek ================= */
+function newFeature(type, coords, extra = {}) {
+  const f = { id: rid(), type, kode: nextKode(type), habitat: '', kondisi: '', ancaman: [], vegetasi: '', deskripsi: '', catatan: '',
+    coords, t: Math.round(Date.now() / 1000), by: S.profile.nama || '', updated: Date.now(), ...extra };
+  S.features[f.id] = f; save(); drawFeature(f); renderLegend();
+  return f;
+}
+const addMenu = document.getElementById('addMenu');
+document.getElementById('addBtn').addEventListener('click', () => { if (DRAW || REC) return; addMenu.hidden = !addMenu.hidden; });
+map.on('click', ev => { if (!addMenu.hidden) { addMenu.hidden = true; return; } if (DRAW) onMapTap(ev); });
+addMenu.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-add]'); if (!b) return; addMenu.hidden = true;
+  const k = b.dataset.add;
+  if (k === 'gps') gpsPoint(); else startDraw(k);
+});
+
+// Titik GPS: kumpulkan pembacaan sampai 15 detik dan pakai yang paling akurat (berhenti lebih cepat bila ≤ 5 m).
+function gpsPoint() {
+  if (!navigator.geolocation) { toast('GPS tidak tersedia di perangkat ini.'); return; }
+  startWatch();
+  let best = null, n = 0; const t0 = Date.now();
+  const bar = document.getElementById('drawbar'), info = document.getElementById('drawInfo');
+  DRAW = { kind: 'gps' }; bar.hidden = false;
+  document.getElementById('drawUndo').hidden = true;
+  const onPos = p => {
+    n++;
+    if (!best || p.coords.accuracy < best.coords.accuracy) best = p;
+    info.innerHTML = `Mengambil posisi GPS… terbaik <b>±${Math.round(best.coords.accuracy)} m</b> (${n} bacaan). Tekan Selesai bila sudah cukup.`;
+    if (best.coords.accuracy <= 5 || Date.now() - t0 > 15000) finish();
+  };
+  posListeners.add(onPos);
+  setTimeout(() => { if (posListeners.has(onPos) && best) finish(); }, 15000);
+  info.textContent = 'Mencari sinyal GPS…';
+  // Posisi yang baru saja diterima (≤ 5 detik) langsung dipakai sebagai bacaan pertama.
+  if (lastPos && Date.now() - lastPos.timestamp < 5000) setTimeout(() => posListeners.has(onPos) && onPos(lastPos), 0);
+  DRAW.finish = finish; DRAW.cancel = () => { posListeners.delete(onPos); endDraw(); };
+  function finish() {
+    if (!posListeners.has(onPos)) return;
+    posListeners.delete(onPos);
+    if (!best) { toast('Belum ada posisi GPS. Coba lagi di tempat terbuka.'); endDraw(); return; }
+    endDraw();
+    const c = best.coords;
+    const f = newFeature('point', [+c.latitude.toFixed(6), +c.longitude.toFixed(6), Math.round(c.accuracy)], { src: 'gps' });
+    map.setView([c.latitude, c.longitude], Math.max(map.getZoom(), 17));
+    openSheet(f.id);
+  }
+}
+
+/* Mode gambar: ketuk peta untuk titik / sudut garis / sudut area. */
+let DRAW = null;
+function startDraw(kind) {
+  DRAW = { kind, verts: [] };
+  document.getElementById('drawbar').hidden = false;
+  document.getElementById('drawUndo').hidden = kind === 'point';
+  map.getContainer().style.cursor = 'crosshair';
+  updateDraw();
+}
+function updateDraw() {
+  drawLayer.clearLayers();
+  const v = DRAW.verts, info = document.getElementById('drawInfo');
+  if (DRAW.kind === 'point') { info.textContent = 'Ketuk peta di lokasi titik.'; return; }
+  v.forEach(p => L.circleMarker(p, { radius: 5, color: '#fff', weight: 2, fillColor: '#ff6d00', fillOpacity: 1, interactive: false }).addTo(drawLayer));
+  if (v.length > 1) (DRAW.kind === 'area' ? L.polygon(v, { color: '#ff6d00', weight: 3, dashArray: '6 6', fillOpacity: .15, interactive: false }) : L.polyline(v, { color: '#ff6d00', weight: 4, dashArray: '6 6', interactive: false })).addTo(drawLayer);
+  const pts = v.map(p => [p[0], p[1]]);
+  const need = DRAW.kind === 'area' ? 3 : 2;
+  info.innerHTML = v.length < need
+    ? `Ketuk peta untuk menambah titik sudut ${DRAW.kind === 'area' ? 'area' : 'garis'} (${v.length}/${need} minimum).`
+    : `${v.length} titik · <b>${fmtLen(lineLen(pts, DRAW.kind === 'area'))}</b>${DRAW.kind === 'area' ? ` · luas <b>${fmtHa(areaM2(pts) / 10000)}</b>` : ''}`;
+}
+function onMapTap(ev) {
+  if (!DRAW || DRAW.kind === 'gps') return;
+  const ll = [+ev.latlng.lat.toFixed(6), +ev.latlng.lng.toFixed(6)];
+  if (DRAW.kind === 'point') { endDraw(); const f = newFeature('point', [ll[0], ll[1], 0], { src: 'peta' }); openSheet(f.id); return; }
+  DRAW.verts.push(ll); updateDraw();
+}
+function endDraw() { DRAW = null; drawLayer.clearLayers(); document.getElementById('drawbar').hidden = true; map.getContainer().style.cursor = ''; }
+document.getElementById('drawUndo').addEventListener('click', () => { if (DRAW && DRAW.verts) { DRAW.verts.pop(); updateDraw(); } });
+document.getElementById('drawCancel').addEventListener('click', () => { if (DRAW && DRAW.cancel) DRAW.cancel(); else endDraw(); });
+document.getElementById('drawDone').addEventListener('click', () => {
+  if (!DRAW) return;
+  if (DRAW.finish) { DRAW.finish(); return; }
+  if (DRAW.kind === 'point') { endDraw(); return; }
+  const need = DRAW.kind === 'area' ? 3 : 2;
+  if (DRAW.verts.length < need) { toast(`Perlu minimal ${need} titik sudut.`); return; }
+  const kind = DRAW.kind, coords = DRAW.verts.map(p => [p[0], p[1], 0, 0]);
+  endDraw();
+  const f = newFeature(kind, coords, { src: 'peta' }); openSheet(f.id);
+});
+
+/* ================= Rekam jalur ================= */
+const TRK_MAX_ACC = 30, TRK_MIN_STEP = 4;
+let REC = null, wakeLock = null, recLine = null;
+async function keepAwake() { try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) { wakeLock = null; } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && REC) keepAwake(); });
+document.getElementById('trackBtn').addEventListener('click', () => { if (REC) stopTrack(); else startTrack(); });
+document.getElementById('recStop').addEventListener('click', () => stopTrack());
+function startTrack() {
+  if (!navigator.geolocation) { toast('GPS tidak tersedia.'); return; }
+  if (DRAW) return;
+  REC = { pts: [], waitAcc: 0 };
+  startWatch(); keepAwake();
+  recLine = L.polyline([], { color: '#e53935', weight: 4 }).addTo(trackLayer);
+  const b = document.getElementById('trackBtn'); b.textContent = 'Hentikan rekam'; b.classList.add('rec');
+  document.getElementById('recbar').hidden = false; updateRecText();
+  toast('Rekam jalur dimulai. Biarkan layar menyala dan aplikasi tetap terbuka.');
+}
+function updateRecText() {
+  if (!REC) return;
+  const len = lineLen(REC.pts);
+  document.getElementById('recText').textContent = `Merekam jalur · ${fmtLen(len)} · ${REC.pts.length} titik${REC.waitAcc ? ` · menunggu GPS (±${REC.waitAcc} m)` : ''}`;
+}
+function onTrackPos(p) {
+  if (!REC) return;
+  const acc = Math.round(p.coords.accuracy);
+  if (acc > TRK_MAX_ACC) { REC.waitAcc = acc; updateRecText(); return; }
+  REC.waitAcc = 0;
+  const pt = [+p.coords.latitude.toFixed(6), +p.coords.longitude.toFixed(6), acc, Math.round(p.timestamp / 1000)];
+  const last = REC.pts[REC.pts.length - 1];
+  if (last && hav(last, pt) < Math.max(TRK_MIN_STEP, acc * 0.5)) { updateRecText(); return; }
+  REC.pts.push(pt); recLine.addLatLng([pt[0], pt[1]]); updateRecText();
+  try { sessionStorage.setItem('peta-survei-rec', JSON.stringify(REC.pts)); } catch (e) {}
+}
+function stopTrack() {
+  if (!REC) return;
+  const pts = REC.pts; REC = null;
+  trackLayer.clearLayers(); recLine = null;
+  try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null;
+  try { sessionStorage.removeItem('peta-survei-rec'); } catch (e) {}
+  const b = document.getElementById('trackBtn'); b.textContent = 'Rekam jalur'; b.classList.remove('rec');
+  document.getElementById('recbar').hidden = true;
+  if (pts.length < 2) { toast('Jalur terlalu pendek, tidak disimpan.'); return; }
+  const f = newFeature('line', pts, { src: 'gps' });
+  toast(`Jalur tersimpan: ${fmtLen(lineLen(pts))}`); openSheet(f.id);
+}
+
+/* ================= Lembar formulir objek ================= */
+let SHEET = null;
+const sheet = document.getElementById('sheet');
+function chipsHTML(key, opts, val, multi, colors) {
+  const sel = multi ? (val || []) : [val];
+  return `<div class="chips" role="group">${opts.map(([k, l, c]) => `<button type="button" class="chip" data-chip="${key}" data-v="${k}" data-multi="${multi ? 1 : 0}" aria-pressed="${sel.includes(k)}">${colors ? `<span class="sw" style="background:${c}"></span>` : ''}${esc(l)}</button>`).join('')}</div>`;
+}
+function openSheet(id) {
+  const f = S.features[id]; if (!f) return;
+  SHEET = id; addMenu.hidden = true;
+  renderSheet(); sheet.hidden = false;
+}
+function renderSheet() {
+  const f = S.features[SHEET]; if (!f) { closeSheet(); return; }
+  const st = stats(f);
+  document.getElementById('sheetTitle').textContent = `${TIPE[f.type]} ${f.kode}`;
+  const geo = f.type === 'point'
+    ? `${f.coords[0].toFixed(6)}, ${f.coords[1].toFixed(6)}${f.coords[2] ? ` · ±${f.coords[2]} m` : ''}<br><span class="hint">${f.src === 'gps' ? 'Dari GPS HP' : 'Ditandai di peta'} · ${fmtTime(f.t)}</span>`
+    : `${st.n} titik · panjang ${fmtLen(st.len)}${f.type === 'area' ? ` · luas <b>${fmtHa(st.ha)}</b>` : ''}<br><span class="hint">${f.src === 'gps' ? 'Rekaman GPS HP' : f.src === 'file' ? 'Dari file' : 'Digambar di peta'} · ${fmtTime(f.t)}</span>`;
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="box"><div class="geo">${geo}</div>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="btn ghost sm" data-s="center">Lihat di peta</button>
+        ${f.type === 'point' ? `<button type="button" class="btn ghost sm" data-s="regps">Perbarui dari GPS</button>` : `<button type="button" class="btn ghost sm" data-s="swap">Jadikan ${f.type === 'line' ? 'area' : 'garis'}</button>`}
+      </div></div>
+    <div class="fields">
+      <div class="field w"><span class="lbl">Habitat</span>${chipsHTML('habitat', HABITAT, f.habitat, false, true)}</div>
+      <div class="field"><label for="f-kode">Kode</label><input type="text" id="f-kode" data-k="kode" value="${esc(f.kode)}"></div>
+      <div class="field"><label for="f-nama">Nama lokasi</label><input type="text" id="f-nama" data-k="nama" value="${esc(f.nama || '')}" placeholder="mis. Muara Sungai Cemara"></div>
+      <div class="field w"><span class="lbl">Kondisi habitat</span>${chipsHTML('kondisi', KONDISI, f.kondisi, false)}</div>
+      <div class="field w"><span class="lbl">Ancaman / gangguan</span>${chipsHTML('ancaman', ANCAMAN, f.ancaman, true)}</div>
+      <div class="field w"><label for="f-veg">Vegetasi / jenis dominan</label><input type="text" id="f-veg" data-k="vegetasi" value="${esc(f.vegetasi)}" placeholder="mis. Avicennia, Rhizophora, Ipomoea"></div>
+      <div class="field w"><label for="f-desk">Deskripsi habitat</label><textarea id="f-desk" data-k="deskripsi" rows="2" placeholder="Substrat, tutupan, genangan, lebar, kondisi sekitar">${esc(f.deskripsi)}</textarea></div>
+      <div class="field w"><label for="f-cat">Catatan / temuan</label><textarea id="f-cat" data-k="catatan" rows="2">${esc(f.catatan)}</textarea></div>
+    </div>
+    <section class="section">
+      <div class="row" style="justify-content:space-between;align-items:baseline"><h2>Foto lokasi</h2><span class="hint">${(f._photos || []).length} foto</span></div>
+      ${(f._photos || []).length ? `<div class="photos" id="photos">${f._photos.map(ph => `<button type="button" data-s="photo" data-ph="${ph.id}" aria-label="Buka foto ${esc(ph.name)}"></button>`).join('')}</div>` : ''}
+      <div class="row"><button type="button" class="btn" data-s="cam">Ambil foto</button><button type="button" class="btn ghost" data-s="gal">Dari galeri</button></div>
+      <p class="note">Foto diberi nama dari kode objek, jam, dan koordinat GPS, lalu ikut dalam ekspor (folder foto/ dan KMZ Google Earth).</p>
+    </section>
+    <button type="button" class="btn danger block" data-s="del">Hapus ${TIPE[f.type].toLowerCase()} ini</button>
+    <p class="note">Tersimpan otomatis setiap kali Anda mengetik atau memilih.</p>`;
+  loadThumbs(f);
+}
+function closeSheet() { sheet.hidden = true; SHEET = null; closeViewer(); if (updateReady && safeToReload()) applyUpdate(); }
+document.getElementById('sheetClose').addEventListener('click', closeSheet);
+sheet.addEventListener('click', ev => { if (ev.target === sheet) closeSheet(); });
+const sheetBody = document.getElementById('sheetBody');
+sheetBody.addEventListener('input', ev => {
+  const k = ev.target.dataset.k; const f = S.features[SHEET]; if (!k || !f) return;
+  f[k] = ev.target.value; f.updated = Date.now(); saveSoon();
+  if (k === 'kode') { document.getElementById('sheetTitle').textContent = `${TIPE[f.type]} ${f.kode}`; drawFeature(f); }
+});
+let armed = null;
+sheetBody.addEventListener('click', async ev => {
+  const f = S.features[SHEET]; if (!f) return;
+  const chip = ev.target.closest('[data-chip]');
+  if (chip) {
+    const k = chip.dataset.chip, v = chip.dataset.v;
+    if (chip.dataset.multi === '1') { const a = f[k] || []; f[k] = a.includes(v) ? a.filter(x => x !== v) : [...a, v]; chip.setAttribute('aria-pressed', f[k].includes(v)); }
+    else { f[k] = f[k] === v ? '' : v; chip.parentElement.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.v === f[k])); }
+    f.updated = Date.now(); save();
+    if (k === 'habitat') { drawFeature(f); renderLegend(); }
+    return;
+  }
+  const b = ev.target.closest('[data-s]'); if (!b) return;
+  const a = b.dataset.s;
+  if (a === 'center') { closeSheet(); showTab('map'); const ly = layers[f.id]; if (f.type === 'point') map.setView([f.coords[0], f.coords[1]], Math.max(map.getZoom(), 17)); else map.fitBounds(ly.getBounds().pad(0.2)); }
+  else if (a === 'regps') {
+    if (!me) { startWatch(); toast('Belum ada posisi GPS. Tunggu sebentar lalu coba lagi.'); return; }
+    f.coords = [+me.lat.toFixed(6), +me.lon.toFixed(6), me.acc]; f.src = 'gps'; f.updated = Date.now(); save(); drawFeature(f); renderSheet(); toast(`Koordinat diperbarui (±${me.acc} m)`);
+  }
+  else if (a === 'swap') { f.type = f.type === 'line' ? 'area' : 'line'; f.updated = Date.now(); save(); drawFeature(f); renderSheet(); }
+  else if (a === 'cam') { photoGeo = me; document.getElementById('camIn').click(); }
+  else if (a === 'gal') { photoGeo = me; document.getElementById('galIn').click(); }
+  else if (a === 'photo') openViewer(b.dataset.ph);
+  else if (a === 'del') {
+    if (armed !== 'del') { armed = 'del'; b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; setTimeout(() => { if (armed === 'del') { armed = null; b.classList.remove('armed'); b.textContent = `Hapus ${TIPE[f.type].toLowerCase()} ini`; } }, 3500); return; }
+    armed = null;
+    await deletePhotos(f._photos); delete S.features[f.id]; save();
+    if (layers[f.id]) { featLayer.removeLayer(layers[f.id]); delete layers[f.id]; }
+    renderLegend(); closeSheet(); if (currentTab === 'list') renderList(); toast('Objek dihapus');
+  }
+});
+
+/* Foto */
+let photoGeo = null, thumbURLs = [];
+['camIn', 'galIn'].forEach(id => document.getElementById(id).addEventListener('change', ev => { const files = [...ev.target.files]; ev.target.value = ''; addPhotos(files); }));
+async function addPhotos(files) {
+  const f = S.features[SHEET]; if (!f || !files.length) return;
+  toast(files.length > 1 ? `Menyimpan ${files.length} foto…` : 'Menyimpan foto…');
+  const geo = photoGeo || me; let n = 0;
+  for (const file of files) {
+    try {
+      const taken = Math.round((file.lastModified || Date.now()) / 1000);
+      const big = await shrink(file, PHOTO_MAX), small = await shrink(file, THUMB_MAX), id = rid();
+      await pdbPut('foto', id, big.blob); await pdbPut('thumb', id, small.blob);
+      f._photos = f._photos || [];
+      const d = new Date(taken * 1000);
+      let name = `${(f.kode || 'objek').replace(/[^\w-]+/g, '_')}_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`, k = 1;
+      while (f._photos.some(p => p.name === name + '.jpg')) name = name.replace(/_\d+$/, '') + '_' + (++k);
+      const meta = { id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size };
+      if (geo) Object.assign(meta, { lat: +geo.lat.toFixed(6), lon: +geo.lon.toFixed(6), acc: geo.acc });
+      else if (f.type === 'point') Object.assign(meta, { lat: f.coords[0], lon: f.coords[1], acc: f.coords[2] || null });
+      f._photos.push(meta); n++;
+    } catch (e) { toast('Foto gagal disimpan. Memori HP mungkin penuh.'); }
+  }
+  photoGeo = null;
+  if (n) { f.updated = Date.now(); save(); if (SHEET === f.id) renderSheet(); toast(`${n} foto tersimpan`); }
+}
+async function loadThumbs(f) {
+  thumbURLs.forEach(u => URL.revokeObjectURL(u)); thumbURLs = [];
+  for (const btn of document.querySelectorAll('#photos button[data-ph]')) {
+    try { const b = await pdbGet('thumb', btn.dataset.ph); if (b) { const u = URL.createObjectURL(b); thumbURLs.push(u); btn.innerHTML = `<img src="${u}" alt="">`; } else btn.innerHTML = '<span class="missing">Foto ada di HP lain</span>'; } catch (e) {}
+  }
+}
+let viewerPhoto = null, viewerURL = null;
+async function openViewer(id) {
+  const f = S.features[SHEET]; const ph = f && (f._photos || []).find(p => p.id === id); if (!ph) return;
+  const b = await pdbGet('foto', id).catch(() => null);
+  if (!b) { toast('File foto ini tidak ada di HP ini.'); return; }
+  viewerPhoto = ph; if (viewerURL) URL.revokeObjectURL(viewerURL); viewerURL = URL.createObjectURL(b);
+  document.getElementById('viewerImg').src = viewerURL;
+  document.getElementById('viewerCap').textContent = `${ph.name} · ${fmtTime(ph.t)}${ph.lat != null ? ` · ${ph.lat}, ${ph.lon}${ph.acc ? ` (±${ph.acc} m)` : ''}` : ''}`;
+  const del = document.getElementById('viewerDel'); del.classList.remove('armed'); del.textContent = 'Hapus foto';
+  document.getElementById('viewer').hidden = false;
+}
+function closeViewer() { document.getElementById('viewer').hidden = true; viewerPhoto = null; if (viewerURL) { URL.revokeObjectURL(viewerURL); viewerURL = null; } }
+document.getElementById('viewerClose').addEventListener('click', closeViewer);
+document.getElementById('viewerDel').addEventListener('click', async ev => {
+  const b = ev.currentTarget;
+  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; return; }
+  const f = S.features[SHEET]; if (!f || !viewerPhoto) return;
+  await deletePhotos([viewerPhoto]); f._photos = f._photos.filter(p => p.id !== viewerPhoto.id); if (!f._photos.length) delete f._photos;
+  f.updated = Date.now(); save(); closeViewer(); renderSheet(); toast('Foto dihapus');
+});
+
+/* ================= Tab ================= */
+let currentTab = 'map';
+function showTab(t) {
+  currentTab = t; addMenu.hidden = true;
+  document.getElementById('mapView').hidden = t !== 'map';
+  document.getElementById('listView').hidden = t !== 'list';
+  document.getElementById('dataView').hidden = t !== 'data';
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === t ? 'page' : 'false'));
+  if (t === 'map') setTimeout(() => map.invalidateSize(), 0);
+  if (t === 'list') renderList();
+  if (t === 'data') renderData();
+  if (updateReady && safeToReload()) applyUpdate();
+}
+document.getElementById('tabs').addEventListener('click', ev => { const b = ev.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
+
+/* ================= Daftar & ringkasan ================= */
+let listFilter = '', listQuery = '';
+function renderList() {
+  const all = Object.values(S.features).sort((a, b) => b.t - a.t);
+  const sum = {}; all.forEach(f => { const k = f.habitat || '-'; const s = sum[k] = sum[k] || { n: 0, ha: 0, len: 0 }; const st = stats(f); s.n++; if (f.type === 'area') s.ha += st.ha; if (f.type === 'line') s.len += st.len; });
+  const rows = Object.entries(sum).sort((a, b) => b[1].n - a[1].n);
+  const q = listQuery.toLowerCase();
+  const list = all.filter(f => (!listFilter || (f.habitat || '-') === listFilter) && (!q || [f.kode, f.nama, f.vegetasi, f.deskripsi, f.catatan, habLabel(f.habitat)].join(' ').toLowerCase().includes(q)));
+  document.getElementById('listPage').innerHTML = `
+    <section class="section"><h2>Ringkasan per habitat</h2>
+      ${rows.length ? `<div class="box" style="overflow-x:auto"><table class="sumtab"><thead><tr><th>Habitat</th><th>Objek</th><th>Luas area</th><th>Panjang garis</th></tr></thead><tbody>
+        ${rows.map(([k, s]) => `<tr><td><span class="sw" style="background:${k === '-' ? '#777' : habColor(k)}"></span>${esc(k === '-' ? 'Belum dipilih' : habLabel(k))}</td><td>${s.n}</td><td>${s.ha ? fmtHa(s.ha) : '–'}</td><td>${s.len ? fmtLen(s.len) : '–'}</td></tr>`).join('')}
+      </tbody></table></div>` : ''}
+    </section>
+    <section class="section"><h2>Semua objek (${all.length})</h2>
+      <input type="search" id="q" placeholder="Cari kode, nama, vegetasi, catatan" value="${esc(listQuery)}" aria-label="Cari objek">
+      ${rows.length > 1 ? `<div class="chips"><button type="button" class="chip" data-filter="" aria-pressed="${!listFilter}">Semua</button>${rows.map(([k]) => `<button type="button" class="chip" data-filter="${k}" aria-pressed="${listFilter === k}"><span class="sw" style="background:${k === '-' ? '#777' : habColor(k)}"></span>${esc(k === '-' ? 'Belum dipilih' : habLabel(k))}</button>`).join('')}</div>` : ''}
+      ${list.length ? `<div class="list">${list.map(f => { const st = stats(f); return `<button type="button" class="item" data-open="${f.id}">
+          <span class="sw" style="background:${f.habitat ? habColor(f.habitat) : '#777'};width:14px;height:14px"></span>
+          <span class="main"><span class="t">${esc(f.kode)}${f.nama ? ' · ' + esc(f.nama) : ''}</span><br><span class="s">${esc(TIPE[f.type])} · ${esc(habLabel(f.habitat))}${f.type === 'area' ? ' · ' + fmtHa(st.ha) : f.type === 'line' ? ' · ' + fmtLen(st.len) : ''}${f._photos ? ` · ${f._photos.length} foto` : ''}</span></span>
+          <span class="k">${fmtTime(f.t).slice(0, 10)}</span></button>`; }).join('')}</div>`
+        : `<div class="empty">${all.length ? 'Tidak ada objek yang cocok.' : 'Belum ada objek. Buka tab Peta lalu tekan "+ Tandai" atau "Rekam jalur".'}</div>`}
+    </section>`;
+  const qi = document.getElementById('q');
+  qi.addEventListener('input', () => { listQuery = qi.value; const pos = qi.selectionStart; renderList(); const n = document.getElementById('q'); n.focus(); n.setSelectionRange(pos, pos); });
+}
+document.getElementById('listPage').addEventListener('click', ev => {
+  const o = ev.target.closest('[data-open]'); if (o) { openSheet(o.dataset.open); return; }
+  const fl = ev.target.closest('[data-filter]'); if (fl) { listFilter = fl.dataset.filter; renderList(); }
+});
+
+/* ================= Data: ekspor, impor, layer acuan ================= */
+const NATIVE = false;
+function withPhotos() { return pref('zipfoto', true); }
+async function renderData() {
+  const fs = Object.values(S.features); const ph = fs.flatMap(f => f._photos || []);
+  const refs = await pdbAll('ref').catch(() => []);
+  document.getElementById('dataPage').innerHTML = `
+    <section class="section"><h2>Pencatat</h2>
+      <div class="fields"><div class="field w"><label for="p-nama">Nama pencatat</label><input type="text" id="p-nama" value="${esc(S.profile.nama)}"></div></div></section>
+    <section class="section"><h2>Ekspor</h2>
+      <p class="note">${fs.length} objek (${fs.filter(f => f.type === 'point').length} titik, ${fs.filter(f => f.type === 'line').length} garis, ${fs.filter(f => f.type === 'area').length} area) dan ${ph.length} foto tersimpan di HP ini. Kirim cadangan setiap malam.</p>
+      <div class="row">
+        <button type="button" class="btn" data-d="zip-share">Bagikan ZIP (QGIS)</button>
+        <button type="button" class="btn ghost" data-d="zip">Simpan ZIP ke HP</button>
+      </div>
+      <div class="row">
+        <button type="button" class="btn ghost" data-d="kmz">KMZ Google Earth</button>
+        <button type="button" class="btn ghost" data-d="json">Cadangan .json</button>
+      </div>
+      <label class="check"><input type="checkbox" id="withPhotos" ${withPhotos() ? 'checked' : ''}>Sertakan foto (${ph.length} foto, ±${(ph.reduce((a, p) => a + (p.size || 0), 0) / 1048576).toFixed(1).replace('.', ',')} MB)</label>
+      <p class="note">ZIP berisi peta_survei.geojson (titik, garis, area + atribut), objek.csv, peta_survei.gpx, peta_survei.kml, folder foto/ dengan Daftar_Foto.csv, dan cadangan .json. KMZ langsung dibuka di Google Earth dengan foto di setiap objek.</p>
+    </section>
+    <section class="section"><h2>Layer acuan</h2>
+      <p class="note">Tampilkan batas kawasan, rencana jalur, atau titik lama dari file GeoJSON, KML, atau GPX sebagai garis putus-putus (tidak ikut diekspor).</p>
+      ${refs.length ? `<div class="list">${refs.map(r => `<div class="item" style="cursor:default"><span class="main"><span class="t">${esc(r.name)}</span><br><span class="s">${r.geojson.features.length} objek</span></span><button type="button" class="btn danger sm" data-d="refdel" data-id="${r.id}">Hapus</button></div>`).join('')}</div>` : ''}
+      <button type="button" class="btn ghost block" data-d="refadd">Tambah layer acuan…</button>
+    </section>
+    <section class="section"><h2>Gabungkan data tim</h2>
+      <p class="note">Pilih file cadangan .json dari HP anggota lain. Objek yang sama tidak terduplikasi; versi terbaru yang dipakai. File foto tetap di HP pemiliknya.</p>
+      <button type="button" class="btn ghost block" data-d="import">Pilih file cadangan…</button>
+    </section>
+    <section class="section"><h2>Peta offline</h2>
+      <p class="note">Potongan peta (satelit/jalan) yang pernah tampil saat ada sinyal disimpan otomatis dan tetap tampil tanpa sinyal. Sebelum ke lapangan, buka dan geser-geser area survei pada beberapa tingkat zoom saat masih ada sinyal.</p>
+      <p class="note" id="tileInfo"></p>
+      <button type="button" class="btn ghost block" data-d="tilesclear">Kosongkan simpanan peta</button>
+    </section>
+    <section class="section"><h2>Hapus semua data</h2>
+      <p class="note">Hanya setelah ekspor tersimpan aman. Ketuk dua kali untuk mengonfirmasi.</p>
+      <button type="button" class="btn danger block" data-d="wipe">Hapus semua objek dan foto</button>
+    </section>
+    <p class="note">Aplikasi formulir: <a href="../">Survei Pantai Cemara</a>. Peta dasar: citra Esri World Imagery dan © OpenStreetMap contributors.</p>`;
+  if ('caches' in window) caches.open('peta-tiles').then(c => c.keys()).then(k => { const el = document.getElementById('tileInfo'); if (el) el.textContent = `${k.length} potongan peta tersimpan untuk dipakai tanpa sinyal.`; }).catch(() => {});
+}
+const dataPage = document.getElementById('dataPage');
+dataPage.addEventListener('input', ev => { if (ev.target.id === 'p-nama') { S.profile.nama = ev.target.value; saveSoon(); } });
+dataPage.addEventListener('change', ev => { if (ev.target.id === 'withPhotos') setPref('zipfoto', ev.target.checked); });
+dataPage.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-d]'); if (!b) return; const a = b.dataset.d;
+  if (a === 'zip' || a === 'zip-share') exportZip(a === 'zip-share');
+  else if (a === 'kmz') exportKMZ();
+  else if (a === 'json') download(new Blob([backupJSON()], { type: 'application/json' }), fileBase() + '.json');
+  else if (a === 'import') document.getElementById('importIn').click();
+  else if (a === 'refadd') document.getElementById('refIn').click();
+  else if (a === 'refdel') { await pdbDel('ref', b.dataset.id); await drawRefs(); renderData(); toast('Layer acuan dihapus'); }
+  else if (a === 'tilesclear') { if ('caches' in window) await caches.delete('peta-tiles'); renderData(); toast('Simpanan peta dikosongkan'); }
+  else if (a === 'wipe') {
+    if (armed !== 'wipe') { armed = 'wipe'; b.classList.add('armed'); b.textContent = 'Ketuk lagi: semua objek dan foto akan hilang'; setTimeout(() => { if (armed === 'wipe') { armed = null; renderData(); } }, 3500); return; }
+    armed = null; const keep = S.profile; S = blank(); S.profile = keep; save();
+    await pdbDo('foto', 'readwrite', st => st.clear()).catch(() => {}); await pdbDo('thumb', 'readwrite', st => st.clear()).catch(() => {});
+    drawAll(); renderData(); toast('Semua objek dihapus');
+  }
+});
+
+function fileBase() {
+  const d = new Date(), who = (S.profile.nama || 'tim').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tim';
+  return `peta_survei_${today().replace(/-/g, '')}_${pad(d.getHours())}${pad(d.getMinutes())}_${who}`;
+}
+function backupJSON() { return JSON.stringify({ app: 'peta-survei', exported: new Date().toISOString(), data: S }, null, 1); }
+function props(f) {
+  const st = stats(f);
+  return {
+    kode: f.kode, tipe: TIPE[f.type], nama: f.nama || '', habitat_kode: f.habitat || '', habitat: f.habitat ? habLabel(f.habitat) : '',
+    kondisi: (KONDISI.find(k => k[0] === f.kondisi) || ['', ''])[1], ancaman: (f.ancaman || []).map(a => (ANCAMAN.find(x => x[0] === a) || [a, a])[1]).join('; '),
+    vegetasi: f.vegetasi || '', deskripsi: f.deskripsi || '', catatan: f.catatan || '', waktu: new Date(f.t * 1000).toISOString(),
+    sumber: f.src === 'gps' ? 'GPS HP' : f.src === 'file' ? 'file' : 'peta', akurasi_m: f.type === 'point' ? (f.coords[2] || null) : null,
+    panjang_m: f.type === 'point' ? null : Math.round(st.len), luas_ha: f.type === 'area' ? +st.ha.toFixed(4) : null,
+    foto: (f._photos || []).map(p => 'foto/' + p.name).join('; '), pencatat: f.by || '',
+  };
+}
+function geomOf(f) {
+  if (f.type === 'point') return { type: 'Point', coordinates: [f.coords[1], f.coords[0]] };
+  const c = f.coords.map(p => [p[1], p[0]]);
+  if (f.type === 'line') return { type: 'LineString', coordinates: c };
+  return { type: 'Polygon', coordinates: [[...c, c[0]]] };
+}
+function toGeoJSON() { return { type: 'FeatureCollection', features: Object.values(S.features).sort((a, b) => a.t - b.t).map(f => ({ type: 'Feature', properties: props(f), geometry: geomOf(f) })) }; }
+function csvCell(v) { const s = v == null ? '' : String(v); return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function toCSV(rows) { return '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n'; }
+function objekCSV() {
+  const fs = Object.values(S.features).sort((a, b) => a.t - b.t);
+  const keys = ['kode', 'tipe', 'nama', 'habitat_kode', 'habitat', 'kondisi', 'ancaman', 'vegetasi', 'deskripsi', 'catatan', 'waktu', 'sumber', 'akurasi_m', 'panjang_m', 'luas_ha', 'foto', 'pencatat'];
+  return toCSV([['lat', 'lon', ...keys], ...fs.map(f => { const st = stats(f), p = props(f); return [st.lat.toFixed(6), st.lon.toFixed(6), ...keys.map(k => p[k] ?? '')]; })]);
+}
+function fotoCSV() {
+  const rows = [['file', 'kode_objek', 'habitat', 'waktu', 'lat', 'lon', 'akurasi_m', 'lebar_px', 'tinggi_px']];
+  Object.values(S.features).forEach(f => (f._photos || []).forEach(p => rows.push(['foto/' + p.name, f.kode, habLabel(f.habitat), new Date(p.t * 1000).toISOString(), p.lat ?? '', p.lon ?? '', p.acc ?? '', p.w, p.h])));
+  return toCSV(rows);
+}
+function toGPX() {
+  const x = s => esc(s);
+  const fs = Object.values(S.features).sort((a, b) => a.t - b.t);
+  const wpt = fs.filter(f => f.type === 'point').map(f => `  <wpt lat="${f.coords[0]}" lon="${f.coords[1]}"><time>${new Date(f.t * 1000).toISOString()}</time><name>${x(f.kode)}</name><desc>${x(habLabel(f.habitat))}${f.nama ? ' – ' + x(f.nama) : ''}</desc></wpt>`).join('\n');
+  const trk = fs.filter(f => f.type !== 'point').map(f => `  <trk><name>${x(f.kode)}</name><desc>${x(TIPE[f.type])} – ${x(habLabel(f.habitat))}</desc><trkseg>\n${f.coords.map(p => `    <trkpt lat="${p[0]}" lon="${p[1]}">${p[3] ? `<time>${new Date(p[3] * 1000).toISOString()}</time>` : ''}</trkpt>`).join('\n')}\n  </trkseg></trk>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Peta Survei Pantai Cemara" xmlns="http://www.topografix.com/GPX/1/1">\n${wpt}\n${trk}\n</gpx>\n`;
+}
+function kmlColor(hex, a) { const h = hex.replace('#', ''); return a + h.slice(4, 6) + h.slice(2, 4) + h.slice(0, 2); }
+function toKML(withImgs) {
+  const styles = [...HABITAT, ['XX', 'Belum dipilih', '#777777']].map(([k, , c]) => `<Style id="h${k}"><IconStyle><color>${kmlColor(c, 'ff')}</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-blank.png</href></Icon></IconStyle><LineStyle><color>${kmlColor(c, 'ff')}</color><width>3</width></LineStyle><PolyStyle><color>${kmlColor(c, '55')}</color></PolyStyle></Style>`).join('\n');
+  const fs = Object.values(S.features).sort((a, b) => a.t - b.t);
+  const groups = {};
+  fs.forEach(f => { const k = f.habitat || 'XX'; (groups[k] = groups[k] || []).push(f); });
+  const pm = f => {
+    const p = props(f);
+    const rows = [['Tipe', p.tipe], ['Habitat', p.habitat], ['Nama', p.nama], ['Kondisi', p.kondisi], ['Ancaman', p.ancaman], ['Vegetasi', p.vegetasi], ['Deskripsi', p.deskripsi], ['Catatan', p.catatan], ['Waktu', fmtTime(f.t)], ['Panjang', p.panjang_m != null ? fmtLen(p.panjang_m) : ''], ['Luas', p.luas_ha != null ? fmtHa(p.luas_ha) : '']].filter(r => r[1]);
+    const desc = `<table>${rows.map(r => `<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td></tr>`).join('')}</table>` + (withImgs ? (f._photos || []).map(ph => `<p><img src="foto/${esc(ph.name)}" width="480"><br>${esc(ph.name)}</p>`).join('') : '');
+    const c = f.type === 'point' ? `<Point><coordinates>${f.coords[1]},${f.coords[0]},0</coordinates></Point>`
+      : f.type === 'line' ? `<LineString><tessellate>1</tessellate><coordinates>${f.coords.map(q => `${q[1]},${q[0]},0`).join(' ')}</coordinates></LineString>`
+      : `<Polygon><outerBoundaryIs><LinearRing><coordinates>${[...f.coords, f.coords[0]].map(q => `${q[1]},${q[0]},0`).join(' ')}</coordinates></LinearRing></outerBoundaryIs></Polygon>`;
+    return `<Placemark><name>${esc(f.kode)}${f.nama ? ' ' + esc(f.nama) : ''}</name><styleUrl>#h${f.habitat || 'XX'}</styleUrl><description><![CDATA[${desc}]]></description>${c}</Placemark>`;
+  };
+  const folders = Object.entries(groups).map(([k, list]) => `<Folder><name>${esc(k === 'XX' ? 'Belum dipilih' : habLabel(k))} (${list.length})</name>\n${list.map(pm).join('\n')}\n</Folder>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Peta Survei Pantai Cemara ${today()}</name>\n${styles}\n${folders}\n</Document></kml>\n`;
+}
+/* ZIP tanpa kompresi (store). File foto dimasukkan sebagai Blob agar tidak dimuat sekaligus ke memori. */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files, type) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const d = new Date(), dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF, dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+  files.forEach(([name, content]) => {
+    const nb = enc.encode(name), isBlob = content && content.blob;
+    const data = isBlob ? { length: content.blob.size } : typeof content === 'string' ? enc.encode(content) : content;
+    const crc = isBlob ? content.crc : crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(10, dt, true); lh.setUint16(12, dd, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, nb.length, true);
+    parts.push(new Uint8Array(lh.buffer), nb, isBlob ? content.blob : data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(12, dt, true); ch.setUint16(14, dd, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), nb); off += 30 + nb.length + data.length;
+  });
+  const csize = central.reduce((a, p) => a + p.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, csize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: type || 'application/zip' });
+}
+async function photoFiles() {
+  const out = [];
+  if (!withPhotos()) return out;
+  const all = Object.values(S.features).flatMap(f => f._photos || []);
+  if (all.length) toast(`Menyiapkan ${all.length} foto…`);
+  for (const ph of all) { const blob = await pdbGet('foto', ph.id).catch(() => null); if (!blob) continue; out.push(['foto/' + ph.name, { blob, crc: crc32(new Uint8Array(await blob.arrayBuffer())) }]); }
+  return out;
+}
+function download(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000); toast(`${name} diunduh`);
+}
+async function shareOrDownload(blob, name, share) {
+  if (share) {
+    const file = new File([blob], name, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: name, text: 'Data Peta Survei Pantai Cemara' }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    toast('Berbagi file tidak tersedia. File diunduh sebagai gantinya.');
+  }
+  download(blob, name);
+}
+async function exportZip(share) {
+  save(); const base = fileBase(); const photos = await photoFiles();
+  const zip = makeZip([
+    ['peta_survei.geojson', JSON.stringify(toGeoJSON())], ['objek.csv', objekCSV()], ['peta_survei.gpx', toGPX()], ['peta_survei.kml', toKML(true)],
+    ...(Object.values(S.features).some(f => f._photos) ? [['foto/Daftar_Foto.csv', fotoCSV()]] : []), ...photos, [base + '.json', backupJSON()],
+  ]);
+  shareOrDownload(zip, base + '.zip', share);
+}
+async function exportKMZ() {
+  save(); const photos = await photoFiles();
+  shareOrDownload(makeZip([['doc.kml', toKML(true)], ...photos], 'application/vnd.google-earth.kmz'), fileBase() + '.kmz', true);
+}
+
+/* Impor cadangan (gabung) */
+document.getElementById('importIn').addEventListener('change', ev => {
+  const file = ev.target.files[0]; ev.target.value = ''; if (!file) return;
+  file.text().then(txt => {
+    const o = JSON.parse(txt), d = o.data || o; if (!d.features) throw new Error('format');
+    let add = 0, upd = 0;
+    Object.values(d.features).forEach(f => { const cur = S.features[f.id]; if (!cur) { S.features[f.id] = f; add++; } else if ((f.updated || 0) > (cur.updated || 0)) { S.features[f.id] = f; upd++; } });
+    ['point', 'line', 'area'].forEach(t => { S.seq[t] = Math.max(S.seq[t] || 0, (d.seq && d.seq[t]) || 0); });
+    save(); drawAll(); renderData(); toast(`Digabung: ${add} objek baru, ${upd} diperbarui`);
+  }).catch(() => toast('File ini bukan cadangan Peta Survei (.json).'));
+});
+
+/* Layer acuan: GeoJSON / KML / GPX */
+function parseRef(text) {
+  const t = text.trim();
+  if (t.startsWith('{')) {
+    const g = JSON.parse(t);
+    if (g.type === 'FeatureCollection') return g;
+    if (g.type === 'Feature') return { type: 'FeatureCollection', features: [g] };
+    if (g.type) return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: g }] };
+    throw new Error('geojson');
+  }
+  const doc = new DOMParser().parseFromString(t, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('xml');
+  const byTag = (el, n) => [...el.getElementsByTagNameNS('*', n)];
+  const feats = [];
+  const coordsOf = s => s.trim().split(/\s+/).map(c => c.split(',').map(Number)).filter(a => a.length >= 2 && isFinite(a[0]) && isFinite(a[1])).map(a => [a[0], a[1]]);
+  byTag(doc, 'Placemark').forEach(pm => {
+    const name = (byTag(pm, 'name')[0] || {}).textContent || '';
+    byTag(pm, 'Point').forEach(p => { const c = coordsOf(byTag(p, 'coordinates')[0].textContent)[0]; if (c) feats.push({ type: 'Feature', properties: { name }, geometry: { type: 'Point', coordinates: c } }); });
+    byTag(pm, 'LineString').forEach(p => feats.push({ type: 'Feature', properties: { name }, geometry: { type: 'LineString', coordinates: coordsOf(byTag(p, 'coordinates')[0].textContent) } }));
+    byTag(pm, 'Polygon').forEach(p => { const ob = byTag(p, 'outerBoundaryIs')[0] || p; feats.push({ type: 'Feature', properties: { name }, geometry: { type: 'Polygon', coordinates: [coordsOf(byTag(ob, 'coordinates')[0].textContent)] } }); });
+  });
+  const pt = n => [+n.getAttribute('lon'), +n.getAttribute('lat')];
+  byTag(doc, 'trk').forEach(tr => byTag(tr, 'trkseg').forEach(sg => feats.push({ type: 'Feature', properties: { name: (byTag(tr, 'name')[0] || {}).textContent || '' }, geometry: { type: 'LineString', coordinates: byTag(sg, 'trkpt').map(pt) } })));
+  byTag(doc, 'rte').forEach(r => feats.push({ type: 'Feature', properties: { name: (byTag(r, 'name')[0] || {}).textContent || '' }, geometry: { type: 'LineString', coordinates: byTag(r, 'rtept').map(pt) } }));
+  byTag(doc, 'wpt').forEach(w => feats.push({ type: 'Feature', properties: { name: (byTag(w, 'name')[0] || {}).textContent || '' }, geometry: { type: 'Point', coordinates: pt(w) } }));
+  if (!feats.length) throw new Error('kosong');
+  return { type: 'FeatureCollection', features: feats };
+}
+document.getElementById('refIn').addEventListener('change', ev => {
+  const file = ev.target.files[0]; ev.target.value = ''; if (!file) return;
+  file.text().then(async txt => {
+    const gj = parseRef(txt); const id = rid();
+    await pdbPut('ref', id, { id, name: file.name, geojson: gj }); await drawRefs(true); renderData();
+    toast(`Layer acuan ditambahkan: ${gj.features.length} objek`);
+  }).catch(() => toast('File tidak bisa dibaca. Pilih file .geojson, .kml, atau .gpx.'));
+});
+async function drawRefs(fit) {
+  refLayer.clearLayers();
+  const refs = await pdbAll('ref').catch(() => []);
+  refs.forEach(r => L.geoJSON(r.geojson, {
+    style: { color: '#ffd400', weight: 3, dashArray: '8 6', fillOpacity: .05 },
+    pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 6, color: '#ffd400', weight: 2, fillColor: '#333', fillOpacity: .6 }),
+    onEachFeature: (f, ly) => { const n = f.properties && (f.properties.name || f.properties.NAMA || f.properties.nama); if (n) ly.bindTooltip(String(n)); },
+  }).addTo(refLayer));
+  if (fit && refLayer.getLayers().length) map.fitBounds(refLayer.getBounds().pad(0.1));
+}
+
+/* ================= Tema & jaringan ================= */
+const THEMES = ['auto', 'light', 'dark'], THEME_LABEL = { auto: 'Otomatis', light: 'Terang', dark: 'Gelap' };
+let theme = pref('theme', 'auto');
+function applyTheme() {
+  if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeBtn').textContent = THEME_LABEL[theme];
+}
+document.getElementById('themeBtn').addEventListener('click', () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; setPref('theme', theme); applyTheme(); });
+function updateNet() { document.getElementById('net').textContent = navigator.onLine ? 'Online' : 'Offline'; }
+window.addEventListener('online', updateNet); window.addEventListener('offline', updateNet);
+
+/* ================= Pembaruan otomatis ================= */
+let updateReady = false;
+function safeToReload() { const a = document.activeElement; return !REC && !DRAW && !SHEET && !(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); }
+function applyUpdate() { save(); try { sessionStorage.setItem('peta-survei-tab', currentTab); sessionStorage.setItem('peta-survei-updated', '1'); } catch (e) {} location.reload(); }
+function onUpdateReady() { updateReady = true; if (safeToReload()) applyUpdate(); else document.getElementById('updbar').hidden = false; }
+function checkUpdate() { if (!navigator.onLine || !navigator.serviceWorker || !navigator.serviceWorker.controller) return; navigator.serviceWorker.controller.postMessage({ type: 'check' }); navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}); }
+document.getElementById('updBtn').addEventListener('click', applyUpdate);
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.type === 'updated') onUpdateReady(); });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had) onUpdateReady(); });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+  window.addEventListener('online', checkUpdate);
+  setInterval(checkUpdate, 15 * 60 * 1000);
+}
+window.addEventListener('beforeunload', ev => { if (REC) { save(); ev.preventDefault(); ev.returnValue = ''; } });
+
+/* ================= Mulai ================= */
+applyTheme(); updateNet(); drawAll(); drawRefs(false); startWatch();
+try {
+  const tab = sessionStorage.getItem('peta-survei-tab'); sessionStorage.removeItem('peta-survei-tab');
+  showTab(tab || 'map');
+  if (sessionStorage.getItem('peta-survei-updated')) { sessionStorage.removeItem('peta-survei-updated'); toast('Aplikasi diperbarui ke versi terbaru'); }
+  // Rekaman jalur yang terputus karena halaman dimuat ulang: tawarkan untuk disimpan.
+  const lost = JSON.parse(sessionStorage.getItem('peta-survei-rec') || 'null');
+  if (lost && lost.length > 1) { sessionStorage.removeItem('peta-survei-rec'); const f = newFeature('line', lost, { src: 'gps' }); toast(`Rekaman jalur sebelumnya dipulihkan (${fmtLen(lineLen(lost))}).`); openSheet(f.id); }
+} catch (e) { showTab('map'); }
+</script>
+</body>
+</html>

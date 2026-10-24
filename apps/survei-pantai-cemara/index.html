@@ -149,6 +149,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 .btn.danger { background: var(--surface); color: var(--bad); border-color: var(--bad); }
 .btn.danger.armed { background: var(--bad); color: var(--surface); }
 .btn.block { width: 100%; }
+a.btn { text-decoration: none; box-sizing: border-box; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .row > .btn { flex: 1 1 140px; }
 
@@ -1246,6 +1247,10 @@ function renderData() {
       <label class="check"><input type="checkbox" id="withPhotos" ${withPhotos() ? 'checked' : ''}>Sertakan foto (${nPhotos} foto, ±${(photoBytes / 1048576).toFixed(1).replace('.', ',')} MB)</label>
       <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), folder foto/ dan track/, CSV status kegiatan, dan file cadangan .json. Cadangan .json tidak memuat file foto; foto hanya ada di ZIP.</p>
       <p class="note" id="storageInfo"></p>
+    </section>
+    <section class="section"><h2>Aplikasi Peta Survei</h2>
+      <p class="note">Untuk memetakan titik, jalur, dan area habitat beserta foto lokasinya, pakai aplikasi pendamping Peta Survei. Buka sekali saat ada sinyal agar bisa dipakai tanpa sinyal.</p>
+      <a class="btn ghost block" href="peta/">Buka Peta Survei</a>
     </section>
     <section class="section"><h2>Gabungkan data tim</h2>
       <p class="note">Pilih file cadangan .json dari HP anggota tim lain. Lembar yang sama tidak terduplikasi; versi yang paling baru dipakai.</p>

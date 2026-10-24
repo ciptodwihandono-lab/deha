@@ -81,6 +81,10 @@ HP) untuk Survei Lanjutan KEHATI KEE Mangrove Pantai Cemara: 12 formulir,
 jadwal H1–H4, status kegiatan, GPS, dan ekspor CSV. Lihat
 `apps/survei-pantai-cemara/README.md` untuk cara memasang di HP.
 
+Aplikasi pendamping `apps/peta-survei/` (alamat `/deha/peta/`) untuk
+memetakan titik, jalur, dan area habitat dengan foto lokasi; ekspor ke QGIS
+(GeoJSON/CSV/GPX) dan Google Earth (KMZ). Lihat `apps/peta-survei/README.md`.
+
 ## Setup tiap tool
 
 ### Python

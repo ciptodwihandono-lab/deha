@@ -68,6 +68,8 @@ svg.i { width: 22px; height: 22px; flex: none; }
 .bandbar { flex-basis: 100%; margin: 4px -12px -8px -16px; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; font-size: 14px; font-weight: 600; color: #fff; }
 .bandbar .grow { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
 .bandbar button.b { background: rgba(255,255,255,.95); color: #1b1b1b; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+.installbar { background: #0f6f80; }
+.bandbar button.x { background: none; border: 0; color: #fff; font-size: 16px; padding: 4px 6px; cursor: pointer; }
 .recbar { background: #c62828; } .updbar { background: #2463a6; } .navbar { background: #6a3fb5; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1.2s infinite; flex: none; }
 @keyframes blink { 50% { opacity: .25; } }
@@ -218,6 +220,7 @@ details.guide ol { padding-left: 20px; margin: 8px 0; display: flex; flex-direct
   <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
   <div class="bandbar navbar" id="navbar" hidden><span class="grow" id="navText">Menuju…</span><button type="button" class="b" id="navStop">Berhenti</button></div>
   <div class="bandbar updbar" id="updbar" hidden><span class="grow">Versi baru aplikasi sudah siap.</span><button type="button" class="b" id="updBtn">Perbarui</button></div>
+  <div class="bandbar installbar" id="installbar" hidden><span class="grow">Pasang Peta Survei sebagai aplikasi di HP ini.</span><button type="button" class="b" id="installBtn">Pasang</button><button type="button" class="x" id="installX" aria-label="Tutup">✕</button></div>
   <div class="bandbar recbar" id="recbar" hidden><span class="dot" aria-hidden="true"></span><span class="grow" id="recText">Merekam jalur…</span><button type="button" class="b" id="recStop">Hentikan</button></div>
 </header>
 
@@ -1009,6 +1012,7 @@ async function renderData() {
   const fs = Object.values(S.features), ph = fs.flatMap(f => f._photos || []);
   const refs = await pdbAll('ref').catch(() => []);
   $('dataPage').innerHTML = `
+    <section class="section"><h2>Pasang aplikasi</h2>${installSectionHTML()}</section>
     <section class="section"><h2>Proyek</h2>
       <div class="fields">
         <div class="field w"><label for="p-proyek">Nama proyek / kawasan</label><input type="text" id="p-proyek" value="${esc(S.profile.proyek)}"></div>
@@ -1061,7 +1065,8 @@ dataPage.addEventListener('change', ev => { if (ev.target.id === 'withPhotos') s
 dataPage.addEventListener('click', async ev => {
   const fm = ev.target.closest('[data-fmt]'); if (fm) { coordFmt = fm.dataset.fmt; setPref('fmt', coordFmt); updateHud(); renderData(); return; }
   const b = ev.target.closest('[data-d]'); if (!b) return; const a = b.dataset.d;
-  if (a === 'zip' || a === 'zip-share') exportZip(a === 'zip-share');
+  if (a === 'install') doInstall();
+  else if (a === 'zip' || a === 'zip-share') exportZip(a === 'zip-share');
   else if (a === 'shp') exportSHP();
   else if (a === 'kmz') exportKMZ();
   else if (a === 'json') download(new Blob([backupJSON()], { type: 'application/json' }), fileBase() + '.json');
@@ -1420,6 +1425,39 @@ async function deleteMap(id, silent) {
   MAPS = await pdbAll('maps').catch(() => []);
   if (!silent && base.kind === 'off:' + id) setBase('sat');
 }
+
+/* ================= Pasang sebagai aplikasi =================
+   Chrome/Edge/Samsung Internet mengirim beforeinstallprompt bila syarat instalasi terpenuhi;
+   tombol Pasang memunculkan dialog instal resmi sehingga aplikasi masuk daftar aplikasi HP. */
+let installEvt = null;
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+function installSectionHTML() {
+  if (isStandalone()) return '<p class="note">Peta Survei sudah berjalan sebagai aplikasi terpasang. Buka dari ikon "Peta Survei" di layar utama atau daftar aplikasi.</p>';
+  const help = `<details class="guide"><summary>Tombol Pasang tidak muncul atau gagal?</summary><ol>
+      ${isIOS ? '<li>Di iPhone/iPad: buka di <b>Safari</b> → tombol Bagikan → <b>Tambahkan ke Layar Utama</b>.</li>'
+        : '<li>Buka alamat ini di <b>aplikasi Chrome</b> (bukan dari dalam WhatsApp/Telegram): ciptodwihandono-lab.github.io/deha/peta/</li><li>Ketuk <b>⋮</b> → <b>Instal aplikasi</b> (bukan "Buat pintasan").</li>'}
+      <li>Bila muncul "Aplikasi ini sudah diinstal" tetapi tidak bisa dibuka: hapus dulu aplikasi lama "Survei Cemara"/"Peta Survei" di <b>Setelan HP → Aplikasi</b>, lalu ulangi.</li>
+      <li>Aplikasi terpasang memakai data yang sama dengan versi di Chrome; tidak ada data yang hilang.</li>
+    </ol></details>`;
+  return (installEvt
+    ? '<p class="note">Pasang agar Peta Survei muncul di daftar aplikasi, terbuka layar penuh tanpa bar Chrome, dan bisa dipakai tanpa sinyal.</p><button type="button" class="btn block" data-d="install">Pasang aplikasi Peta Survei</button>'
+    : '<p class="note">Pasang agar Peta Survei muncul di daftar aplikasi dan terbuka layar penuh tanpa bar Chrome.</p>') + help;
+}
+async function doInstall() {
+  if (!installEvt) { toast('Gunakan menu ⋮ → Instal aplikasi di Chrome.'); return; }
+  const ev = installEvt; installEvt = null; $('installbar').hidden = true;
+  try { ev.prompt(); const r = await ev.userChoice; if (r && r.outcome === 'accepted') toast('Memasang Peta Survei…'); } catch (e) {}
+  if (currentTab === 'data') renderData();
+}
+window.addEventListener('beforeinstallprompt', ev => {
+  ev.preventDefault(); installEvt = ev;
+  if (!isStandalone() && Date.now() - pref('installDismissed', 0) > 3 * 86400000) $('installbar').hidden = false;
+  if (currentTab === 'data') renderData();
+});
+window.addEventListener('appinstalled', () => { installEvt = null; $('installbar').hidden = true; toast('Peta Survei terpasang. Buka dari ikon di layar utama atau daftar aplikasi.'); if (currentTab === 'data') renderData(); });
+$('installBtn').addEventListener('click', doInstall);
+$('installX').addEventListener('click', () => { $('installbar').hidden = true; setPref('installDismissed', Date.now()); });
 
 /* ================= Tema, jaringan, pembaruan ================= */
 const THEMES = ['auto', 'light', 'dark'], THEME_LABEL = { auto: 'Otomatis', light: 'Terang', dark: 'Gelap' };

@@ -96,7 +96,7 @@ nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 650; }
 .hud .c { font-family: var(--font-data); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .hud .l { opacity: .75; }
 .actions { left: 10px; right: 10px; bottom: 12px; display: flex; gap: 8px; }
-.actbtn { flex: 1; min-height: 52px; border-radius: 14px; border: 0; background: var(--accent); color: var(--accent-fg); font-weight: 700; font-size: 15px; box-shadow: var(--shadow); cursor: pointer; padding: 6px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.actbtn { flex: 1 1 0; min-width: 0; min-height: 52px; border-radius: 14px; border: 0; background: var(--accent); color: var(--accent-fg); font-weight: 700; font-size: 15px; box-shadow: var(--shadow); cursor: pointer; padding: 6px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .actbtn.alt { background: var(--surface); color: var(--accent); }
 .actbtn.rec { background: #c62828; color: #fff; }
 .crosshair { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; z-index: 790; pointer-events: none; }
@@ -207,6 +207,7 @@ details.guide ol { padding-left: 20px; margin: 8px 0; display: flex; flex-direct
   <symbol id="i-area" viewBox="0 0 24 24"><path d="M5 6l12-2 3 11-9 5-7-6z" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13" stroke="currentColor" stroke-width="2"/><circle cx="4" cy="6" r="1.3" fill="currentColor"/><circle cx="4" cy="12" r="1.3" fill="currentColor"/><circle cx="4" cy="18" r="1.3" fill="currentColor"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-data" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
 </svg>
 
@@ -253,7 +254,8 @@ details.guide ol { padding-left: 20px; margin: 8px 0; display: flex; flex-direct
     <button type="button" class="float hud" id="hud" aria-label="Ganti format koordinat"><span class="l" id="hudL">Posisi saya</span><span class="c" id="hudC">Menunggu GPS…</span></button>
     <div class="float actions">
       <button type="button" class="actbtn" id="addBtn"><svg class="i"><use href="#i-plus"/></svg>Tandai</button>
-      <button type="button" class="actbtn alt" id="trackBtn"><svg class="i"><use href="#i-rec"/></svg><span id="trackLbl">Rekam jalur</span></button>
+      <button type="button" class="actbtn alt" id="photoBtn"><svg class="i"><use href="#i-cam"/></svg>Foto</button>
+      <button type="button" class="actbtn alt" id="trackBtn"><svg class="i"><use href="#i-rec"/></svg><span id="trackLbl">Rekam</span></button>
     </div>
   </section>
   <section class="view" id="listView" hidden><div class="page" id="listPage"></div></section>
@@ -525,6 +527,23 @@ function newFeature(type, coords, extra = {}) {
   return f;
 }
 const addMenu = $('addMenu');
+/* Foto cepat: kamera langsung terbuka; setelah memotret, foto menjadi titik baru di posisi GPS
+   (atau di tengah peta bila GPS belum ada) dan formulirnya terbuka untuk diisi habitatnya. */
+let QUICK = null;
+$('photoBtn').addEventListener('click', () => {
+  if (DRAW || EDIT) return;
+  closeFloating(); startWatch();
+  QUICK = { at: Date.now() };
+  $('camIn').click();
+});
+function quickPoint() {
+  const fresh = me && lastPos && Date.now() - lastPos.timestamp < 30000;
+  let f;
+  if (fresh) f = newFeature('point', [+me.lat.toFixed(7), +me.lon.toFixed(7), me.acc], { src: 'gps', foto: true });
+  else { const c = map.getCenter(); f = newFeature('point', [+c.lat.toFixed(7), +c.lng.toFixed(7), 0], { src: 'peta', foto: true }); toast('GPS belum siap: titik diletakkan di tengah peta. Pakai "Ambil ulang GPS" atau "Geser titik" bila perlu.'); }
+  if (fresh) map.setView([f.coords[0], f.coords[1]], Math.max(map.getZoom(), 17));
+  return f;
+}
 function closeFloating() { addMenu.hidden = true; $('lpanel').hidden = true; }
 $('addBtn').addEventListener('click', () => { if (DRAW || REC || EDIT) return; const open = addMenu.hidden; closeFloating(); addMenu.hidden = !open; });
 map.on('click', ev => { if (!addMenu.hidden || !$('lpanel').hidden) { closeFloating(); return; } if (DRAW || EDIT) onMapTap(ev); });
@@ -743,7 +762,7 @@ function stopTrack() {
   trackLayer.clearLayers(); recLine = null;
   try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null;
   try { sessionStorage.removeItem('peta-survei-rec'); } catch (e) {}
-  $('trackLbl').textContent = 'Rekam jalur'; $('trackBtn').classList.remove('rec'); $('recbar').hidden = true;
+  $('trackLbl').textContent = 'Rekam'; $('trackBtn').classList.remove('rec'); $('recbar').hidden = true;
   if (pts.length < 2) { toast('Jalur terlalu pendek, tidak disimpan.'); return; }
   const f = newFeature('line', pts, { src: 'gps' });
   toast(`Jalur tersimpan: ${fmtLen(lineLen(pts))}`); openSheet(f.id);
@@ -864,8 +883,8 @@ sheetBody.addEventListener('click', async ev => {
   else if (a === 'edit') startEdit(f.id);
   else if (a === 'regps') { const id = f.id; closeSheet(); showTab('map'); gpsAverage(id); }
   else if (a === 'swap') { f.type = f.type === 'line' ? 'area' : 'line'; f.updated = Date.now(); save(); drawFeature(f); renderSheet(); }
-  else if (a === 'cam') $('camIn').click();
-  else if (a === 'gal') $('galIn').click();
+  else if (a === 'cam') { QUICK = null; $('camIn').click(); }
+  else if (a === 'gal') { QUICK = null; $('galIn').click(); }
   else if (a === 'photo') openViewer(b.dataset.ph);
   else if (a === 'del') {
     if (armed !== 'del') { armed = 'del'; b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; setTimeout(() => { if (armed === 'del') { armed = null; b.classList.remove('armed'); b.textContent = `Hapus ${TIPE[f.type].toLowerCase()} ini`; } }, 3500); return; }
@@ -879,7 +898,13 @@ sheetBody.addEventListener('click', async ev => {
 
 /* Foto */
 let thumbURLs = [];
-['camIn', 'galIn'].forEach(id => $(id).addEventListener('change', ev => { const files = [...ev.target.files]; ev.target.value = ''; addPhotos(files); }));
+['camIn', 'galIn'].forEach(id => $(id).addEventListener('change', ev => {
+  const files = [...ev.target.files]; ev.target.value = '';
+  if (!files.length) return;
+  if (id === 'camIn' && QUICK && !SHEET) { QUICK = null; const f = quickPoint(); openSheet(f.id); }
+  QUICK = null;
+  addPhotos(files);
+}));
 async function addPhotos(files) {
   const f = S.features[SHEET]; if (!f || !files.length) return;
   toast(files.length > 1 ? `Menyimpan ${files.length} foto…` : 'Menyimpan foto…');

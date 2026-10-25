@@ -31,12 +31,14 @@ Alamat: https://ciptodwihandono-lab.github.io/deha/peta/
 **Digitasi**
 - Titik, garis, dan area dengan ketuk peta atau **tanda silang di tengah layar**
   ("+ Titik tengah") untuk penempatan presisi.
-- **Rekam jalur** GPS (titik > ±30 m diabaikan, layar dijaga menyala).
+- **Rekam** jalur GPS (titik > ±30 m diabaikan, layar dijaga menyala).
 - **Ubah bentuk / geser titik**: seret titik sudut, ketuk untuk menghapus,
   ketuk peta untuk menyisipkan, dengan tombol urungkan.
 - **Alat ukur** jarak, keliling, dan luas (tidak disimpan).
 
 **Atribut dan foto**
+- Tombol **Foto** di layar peta: kamera langsung terbuka, foto menjadi titik baru
+  di posisi GPS (atau di tengah peta bila GPS belum siap), lalu formulirnya terbuka.
 - Habitat (15 kelas berwarna), kode otomatis P/G/A###, nama lokasi, kondisi,
   ancaman, vegetasi dominan, deskripsi, catatan.
 - **Foto lokasi** dari kamera atau galeri, diperkecil ke 2560 px, dengan GPS saat memotret.

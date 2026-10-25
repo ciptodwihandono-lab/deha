@@ -7,6 +7,14 @@ sinyal** setelah dibuka sekali, dan memperbarui diri sendiri saat ada sinyal.
 
 Alamat: https://ciptodwihandono-lab.github.io/deha/peta/
 
+## Memasang di HP
+
+Buka alamat di atas di **aplikasi Chrome** saat ada sinyal. Lalu ketuk
+**Pasang** pada pita biru di atas, atau tombol **Pasang aplikasi** di tab Data.
+Cara lain lewat menu Chrome: **⋮ → Instal aplikasi**. Setelah itu Peta Survei
+muncul di daftar aplikasi HP, terbuka layar penuh, dan bisa dipakai tanpa sinyal.
+Di iPhone: Safari → Bagikan → Tambahkan ke Layar Utama.
+
 ## Fitur
 
 **Peta dan peta offline**

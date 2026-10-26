@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Survei Pantai Cemara</title>
+<title>Survei KEHATI Pantai Cemara</title>
 <meta name="description" content="Formulir lapangan Survei Lanjutan KEHATI KEE Mangrove Pantai Cemara. Bekerja tanpa sinyal.">
 <meta name="theme-color" content="#1f4a3c">
 <link rel="manifest" href="manifest.webmanifest">
@@ -78,7 +78,7 @@ main { max-width: 720px; margin: 0 auto; padding: 14px 16px 24px; display: flex;
 
 nav.tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface);
-  border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, 1fr);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 nav.tabs button {
@@ -291,7 +291,7 @@ a.btn { text-decoration: none; box-sizing: border-box; }
 <body>
 <header class="topbar">
   <button class="back" id="backBtn" type="button" aria-label="Kembali" hidden>&#8592;</button>
-  <h1 id="title">Survei Pantai Cemara</h1>
+  <h1 id="title">Survei KEHATI Pantai Cemara</h1>
   <span class="pill" id="net">Offline</span>
   <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
   <div class="updbar" id="updbar" hidden>
@@ -307,10 +307,8 @@ a.btn { text-decoration: none; box-sizing: border-box; }
 
 <main id="app"></main>
 <nav class="tabs" id="tabs">
-  <button type="button" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18c3-2 6-2 9 0s6 2 9 0"/><path d="M12 3v9M8 7l4-4 4 4"/></svg>Hari ini</button>
   <button type="button" data-tab="forms"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Form</button>
   <button type="button" data-tab="rekap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/><path d="M13 13v4M15.5 13v4M18 13v4"/></svg>Rekap</button>
-  <button type="button" data-tab="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg>Status</button>
   <button type="button" data-tab="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Data</button>
 </nav>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -350,6 +348,7 @@ const C = {
   primata: [['TC','Lutung kelabu'],['MF','Monyet ekor-panjang']],
   aktP: [['MK','Makan'],['BG','Bergerak'],['IS','Istirahat'],['SO','Sosial']],
   mikro: [['GN','Genangan'],['PR','Parit'],['TM','Tepi mangrove'],['VG','Vegetasi/batang'],['TN','Tanah terbuka']],
+  mikroS: [['LM','Permukaan lumpur'],['GN','Genangan'],['PS','Pasir/beting'],['AL','Alga/serasah terdampar'],['VP','Vegetasi pionir'],['UD','Terbang rendah di atas mudflat']],
   aktH: [['DM','Diam'],['BG','Bergerak'],['MK','Makan'],['BS','Bersuara']],
   kelas: [['I','< 1 m'],['II','1–2 m'],['III','2–3 m'],['IV','> 3 m'],['MO','Hanya mata']],
   posisi: [['AI','Di air'],['TP','Tepian'],['DR','Darat']],
@@ -403,13 +402,11 @@ const KEG = [
   ['D','Perairan & epifauna','D3','Kuadrat epifauna','Di stasiun D1; hitung kepiting (termasuk lubang Uca) dan gastropoda per kuadrat; bandingkan stasiun burung vs pembanding. Ukuran kuadrat dan jumlah ulangan disepakati sebelum berangkat. Plankton dan infauna tidak diulang.','Jenis, jumlah per kuadrat (kepadatan per m²); foto jenis yang belum pasti (Bivalvia indet., Cassidula, Cerithidea, Ocypode)','Saat surut, bersamaan dengan D2','H1–H3',1],
   ['E','Dokumentasi','E1','Foto tumbuhan per jenis','Fokus Avicennia sp. dan 19 jenis berkode numerik; selalu pakai pembanding skala. Untuk Avicennia utamakan warna bawah daun, bentuk ujung daun, bentuk buah.','Perawakan utuh; daun atas dan bawah, ujung, susunan; bunga; buah/propagul; kulit batang; tipe akar; label kode dan koordinat','Siang, di luar jadwal pasang/surut','H2–H3',2],
   ['E','Dokumentasi','E2','Dokumentasi jenis ikan','Foto dari tangkapan nelayan atau tempat pendaratan, tampak samping, sirip terbuka, dengan skala. Tanyakan musim kemunculan tiap jenis.','Nama lokal, alat tangkap, lokasi tangkap, bulan, musim kemunculan','Saat nelayan pulang melaut','H2–H3',2],
-  ['F','Mamalia & herpetofauna','F1','Petakan lokasi kelompok Macaca','Sebelum memasang kamera jebak; bisa dibantu informasi warga.','Jalur harian, pohon tidur, titik GPS','Pagi H1','H1',2],
-  ['F','Mamalia & herpetofauna','F2','Pasang kamera jebak','Jalur satwa, tepi sungai/parit, batas mangrove–kebun, di atas pasang tertinggi; hindari jalur dan pohon tidur monyet. Security box + kabel pengunci, kamuflase, IR no-glow, label pemilik, silika gel, tanpa umpan. Titipkan pengambilan ke pengelola/warga setelah 2–4 minggu.','Kode unit, koordinat, tinggi, arah hadap, tanggal pasang, pengaturan kamera','Sore H1, setelah F1','H1',2],
-  ['F','Mamalia & herpetofauna','F3','Cek kamera jebak','Cek titik rawan monyet di H3; atur serah terima pengambilan dengan pengelola/warga sebelum pulang.','Tanggal cek, kondisi unit, nama penanggung jawab pengambilan','H3 atau H4','H3–H4',2],
+  ['F','Mamalia & herpetofauna','F1','Petakan kelompok Macaca dan lutung','Dibantu informasi warga: lokasi kelompok, pohon tidur, jalur harian.','Jalur harian, pohon tidur, titik GPS','Pagi H1','H1',2],
   ['F','Mamalia & herpetofauna','F4','VES malam herpetofauna','Susuri genangan, parit, tepi mangrove.','Jenis, jumlah, titik, mikrohabitat','Malam','H1–H2',3],
   ['F','Mamalia & herpetofauna','F5','Spotlight buaya muara','Susuri sungai atau kuala dengan senter.','Jumlah, perkiraan ukuran, lokasi','Malam','H1 atau H2',3],
   ['F','Mamalia & herpetofauna','F6','Kelompok primata','Setiap kali berjumpa lutung atau monyet ekor-panjang.','Jumlah dan komposisi kelompok (jantan, betina, anak), titik GPS','Sepanjang survei','H1–H4',3],
-  ['G','Sekitar desa','G1','Pengamatan KEHATI sekitar desa','Pagi hari dalam perjalanan ke Pantai Cemara (survei burung pantai dan anveg dilakukan sore). Jalan pelan menyusuri rute desa: pekarangan, kebun, sawah, tambak, parit. Catat semua jenis yang terlihat atau terdengar; rekam track rute sebagai upaya survei. Info warga dicatat terpisah dengan kode W.','Kelompok taksa, jenis, jumlah, cara perjumpaan, habitat, titik GPS, foto','Pagi, sebelum ke pantai','H1–H4',2],
+  ['F','Serangga','F7','Serangga di intertidal terbuka','Saat surut di sela kegiatan D; pencarian visual + foto dengan pembanding skala; jangan masuk area roosting saat ada burung.','Ordo/jenis, jumlah, mikrohabitat, koordinat, area roosting','Saat surut','H1–H4',3],
 ].map(([g,kel,code,keg,metode,data,waktu,hari,prio]) => ({g,kel,code,keg,metode,data,waktu,hari,prio}));
 const KEG_CODES = KEG.map(k => [k.code, k.keg]);
 
@@ -438,23 +435,6 @@ const JADWAL = [
   ['H4','Pagi (perjalanan)','G1 pengamatan KEHATI sekitar desa (bila waktu cukup)', -1],
 ];
 
-/* ================= Lembar "Persiapan Alat" ================= */
-const ALAT = [
-  ['Tabel pasang surut seluruh hari survei; jam di lembar Jadwal diisi','B1, D2–D3'],
-  ['PIC setiap kegiatan diisi di lembar Kegiatan & Metode','Semua'],
-  ['Ukuran kuadrat dan jumlah ulangan epifauna disepakati','D3'],
-  ['Lembar data: metadata sesi, burung pantai, kuadrat epifauna, kamera jebak','A1, B, D3, F2–F3'],
-  ['GPS dan baterai cadangan','A2, C, D1, F'],
-  ['Binokuler, spotting scope, kamera digital','B, E'],
-  ['pH meter, termometer, TDS meter > 10.000 ppm atau konduktivitimeter, refraktometer, larutan kalibrasi','D2'],
-  ['Bingkai kuadrat, meteran, penggaris/pembanding skala foto','D3, E'],
-  ['Kamera jebak, security box, kabel pengunci, baterai, kartu memori, silika gel, label pemilik','F2–F3'],
-  ['Kesepakatan pengambilan kamera jebak dengan pengelola/warga (nama, kontak, tanggal)','F3'],
-  ['Senter/headlamp untuk survei malam','F4–F5'],
-  ['Label kode, spidol tahan air, kantong plastik','D3, E1'],
-  ['Binokuler kecil dan buku panduan lapangan burung/satwa untuk pengamatan pagi di desa','G1'],
-];
-
 /* ================= Definisi formulir =================
    t: text | num | int | date | time | dt | coord | sel | multi | drop | area | list(datalist)  */
 const F = (k, l, t = 'text', x = {}) => ({ k, l, t, ...x });
@@ -472,7 +452,7 @@ const FORMS = [
     key: 'hari',
     header: [TGL, F('hari', 'Hari ke-', 'sel', { o: C.hari, def: 'day' }), pengamat('Pencatat'), F('gps', 'GPS (merek/unit)', 'text', { def: 'gps' })],
     tables: [{ id: 'sesi', title: 'Sesi kegiatan', sum: ['kode', 'lokasi'], fields: [
-      F('kode', 'Kode kegiatan', 'drop', { o: KEG_CODES }), F('lokasi', 'Lokasi / stasiun'),
+      F('kode', 'Kode kegiatan', 'drop', { o: KEG_CODES }), F('lokasi', 'Lokasi / stasiun'), COORD,
       F('mulai', 'Jam mulai', 'time', { def: 'now' }), F('selesai', 'Jam selesai', 'time'),
       F('rekam', 'Rekam track GPS', 'track', { w: 1, len: 'transek', file: 'track', start: 'mulai', end: 'selesai', area: true, fmt: 'text' }),
       F('nPengamat', 'Jumlah pengamat', 'int'), F('transek', 'Panjang transek (m) / luas (ha)'),
@@ -480,7 +460,7 @@ const FORMS = [
       F('track', 'File track GPS', 'text', { w: 1, hide: true }), CAT ] }] },
 
   { id: 'B1', title: 'Penghitungan Burung Pantai', keg: ['B1', 'B2'], kegLabel: 'B1–B2',
-    intro: 'High tide count dari titik tetap, mulai 1–2 jam sebelum pasang tertinggi.',
+    intro: 'High tide count dari titik tetap, mulai 2 jam sebelum sampai 1 jam setelah pasang tertinggi.',
     legend: 'Satu baris = satu jenis dalam satu kelompok pada satu waktu; kelompok campuran dicatat per jenis. Gangguan dicatat di Form B2.',
     key: 'titik', tally: { table: 'hitung', by: 'jenis', n: 'jumlah' },
     header: [TGL, F('titik', 'Titik pengamatan'), COORD, pengamat(),
@@ -490,7 +470,7 @@ const FORMS = [
       F('alat', 'Alat', 'multi', { o: C.alatB, w: 1 }), F('pasangMulai', 'Kondisi pasang saat mulai', 'sel', { o: C.pasang, w: 1 })],
     tables: [{ id: 'hitung', title: 'Hitungan per jenis', sum: ['jenis'], big: 'jumlah', carry: ['sektor', 'aktivitas'], fields: [
       JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis (nama lokal / ilmiah)', 'list', { o: BIRDS, w: 1 }),
-      F('aktivitas', 'Aktivitas', 'sel', { o: C.aktB, w: 1 }), F('sektor', 'Sektor / lokasi'), F('mangsa', 'Mangsa teramati'),
+      F('aktivitas', 'Aktivitas', 'sel', { o: C.aktB, w: 1 }), F('sektor', 'Sektor / lokasi'), F('mangsa', 'Mangsa teramati'), COORD,
       F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), CAT ] }] },
 
   { id: 'B2', title: 'Gangguan dan Lokasi Persinggahan', keg: ['B3', 'B4'], kegLabel: 'B3–B4',
@@ -548,7 +528,7 @@ const FORMS = [
         F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('stasiun', 'Kode stasiun', 'list', { o: 'stations', w: 1 }),
         F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }), F('mm', 'Burung mencari makan saat ukur?', 'sel', { o: C.yn, w: 1 }),
         F('ph', 'pH', 'num', { min: 0, max: 14 }), F('suhu', 'Suhu (°C)', 'num', { min: 15, max: 45 }),
-        F('salinitas', 'Salinitas (‰)', 'num', { min: 0, max: 60 }), F('tds', 'TDS (ppm) / Kond. (µS/cm)', 'num'), CAT ] }] },
+        F('salinitas', 'Salinitas (‰)', 'num', { min: 0, max: 60 }), F('tds', 'TDS (ppm) / Kond. (µS/cm)', 'num'), COORD, CAT ] }] },
 
   { id: 'D2', title: 'Kuadrat Epifauna', keg: ['D3'], kegLabel: 'D3',
     intro: 'Satu lembar untuk satu stasiun per kunjungan.',
@@ -562,7 +542,7 @@ const FORMS = [
     tables: [{ id: 'kuadrat', title: 'Kuadrat', sum: ['ke'], numbered: 'ke', fields: [
       F('ke', 'Kuadrat ke-', 'int'), F('uca', 'Uca (individu)', 'int'), F('lubang', 'Lubang Uca aktif', 'int'), F('bivalvia', 'Bivalvia (jumlah)', 'int'),
       F('kepiting', 'Kepiting lain (jenis: jml)', 'text', { w: 1, ph: 'Ocypode: 2' }), F('gastropoda', 'Gastropoda (jenis: jml)', 'text', { w: 1, ph: 'Cerithidea: 14; Cassidula: 3' }),
-      F('lainnya', 'Lainnya (jenis: jml)', 'text', { w: 1 }), F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), FOTO, CAT ] }] },
+      F('lainnya', 'Lainnya (jenis: jml)', 'text', { w: 1 }), F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), COORD, FOTO, CAT ] }] },
 
   { id: 'E1', title: 'Dokumentasi Foto Tumbuhan', keg: ['E1'], kegLabel: 'E1',
     intro: 'Fokus Avicennia sp. dan 19 jenis berkode numerik. Tandai setiap bagian yang sudah difoto; selalu sertakan pembanding skala.',
@@ -583,9 +563,10 @@ const FORMS = [
     tables: [{ id: 'ikan', title: 'Jenis ikan', sum: ['lokal', 'musim'], big: 'jumlah', fields: [
       F('lokal', 'Nama lokal', 'list', { o: FISH }), F('ilmiah', 'Nama ilmiah (bila tahu)'), F('jumlah', 'Jumlah', 'int'),
       F('panjang', 'Panjang (cm)', 'text', { ph: '25–32' }), F('alat', 'Alat tangkap'), F('lokasiTangkap', 'Lokasi tangkap'),
-      F('musim', 'Musim muncul (menurut nelayan)', 'area', { w: 1 }), FOTO, CAT ] }] },
+      F('musim', 'Musim muncul (menurut nelayan)', 'area', { w: 1 }), COORD, FOTO, CAT ] }] },
 
-  { id: 'F1', title: 'Kamera Jebak', keg: ['F2', 'F3'], kegLabel: 'F2–F3',
+  // Kamera jebak dibatalkan (Paket Dokumen Final Okt 2026); tetap ada agar lembar lama bisa dibuka dan diekspor.
+  { id: 'F1', title: 'Kamera Jebak', keg: [], kegLabel: 'F2–F3 (dibatalkan)', old: true,
     intro: 'Pasang setelah lokasi kelompok Macaca dipetakan (Form F2). Satu baris = satu unit.',
     legend: 'Pengaturan: sensitivitas, jumlah foto per picu, interval, panjang video. Pastikan label pemilik terpasang dan tidak ada sisa makanan di sekitar unit. Hari-kamera dihitung otomatis.',
     key: 'tglPasang',
@@ -626,7 +607,8 @@ const FORMS = [
         JAM, F('jumlah', 'Jumlah', 'int'), COORD, F('kelas', 'Kelas ukuran', 'sel', { o: C.kelas, w: 1 }),
         F('posisi', 'Posisi', 'sel', { o: C.posisi, w: 1 }), F('reaksi', 'Reaksi', 'sel', { o: C.reaksi, w: 1 }), CAT ] }] },
 
-  { id: 'G1', title: 'Pengamatan KEHATI Sekitar Desa', keg: ['G1'], kegLabel: 'G1', quick: true,
+  // Tidak ada di Paket Dokumen Final; tetap ada agar lembar lama bisa dibuka dan diekspor.
+  { id: 'G1', title: 'Pengamatan KEHATI Sekitar Desa', keg: [], kegLabel: 'G1', quick: true, old: true,
     intro: 'Pagi hari dalam perjalanan ke Pantai Cemara. Satu lembar per pagi/rute; satu baris per jenis per perjumpaan.',
     legend: 'Kelompok: BU burung · MA mamalia · RE reptil · AM amfibi · KC kupu-kupu/capung · TU tumbuhan · LN lainnya. Cara: L lihat · D dengar · J jejak/tanda (kotoran, sarang, bekas makan) · W info warga. Rekam track rute agar upaya survei (panjang rute, durasi) tercatat.',
     key: 'lokasi',
@@ -639,7 +621,19 @@ const FORMS = [
       F('jenis', 'Jenis (nama lokal / ilmiah)', 'list', { o: [...BIRDS_DESA, ...BIRDS], w: 1 }),
       F('cara', 'Cara perjumpaan', 'sel', { o: C.cara, w: 1 }), F('habitat', 'Habitat', 'sel', { o: C.habDesa, w: 1 }),
       COORD, FOTO, CAT ] }] },
+
+  { id: 'F4', title: 'Serangga di Intertidal Terbuka', keg: ['F7'], kegLabel: 'F7 (tidak wajib)',
+    intro: 'Di kawasan intertidal terbuka (area foraging dan roosting burung pantai), saat surut di sela kegiatan D, tanpa mengganggu burung.',
+    legend: 'Area roosting: Y bila titik ini dipakai burung istirahat saat pasang, T bila tidak. Jenis yang belum pasti tulis nama sementara + foto dengan pembanding skala. Jangan masuk area roosting saat burung sedang ada di sana.',
+    key: 'lokasi',
+    header: [TGL, pengamat(), F('lokasi', 'Lokasi / plot'), COORD, F('mulai', 'Jam mulai', 'time', { def: 'now' }), F('selesai', 'Jam selesai', 'time'),
+      F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 })],
+    tables: [{ id: 'serangga', title: 'Temuan serangga', sum: ['jenis', 'mikro'], big: 'jumlah', carry: ['mikro', 'roosting'], fields: [
+      JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Ordo / jenis (nama sementara)', 'text', { w: 1, ph: 'mis. Diptera sp. 1' }),
+      F('mikro', 'Mikrohabitat', 'sel', { o: C.mikroS, w: 1 }), F('roosting', 'Area roosting?', 'sel', { o: C.yn, w: 1 }), COORD, FOTO, CAT ] }] },
 ];
+// Urutan tampil sesuai Paket Dokumen Final: A, B1, B2, C1, C2, D1, D2, E1, E2, F2, F3, F4.
+FORMS.sort((a, b) => (a.old ? 1 : 0) - (b.old ? 1 : 0) || a.id.localeCompare(b.id));
 const FORM = Object.fromEntries(FORMS.map(f => [f.id, f]));
 const CODE_TO_FORM = {};
 FORMS.forEach(f => f.keg.forEach(k => { CODE_TO_FORM[k] = f.id; }));
@@ -704,6 +698,8 @@ function stations() {
   ['PCM', 'REHAB', 'Pemanfaatan'].forEach(x => set.add(x));
   return [...set];
 }
+// Hari survei menurut Paket Dokumen Final: H1 Rabu 28 Okt … H4 Sabtu 31 Okt 2026.
+const SURVEY_DAYS = { '2026-10-28': 'H1', '2026-10-29': 'H2', '2026-10-30': 'H3', '2026-10-31': 'H4' };
 function defaultFor(f) {
   switch (f.def) {
     case 'today': return today();
@@ -711,7 +707,7 @@ function defaultFor(f) {
     case 'nowdt': return `${today()}T${nowTime()}`;
     case 'profile': return S.profile.nama || '';
     case 'gps': return S.profile.gps || '';
-    case 'day': return S.profile.hari || '';
+    case 'day': return SURVEY_DAYS[today()] || S.profile.hari || '';
     default: return '';
   }
 }
@@ -737,15 +733,15 @@ function computed(form, table, row, entry) {
 }
 
 /* ================= Navigasi ================= */
-let view = { v: 'home' };
+let view = { v: 'forms' };
 function go(v, replace) {
   view = v;
   if (replace) history.replaceState(v, ''); else history.pushState(v, '');
   render(); window.scrollTo(0, 0);
 }
-window.addEventListener('popstate', e => { view = e.state || { v: 'home' }; cleanupEmptyRows(); render(); });
+window.addEventListener('popstate', e => { view = e.state || { v: 'forms' }; cleanupEmptyRows(); render(); });
 history.replaceState(view, '');
-const TABS = { home: 'home', forms: 'forms', entries: 'forms', entry: 'forms', row: 'forms', rekap: 'rekap', status: 'status', data: 'data' };
+const TABS = { forms: 'forms', entries: 'forms', entry: 'forms', row: 'forms', rekap: 'rekap', data: 'data' };
 
 /* Baris baru yang ditinggal kosong dihapus agar lembar tetap rapi. */
 let pendingNew = null;
@@ -769,69 +765,35 @@ function setTitle(t, sub) {
 function render() {
   document.getElementById('backBtn').hidden = !['entries', 'entry', 'row'].includes(view.v);
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', TABS[view.v] === b.dataset.tab ? 'page' : 'false'));
-  ({ home: renderHome, forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, rekap: renderRekap, status: renderStatus, data: renderData }[view.v] || renderHome)();
+  ({ forms: renderForms, entries: renderEntries, entry: renderEntry, row: renderRow, rekap: renderRekap, data: renderData }[view.v] || renderForms)();
   refreshTrackUI();
   if (updateReady && safeToReload()) setTimeout(() => { if (safeToReload()) applyUpdate(); }, 300);
 }
 
-function renderHome() {
-  const day = S.profile.hari || 'H1';
-  setTitle('Survei Pantai Cemara', `KEE Mangrove · ${S.profile.nama || 'isi nama di tab Data'}`);
-  const blocks = JADWAL.map((j, i) => ({ j, i })).filter(x => x.j[0] === day).sort((a, b) => (a.j[3] || 0) - (b.j[3] || 0));
-  const total = KEG.length, done = KEG.filter(k => kegStatus(k.code) === 'Selesai').length;
-  const p1 = KEG.filter(k => k.prio === 1), p1done = p1.filter(k => kegStatus(k.code) === 'Selesai').length;
-  const nRows = Object.values(S.entries).reduce((n, e) => n + rowCount(e), 0);
+/* Beranda: daftar formulir sesuai Paket Dokumen Final, ditambah tombol catat cepat. */
+function renderForms() {
+  setTitle('Survei KEHATI Pantai Cemara', S.profile.nama ? `Pencatat: ${S.profile.nama}` : 'Isi nama pencatat di tab Data');
+  const item = f => {
+    const es = entriesOf(f.id); const n = es.reduce((a, e) => a + rowCount(e), 0);
+    return `<button type="button" class="item" data-act="openform" data-f="${f.id}">
+      <span class="code">${f.id}</span>
+      <span class="main"><span class="t">${esc(f.title)}</span><br><span class="s">Kegiatan ${esc(f.kegLabel)}</span></span>
+      <span class="count">${es.length ? `${es.length} lbr · ${n} brs` : '—'}</span><span class="chev">›</span></button>`;
+  };
+  const old = FORMS.filter(f => f.old && entriesOf(f.id).length);
   app.innerHTML = `
-    <section class="section">
-      <h2>Hari survei</h2>
-      <div class="days">${C.hari.map(([c]) => `<button type="button" class="chip" data-act="day" data-v="${c}" aria-pressed="${c === day}">${c}</button>`).join('')}</div>
-    </section>
-    <section class="stats" aria-label="Ringkasan">
-      <div class="stat"><div class="v">${done}/${total}</div><div class="k">Kegiatan selesai</div></div>
-      <div class="stat"><div class="v">${p1done}/${p1.length}</div><div class="k">Prioritas 1</div></div>
-      <div class="stat"><div class="v">${nRows}</div><div class="k">Baris data</div></div>
-    </section>
     <section class="section">
       <h2>Catat cepat</h2>
       <div class="row">
-        <button type="button" class="btn ghost" data-act="quick" data-f="C2">+ Temuan ancaman (C3)</button>
-        <button type="button" class="btn ghost" data-act="quick" data-f="F2">+ Perjumpaan primata (F6)</button>
-        <button type="button" class="btn ghost" data-act="quick" data-f="G1">+ KEHATI sekitar desa (G1)</button>
+        <button type="button" class="btn ghost" data-act="quick" data-f="C2">+ Temuan ancaman</button>
+        <button type="button" class="btn ghost" data-act="quick" data-f="F2">+ Perjumpaan primata</button>
       </div>
-      <button type="button" class="btn ghost block" data-act="gorekap" data-src="B1">Lihat rekap tally sheet burung (B1)</button>
+      <p class="note">Setiap baris data langsung mengambil koordinat GPS; foto bisa diambil dari layar baris yang sama.</p>
     </section>
-    <section class="section">
-      <h2>Jadwal ${esc(day)}${day === 'H4' ? ' (opsional)' : ''}</h2>
-      <p class="note">Isi jam tiap blok dari tabel pasang surut. Ketuk kode kegiatan untuk membuka formulirnya.</p>
-      ${blocks.map(({ j, i }) => {
-        const st = S.jadwal[i] || {};
-        const codes = [...new Set((j[2].match(/\b[A-G][1-6]\b/g) || []))];
-        return `<div class="blk${st.cek ? ' done' : ''}">
-          <div class="blk-head">
-            <span class="when">${esc(j[1])}</span>
-            <input type="time" id="jam-${i}" aria-label="Jam blok ${esc(j[1])}" value="${esc(st.jam || '')}" data-jad="${i}" data-k="jam">
-            <label class="check"><input type="checkbox" id="cek-${i}" data-jad="${i}" data-k="cek" ${st.cek ? 'checked' : ''}>Cek</label>
-          </div>
-          <div class="what">${esc(j[2])}</div>
-          ${codes.length ? `<div class="codes">${codes.map(c => `<button type="button" class="code" data-act="openform" data-f="${CODE_TO_FORM[c] || ''}">${c}</button>`).join('')}</div>` : ''}
-        </div>`;
-      }).join('')}
-      <p class="note">A1 (upaya survei) dan C3, F6 (pencatatan oportunistik) dilakukan di setiap sesi.</p>
-    </section>`;
-}
-
-function renderForms() {
-  setTitle('Formulir', `${FORMS.length} lembar data lapangan`);
-  const groups = { A: 'Upaya survei', B: 'Burung pantai', C: 'Data ancaman', D: 'Perairan & epifauna', E: 'Dokumentasi', F: 'Mamalia & herpetofauna', G: 'Sekitar desa (pagi)' };
-  app.innerHTML = Object.entries(groups).map(([g, name]) => `
-    <section class="section"><h2>${g}. ${esc(name)}</h2>
-      <div class="list">${FORMS.filter(f => f.id[0] === g).map(f => {
-        const es = entriesOf(f.id); const n = es.reduce((a, e) => a + rowCount(e), 0);
-        return `<button type="button" class="item" data-act="openform" data-f="${f.id}">
-          <span class="code">${f.id}</span>
-          <span class="main"><span class="t">${esc(f.title)}</span><br><span class="s">Kegiatan ${esc(f.kegLabel)}</span></span>
-          <span class="count">${es.length ? `${es.length} lbr · ${n} brs` : '—'}</span><span class="chev">›</span></button>`;
-      }).join('')}</div></section>`).join('');
+    <section class="section"><h2>Formulir</h2>
+      <div class="list">${FORMS.filter(f => !f.old).map(item).join('')}</div>
+    </section>
+    ${old.length ? `<section class="section"><h2>Lembar lama</h2><p class="note">Form yang tidak dipakai lagi; lembar yang sudah diisi tetap bisa dibuka dan ikut diekspor.</p><div class="list">${old.map(item).join('')}</div></section>` : ''}`;
 }
 
 function entryLabel(form, e) {
@@ -1015,7 +977,6 @@ function renderRow() {
   loadThumbs();
 }
 
-function kegStatus(code) { return (S.keg[code] || {}).status || 'Belum'; }
 /* ================= Rekap ala tally sheet =================
    Sumber = tabel yang punya kolom jenis + jumlah. Kolom rekap bisa dikelompokkan per
    waktu, sektor/lokasi, aktivitas, atau tanggal. "Maks" = jumlah tertinggi dalam satu
@@ -1035,6 +996,8 @@ const RK_SOURCES = [
     by: [['tanggal', 'Tanggal'], ['r:aktivitas', 'Aktivitas'], ['jam', 'Waktu']] },
   { id: 'G1', form: 'G1', table: 'jumpa', label: 'KEHATI sekitar desa (G1)', sp: 'jenis', n: 'jumlah',
     by: [['r:habitat', 'Habitat'], ['r:kelompok', 'Kelompok'], ['r:cara', 'Cara perjumpaan'], ['jam', 'Waktu'], ['tanggal', 'Tanggal'], ['h:lokasi', 'Desa / lokasi']] },
+  { id: 'F7', form: 'F4', table: 'serangga', label: 'Serangga intertidal (F7)', sp: 'jenis', n: 'jumlah',
+    by: [['r:mikro', 'Mikrohabitat'], ['r:roosting', 'Area roosting'], ['jam', 'Waktu'], ['tanggal', 'Tanggal'], ['h:lokasi', 'Lokasi / plot']] },
   { id: 'E2', form: 'E2', table: 'ikan', label: 'Jenis ikan (E2)', sp: 'lokal', n: 'jumlah',
     by: [['h:lokasiPendaratan', 'Lokasi pendaratan'], ['tanggal', 'Tanggal'], ['r:alat', 'Alat tangkap']] },
 ];
@@ -1130,7 +1093,7 @@ function renderRekap() {
   app.innerHTML = `
     <section class="section no-print">
       <div class="fields rk-ctl">
-        <div class="field w"><label for="rk-src">Data</label><select id="rk-src" data-rk="src">${RK_SOURCES.map(x => `<option value="${x.id}"${x.id === src.id ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></div>
+        <div class="field w"><label for="rk-src">Data</label><select id="rk-src" data-rk="src">${RK_SOURCES.filter(x => !FORM[x.form].old || x.id === src.id || entriesOf(x.form).length).map(x => `<option value="${x.id}"${x.id === src.id ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></div>
         <div class="field"><label for="rk-by">Kolom per</label><select id="rk-by" data-rk="by">${src.by.map(([k, l]) => `<option value="${k}"${k === RK.by ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         ${RK.by === 'jam' || RK.by === 'tanggal' ? `<div class="field"><label for="rk-step">Selang waktu</label><select id="rk-step" data-rk="step">${[[15, '15 menit'], [30, '30 menit'], [60, '1 jam']].map(([v, l]) => `<option value="${v}"${v === +RK.step ? ' selected' : ''}>${l}</option>`).join('')}</select></div>` : '<div></div>'}
         ${RK.by !== 'tanggal' ? `<div class="field w"><label for="rk-tgl">Tanggal</label><select id="rk-tgl" data-rk="tgl"><option value="">Semua tanggal</option>${R.dates.map(d => `<option value="${d}"${d === RK.tgl ? ' selected' : ''}>${esc(fmtDate(d))}</option>`).join('')}</select></div>` : ''}
@@ -1165,60 +1128,6 @@ app.addEventListener('change', ev => {
   rkSave(); render();
 });
 
-function renderStatus() {
-  setTitle('Status kegiatan', 'Kegiatan & Metode · Persiapan Alat');
-  const groups = [...new Set(KEG.map(k => k.kel))];
-  const rek = groups.map(g => {
-    const ks = KEG.filter(k => k.kel === g);
-    const c = s => ks.filter(k => kegStatus(k.code) === s).length;
-    return [g, ks.length, c('Selesai'), c('Proses'), c('Belum')];
-  });
-  const tot = rek.reduce((a, r) => a.map((x, i) => i ? x + r[i] : x), ['Total', 0, 0, 0, 0]);
-  const p1 = KEG.filter(k => k.prio === 1), p1d = p1.filter(k => kegStatus(k.code) === 'Selesai').length;
-  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
-  app.innerHTML = `
-    <section class="section"><h2>Rekap status</h2>
-      <div class="box scroll"><table class="rekap">
-        <thead><tr><th>Kelompok</th><th>Jml</th><th>Selesai</th><th>Proses</th><th>Belum</th><th>%</th></tr></thead>
-        <tbody>${rek.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${pct(r[2], r[1])}</td></tr>`).join('')}
-        <tr class="tot"><td>Total</td><td>${tot[1]}</td><td>${tot[2]}</td><td>${tot[3]}</td><td>${tot[4]}</td><td>${pct(tot[2], tot[1])}</td></tr></tbody>
-      </table></div>
-      <div class="box"><div class="tablehead"><strong>Prioritas 1 selesai</strong><span class="count">${p1d}/${p1.length}</span></div>
-        <div class="meter" style="margin-top:8px"><i style="width:${pct(p1d, p1.length)}%"></i></div></div>
-    </section>
-    <section class="section"><h2>Kegiatan & metode</h2>
-      <p class="note">Prioritas 1 = wajib; 2 = penting bila waktu cukup; 3 = opsional/oportunistik.</p>
-      ${KEG.map(k => {
-        const st = S.keg[k.code] || {};
-        const fid = CODE_TO_FORM[k.code];
-        const nRows = entriesOf(fid).reduce((a, e) => a + rowCount(e), 0);
-        return `<div class="keg">
-          <div class="keg-top"><button type="button" class="code" data-act="openform" data-f="${fid}">${k.code}</button>
-            <div class="main"><strong>${esc(k.keg)}</strong><div class="keg-meta">${esc(k.waktu)} · ${esc(k.hari)} · Form ${fid}: ${nRows} baris</div></div>
-            <span class="prio p${k.prio}">P${k.prio}</span></div>
-          <div class="keg-ctl">
-            <div class="seg" role="group" aria-label="Status ${k.code}">${['Belum', 'Proses', 'Selesai'].map(s => `<button type="button" data-act="kegstatus" data-c="${k.code}" data-v="${s}" aria-pressed="${kegStatus(k.code) === s}">${s}</button>`).join('')}</div>
-            <input type="text" id="pic-${k.code}" placeholder="PIC" aria-label="PIC ${k.code}" value="${esc(st.pic || '')}" data-keg="${k.code}" data-k="pic">
-          </div>
-          <details><summary>Metode, data dicatat & catatan lapangan</summary>
-            <p><strong>Metode:</strong> ${esc(k.metode)}</p><p><strong>Data dicatat:</strong> ${esc(k.data)}</p>
-            <textarea id="cat-${k.code}" rows="2" placeholder="Catatan lapangan, mis. pasang tertinggi 2,6 m pukul 10.40" data-keg="${k.code}" data-k="catatan">${esc(st.catatan || '')}</textarea>
-          </details>
-        </div>`;
-      }).join('')}
-    </section>
-    <section class="section"><h2>Persiapan sebelum berangkat</h2>
-      <div class="list">${ALAT.map(([item, utk], i) => {
-        const st = S.alat[i] || {};
-        return `<div class="item" style="cursor:default;flex-wrap:wrap">
-          <label class="check" style="flex:1;min-width:0;align-items:flex-start"><input type="checkbox" id="alat-${i}" data-alat="${i}" data-k="siap" ${st.siap ? 'checked' : ''}>
-            <span><span class="t">${esc(item)}</span><br><span class="s">${esc(utk)}</span></span></label>
-          <input type="text" id="alatpic-${i}" placeholder="PIC" aria-label="PIC" style="width:110px;min-height:38px;padding:6px 10px" value="${esc(st.pic || '')}" data-alat="${i}" data-k="pic">
-        </div>`;
-      }).join('')}</div>
-    </section>`;
-}
-
 function withPhotos() { try { return localStorage.getItem('survei-cemara-zipfoto') !== '0'; } catch (e) { return true; } }
 function renderData() {
   setTitle('Data & ekspor', 'Simpan cadangan setiap malam');
@@ -1245,7 +1154,7 @@ function renderData() {
       </div>
       <button type="button" class="btn ghost block" data-act="json">Unduh cadangan saja (.json)</button>
       <label class="check"><input type="checkbox" id="withPhotos" ${withPhotos() ? 'checked' : ''}>Sertakan foto (${nPhotos} foto, ±${(photoBytes / 1048576).toFixed(1).replace('.', ',')} MB)</label>
-      <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), folder foto/ dan track/, CSV status kegiatan, dan file cadangan .json. Cadangan .json tidak memuat file foto; foto hanya ada di ZIP.</p>
+      <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), folder foto/ dan track/, dan file cadangan .json. Cadangan .json tidak memuat file foto; foto hanya ada di ZIP.</p>
       <p class="note" id="storageInfo"></p>
     </section>
     <section class="section"><h2>Gabungkan data tim</h2>
@@ -1563,6 +1472,7 @@ async function addPhotos(files) {
       while (r._photos.some(p => p.name === name + '.jpg')) name = photoName(e, tgt.tag, taken) + '_' + (++k);
       const meta = { id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size };
       if (geo) Object.assign(meta, { lat: +geo.latitude.toFixed(6), lon: +geo.longitude.toFixed(6), acc: Math.round(geo.accuracy) });
+      else { const m = String(r.koordinat || '').match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/); if (m) Object.assign(meta, { lat: +m[1], lon: +m[2], acc: r.koordinatAcc ?? null, geoSrc: 'koordinat baris' }); }
       r._photos.push(meta);
       // Kolom "Dokumentasi" (F/V) ikut dicentang Foto bila ada.
       const tdef = tgt.isRow && FORM[e.form].tables.find(t => t.id === tgt.t);
@@ -1571,7 +1481,7 @@ async function addPhotos(files) {
     } catch (err) { toast('Foto gagal disimpan. Memori HP mungkin penuh.'); }
   }
   photoGeo = null;
-  if (n) { touch(e); save(); if (view.v === 'row' || view.v === 'entry') render(); toast(`${n} foto tersimpan${geo ? ' dengan koordinat' : ' (tanpa GPS)'}`); }
+  if (n) { touch(e); save(); if (view.v === 'row' || view.v === 'entry') render(); const o = tgt.find(); toast(`${n} foto tersimpan${geo || (o && o.koordinat) ? ' dengan koordinat' : ' (tanpa GPS)'}`); }
 }
 let thumbURLs = [];
 async function loadThumbs() {
@@ -1640,9 +1550,6 @@ function markEdited(obj, k) { if (obj._auto) obj._auto = obj._auto.filter(x => x
 
 app.addEventListener('input', ev => {
   const el = ev.target; const k = el.dataset.k; if (!k) return;
-  if (el.dataset.jad != null) { const s = S.jadwal[el.dataset.jad] = S.jadwal[el.dataset.jad] || {}; s[k] = el.type === 'checkbox' ? el.checked : el.value; s.t = Date.now(); saveSoon(); if (k === 'cek') render(); return; }
-  if (el.dataset.keg) { const s = S.keg[el.dataset.keg] = S.keg[el.dataset.keg] || {}; s[k] = el.value; s.t = Date.now(); saveSoon(); return; }
-  if (el.dataset.alat != null) { const s = S.alat[el.dataset.alat] = S.alat[el.dataset.alat] || {}; s[k] = el.type === 'checkbox' ? el.checked : el.value; s.t = Date.now(); saveSoon(); return; }
   const tg = currentTarget(); if (!tg) return;
   tg.obj[k] = el.value; markEdited(tg.obj, k); touch(tg.e);
   const f = view.v === 'data' ? null : fieldDef(k);
@@ -1675,6 +1582,7 @@ function newEntry(fid, from) {
   if (from) { form.header.forEach(f => { if (f.def === 'today') e.header[f.k] = today(); }); }
   form.tables.forEach(t => { e.tables[t.id] = []; });
   S.entries[e.id] = e; save();
+  if (!from && form.header.some(f => f.k === 'koordinat')) autoGPS(e.id, () => S.entries[e.id] && S.entries[e.id].header);
   return e;
 }
 function newRow(e, tid, base) {
@@ -1686,7 +1594,25 @@ function newRow(e, tid, base) {
   if (base && t.carry) t.carry.forEach(k => { if (base[k]) { r[k] = Array.isArray(base[k]) ? [...base[k]] : base[k]; r._auto.push(k); } });
   rows.push(r); touch(e); save();
   pendingNew = { id: e.id, t: tid, rowId: r._id };
+  if (t.fields.some(f => f.k === 'koordinat')) autoGPS(e.id, () => (S.entries[e.id] && S.entries[e.id].tables[tid] || []).find(x => x._id === r._id));
   return rows.length - 1;
+}
+/* Koordinat otomatis: setiap lembar/baris baru langsung meminta posisi GPS dan mengisi kolom
+   Koordinat bila masih kosong. Tombol "Ambil GPS" tetap ada untuk mengulang di tempat yang tepat. */
+function autoGPS(eid, find) {
+  if (!navigator.geolocation) return;
+  const showHint = (txt) => { const o = find(), tg = currentTarget(); if (o && tg && tg.obj === o) { const h = app.querySelector('[data-acc="koordinat"]'); if (h) h.textContent = txt; } };
+  setTimeout(() => showHint('Mengambil koordinat GPS otomatis…'), 0);
+  navigator.geolocation.getCurrentPosition(p => {
+    const o = find(); if (!o || o.koordinat) return;
+    const v = `${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`, acc = Math.round(p.coords.accuracy);
+    o.koordinat = v; o.koordinatAcc = acc;
+    if (o._auto) o._auto.push('koordinat', 'koordinatAcc');
+    touch(S.entries[eid]); save();
+    const tg = currentTarget();
+    if (tg && tg.obj === o) { const inp = app.querySelector('input[data-k="koordinat"]'); if (inp && !inp.value) inp.value = v; showHint(`Otomatis dari GPS HP · akurasi ±${acc} m`); }
+  }, () => showHint('GPS belum didapat. Ketuk "Ambil GPS" di tempat terbuka, atau ketik manual.'),
+  { enableHighAccuracy: true, timeout: 30000, maximumAge: 15000 });
 }
 
 function getGPS(k, btn) {
@@ -1709,8 +1635,7 @@ function getGPS(k, btn) {
 app.addEventListener('click', ev => {
   const b = ev.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act;
-  if (a === 'day') { S.profile.hari = b.dataset.v; save(); render(); }
-  else if (a === 'openform') { if (b.dataset.f) go({ v: 'entries', f: b.dataset.f }); }
+  if (a === 'openform') { if (b.dataset.f) go({ v: 'entries', f: b.dataset.f }); }
   else if (a === 'newentry') { const e = newEntry(b.dataset.f); go({ v: 'entry', id: e.id }); }
   else if (a === 'openentry') go({ v: 'entry', id: b.dataset.id });
   else if (a === 'quick') {
@@ -1788,9 +1713,6 @@ app.addEventListener('click', ev => {
     if (!arm(b, 'delentry', 'Ketuk lagi untuk menghapus lembar')) return;
     const f = S.entries[view.id].form; deletePhotos(photosOfEntry(S.entries[view.id])); delete S.entries[view.id]; save();
     go({ v: 'entries', f }, true); toast('Lembar dihapus');
-  }
-  else if (a === 'kegstatus') {
-    const s = S.keg[b.dataset.c] = S.keg[b.dataset.c] || {}; s.status = b.dataset.v; s.t = Date.now(); save(); render();
   }
   else if (a === 'zip') exportZip(false);
   else if (a === 'share') exportZip(true);
@@ -1938,12 +1860,17 @@ function buildCSVs() {
     files.push(['foto/Daftar_Foto.csv', toCSV(fotoRows)]);
     if (fotoFeats.length) files.push(['foto/titik_foto.geojson', JSON.stringify({ type: 'FeatureCollection', features: fotoFeats })]);
   }
-  const keg = [['kode', 'kelompok', 'kegiatan', 'prioritas', 'hari', 'pic', 'status', 'catatan_lapangan']];
-  KEG.forEach(k => { const s = S.keg[k.code] || {}; keg.push([k.code, k.kel, k.keg, k.prio, k.hari, s.pic || '', s.status || 'Belum', s.catatan || '']); });
-  files.push(['Status_Kegiatan.csv', toCSV(keg)]);
-  const jad = [['hari', 'blok', 'jam', 'kegiatan', 'cek']];
-  JADWAL.forEach((j, i) => { const s = S.jadwal[i] || {}; jad.push([j[0], j[1], s.jam || '', j[2], s.cek ? 'Ya' : '']); });
-  files.push(['Jadwal.csv', toCSV(jad)]);
+  // Status kegiatan dan jadwal lama (versi sebelumnya) tetap diekspor bila pernah diisi.
+  if (Object.keys(S.keg || {}).length) {
+    const keg = [['kode', 'status', 'pic', 'catatan_lapangan']];
+    Object.entries(S.keg).forEach(([c, s]) => keg.push([c, s.status || 'Belum', s.pic || '', s.catatan || '']));
+    files.push(['Status_Kegiatan.csv', toCSV(keg)]);
+  }
+  if (Object.keys(S.jadwal || {}).length) {
+    const jad = [['hari', 'blok', 'jam', 'kegiatan', 'cek']];
+    Object.entries(S.jadwal).forEach(([i, s]) => { const j = JADWAL[i] || ['', '', '']; jad.push([j[0], j[1], s.jam || '', j[2], s.cek ? 'Ya' : '']); });
+    files.push(['Jadwal.csv', toCSV(jad)]);
+  }
   return files;
 }
 function backupBlob() { return new Blob([JSON.stringify({ app: 'survei-cemara', exported: new Date().toISOString(), data: S }, null, 1)], { type: 'application/json' }); }

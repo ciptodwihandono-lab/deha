@@ -659,6 +659,14 @@ function save() {
 }
 function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
 window.addEventListener('pagehide', save);
+/* Aplikasi terbuka di dua tempat (mis. aplikasi terpasang dan tab Chrome): bila tempat lain menyimpan,
+   muat data terbarunya di sini juga, agar salinan lama di sini tidak menimpa data yang lebih baru. */
+window.addEventListener('storage', ev => {
+  if (ev.key !== KEY || !ev.newValue) return;
+  clearTimeout(saveTimer); S = load();
+  const a = document.activeElement;
+  if (!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) render();
+});
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else if (REC) keepAwake(); });
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
 
@@ -745,7 +753,9 @@ function go(v, replace) {
   render(); window.scrollTo(0, 0);
 }
 window.addEventListener('popstate', e => { view = e.state || { v: 'forms' }; cleanupEmptyRows(); render(); });
-history.replaceState(view, '');
+// Setelah halaman dimuat ulang (refresh), buka lagi layar terakhir: lembar/baris yang sedang diisi.
+if (history.state && history.state.v && (!history.state.id || S.entries[history.state.id])) view = history.state;
+else history.replaceState(view, '');
 const TABS = { forms: 'forms', entries: 'forms', entry: 'forms', row: 'forms', rekap: 'rekap', data: 'data' };
 
 /* Baris baru yang ditinggal kosong dihapus agar lembar tetap rapi. */
@@ -1146,6 +1156,10 @@ function renderData() {
   const nRows = Object.values(S.entries).reduce((a, e) => a + rowCount(e), 0);
   app.innerHTML = `
     <section class="section"><h2>Pasang aplikasi</h2>${installSectionHTML()}</section>
+    <section class="section"><h2>Aplikasi lain</h2>
+      <a class="btn ghost block" href="https://ciptodwihandono-lab.github.io/Peta-survey/" target="_blank" rel="noopener">Buka Peta Survei (pemetaan titik, jalur, area, peta offline)</a>
+      <p class="note">Aplikasi terpisah dengan ikonnya sendiri; pasang juga dari tab Data di dalamnya.</p>
+    </section>
     <section class="section"><h2>Profil pencatat</h2>
       <div class="fields" data-scope="p">
         ${fieldHTML(F('nama', 'Nama pencatat (diisi otomatis di setiap lembar)', 'text', { w: 1 }), S.profile.nama, 'p')}

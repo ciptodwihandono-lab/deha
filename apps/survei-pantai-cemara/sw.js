@@ -17,7 +17,8 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // Hanya cache lama milik aplikasi ini; cache aplikasi lain di domain yang sama (mis. Peta Survei) dibiarkan.
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('survei-cemara') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

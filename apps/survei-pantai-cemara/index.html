@@ -1516,7 +1516,7 @@ async function addPhotos(files) {
       if (geo) Object.assign(pos, { lat: +geo.latitude.toFixed(6), lon: +geo.longitude.toFixed(6), acc: Math.round(geo.accuracy) });
       else { const m = String(r0.koordinat || (tgt.isRow ? '' : e.header.koordinat) || '').match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/); if (m) Object.assign(pos, { lat: +m[1], lon: +m[2], acc: r0.koordinatAcc ?? null, geoSrc: 'koordinat baris' }); }
       const wm = withWatermark() ? wmLines(e, r0, tgt.isRow, pos.lat, pos.lon, pos.acc, taken) : null;
-      const big = await shrink(file, PHOTO_MAX, wm), small = await shrink(file, THUMB_MAX);
+      const big = await shrink(file, PHOTO_MAX, wm), small = await shrink(big.blob, THUMB_MAX);   // gambar kecil dari foto ber-watermark agar watermark terlihat di daftar
       const id = rid();
       await pdbPut('foto', id, big.blob); await pdbPut('thumb', id, small.blob);
       const r = tgt.find(); if (!r) break;

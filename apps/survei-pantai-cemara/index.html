@@ -943,7 +943,7 @@ function renderEntry() {
     <section class="section"><h2>Kepala lembar</h2>
       <div class="fields" data-scope="h">${form.header.map(f => fieldHTML(f, e.header[f.k], 'h', { acc: e.header[f.k + 'Acc'], obj: e.header })).join('')}</div>
     </section>
-    ${photoSectionHTML(e.header._photos || [], 'Foto lokasi', 'Ambil foto lokasi', 'Untuk foto kondisi lokasi, titik pengamatan, stasiun, atau habitat. Nama, jam, dan koordinat GPS dicatat otomatis; ikut dalam ekspor ZIP (folder foto/).')}
+    ${photoSectionHTML(e.header._photos || [], 'Foto lokasi', 'Ambil foto lokasi', 'Untuk foto kondisi lokasi, titik pengamatan, stasiun, atau habitat. Nama, jam, dan koordinat GPS dicatat otomatis dan ditulis sebagai watermark di kanan bawah foto; ikut dalam ekspor ZIP (folder foto/).')}
     ${tallyHTML}
     ${form.tables.map(t => {
       const rows = e.tables[t.id] || [];
@@ -979,7 +979,7 @@ function renderRow() {
     <div class="fields" data-scope="r">${t.fields.map(f => fieldHTML(f, row[f.k], 'r', { acc: row[f.k + 'Acc'], obj: row })).join('')}
       ${(form.id === 'D2' || form.id === 'F1') ? `<div class="field w"><span class="computed" id="computed">${comp.map(c => `${c[1]}: ${c[2]}`).join(' · ')}</span></div>` : ''}
     </div>
-    ${photoSectionHTML(row._photos || [], 'Foto data ini', 'Ambil foto', 'Untuk foto satwa, tumbuhan, sampel, atau temuan pada baris ini. Nama, jam, dan koordinat GPS dicatat otomatis; ikut dalam ekspor ZIP (folder foto/).')}
+    ${photoSectionHTML(row._photos || [], 'Foto data ini', 'Ambil foto', 'Untuk foto satwa, tumbuhan, sampel, atau temuan pada baris ini. Nama, jam, dan koordinat GPS dicatat otomatis dan ditulis sebagai watermark di kanan bawah foto; ikut dalam ekspor ZIP (folder foto/).')}
     <div class="sticky-actions">
       <button type="button" class="btn" data-act="rowdone">Selesai</button>
       <button type="button" class="btn ghost" data-act="rownext">Simpan + baris baru</button>
@@ -1173,6 +1173,7 @@ function renderData() {
         <button type="button" class="btn ghost" data-act="zip">Simpan ZIP ke HP</button>
       </div>
       <button type="button" class="btn ghost block" data-act="json">Unduh cadangan saja (.json)</button>
+      <label class="check"><input type="checkbox" id="withWatermark" ${withWatermark() ? 'checked' : ''}>Watermark pada foto baru (kanan bawah: lokasi, koordinat, tanggal)</label>
       <label class="check"><input type="checkbox" id="withPhotos" ${withPhotos() ? 'checked' : ''}>Sertakan foto (${nPhotos} foto, ±${(photoBytes / 1048576).toFixed(1).replace('.', ',')} MB)</label>
       <p class="note">ZIP berisi satu CSV per tabel (siap dibuka di Excel, R, atau QGIS; koordinat dipisah ke kolom lat/lon), folder foto/ dan track/, dan file cadangan .json. Cadangan .json tidak memuat file foto; foto hanya ada di ZIP.</p>
       <p class="note" id="storageInfo"></p>
@@ -1452,15 +1453,43 @@ function photoSectionHTML(list, title, camLabel, note) {
     </section>`;
 }
 
-async function shrink(file, max) {
+async function shrink(file, max, wm) {
   let bmp;
   try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
   catch (e) { bmp = await new Promise((ok, fail) => { const im = new Image(); im.onload = () => ok(im); im.onerror = fail; im.src = URL.createObjectURL(file); }); }
   const w0 = bmp.width, h0 = bmp.height, k = Math.min(1, max / Math.max(w0, h0));
   const c = document.createElement('canvas'); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  if (wm) drawWatermark(c, wm);
   const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', PHOTO_Q));
   return { blob, w: c.width, h: c.height };
+}
+/* Watermark di kanan bawah foto: nama lokasi, koordinat, tanggal-jam, nama kawasan.
+   Teks putih di atas kotak gelap transparan; ukuran huruf mengikuti ukuran foto. */
+function withWatermark() { try { return localStorage.getItem('survei-cemara-watermark') !== '0'; } catch (e) { return true; } }
+function drawWatermark(c, lines) {
+  const g = c.getContext('2d'), fs = Math.max(14, Math.round(Math.min(c.width, c.height) * 0.032)), lh = Math.round(fs * 1.3), pad = Math.round(fs * 0.6), m = Math.round(fs * 0.8);
+  const font = i => `${i === 0 ? '700 ' : ''}${i === lines.length - 1 ? Math.round(fs * 0.8) : fs}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  const w = Math.min(c.width - 2 * m, Math.max(...lines.map((t, i) => { g.font = font(i); return g.measureText(t).width; })) + 2 * pad);
+  const h = lines.length * lh + 2 * pad - Math.round(fs * 0.2), x = c.width - m - w, y = c.height - m - h;
+  g.fillStyle = 'rgba(0,0,0,.55)';
+  if (g.roundRect) { g.beginPath(); g.roundRect(x, y, w, h, Math.round(fs * 0.4)); g.fill(); } else g.fillRect(x, y, w, h);
+  g.fillStyle = '#fff'; g.textAlign = 'right'; g.textBaseline = 'top';
+  g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = Math.round(fs * 0.15);
+  lines.forEach((t, i) => { g.font = font(i); g.fillText(t, c.width - m - pad, y + pad + i * lh, w - 2 * pad); });
+}
+function tzLabel(d) { return { '-420': 'WIB', '-480': 'WITA', '-540': 'WIT' }[String(d.getTimezoneOffset())] || ''; }
+function wmLines(e, obj, isRow, lat, lon, acc, taken) {
+  const keys = ['lokasi', 'titik', 'kodeTitik', 'kodePlot', 'stasiun', 'rute', 'lokasiPendaratan'];
+  const pick = o => { for (const k of keys) if (o && o[k]) return String(o[k]).split(' — ')[0]; return ''; };
+  const names = [...new Set([isRow ? pick(obj) : '', pick(e.header)].filter(Boolean))];
+  const d = new Date(taken * 1000);
+  return [
+    `${names.join(' · ') || 'Lokasi tanpa nama'} · Form ${e.form}`,
+    lat != null ? `${lat.toFixed(6)}, ${lon.toFixed(6)}${acc ? ` (±${acc} m)` : ''}` : 'Koordinat belum ada',
+    `${fmtDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)} · ${pad(d.getHours())}:${pad(d.getMinutes())} ${tzLabel(d)}`.trim(),
+    'KEE Mangrove Pantai Cemara',
+  ];
 }
 let photoGeo = null;   // posisi GPS diminta saat tombol kamera ditekan, dipakai saat foto kembali
 function askPhotoGeo() {
@@ -1483,16 +1512,20 @@ async function addPhotos(files) {
   for (const file of files) {
     try {
       const taken = Math.round((file.lastModified || Date.now()) / 1000);
-      const big = await shrink(file, PHOTO_MAX), small = await shrink(file, THUMB_MAX);
+      const r0 = tgt.find(); if (!r0) break;
+      const pos = {};
+      if (geo) Object.assign(pos, { lat: +geo.latitude.toFixed(6), lon: +geo.longitude.toFixed(6), acc: Math.round(geo.accuracy) });
+      else { const m = String(r0.koordinat || (tgt.isRow ? '' : e.header.koordinat) || '').match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/); if (m) Object.assign(pos, { lat: +m[1], lon: +m[2], acc: r0.koordinatAcc ?? null, geoSrc: 'koordinat baris' }); }
+      const wm = withWatermark() ? wmLines(e, r0, tgt.isRow, pos.lat, pos.lon, pos.acc, taken) : null;
+      const big = await shrink(file, PHOTO_MAX, wm), small = await shrink(file, THUMB_MAX);
       const id = rid();
       await pdbPut('foto', id, big.blob); await pdbPut('thumb', id, small.blob);
       const r = tgt.find(); if (!r) break;
       r._photos = r._photos || [];
       let name = photoName(e, tgt.tag, taken), k = 1;
       while (r._photos.some(p => p.name === name + '.jpg')) name = photoName(e, tgt.tag, taken) + '_' + (++k);
-      const meta = { id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size };
-      if (geo) Object.assign(meta, { lat: +geo.latitude.toFixed(6), lon: +geo.longitude.toFixed(6), acc: Math.round(geo.accuracy) });
-      else { const m = String(r.koordinat || '').match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/); if (m) Object.assign(meta, { lat: +m[1], lon: +m[2], acc: r.koordinatAcc ?? null, geoSrc: 'koordinat baris' }); }
+      const meta = { id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size, ...pos };
+      if (wm) meta.watermark = true;
       r._photos.push(meta);
       // Kolom "Dokumentasi" (F/V) ikut dicentang Foto bila ada.
       const tdef = tgt.isRow && FORM[e.form].tables.find(t => t.id === tgt.t);
@@ -1583,6 +1616,7 @@ app.addEventListener('input', ev => {
 });
 app.addEventListener('change', ev => {
   if (ev.target.id === 'importFile') importFile(ev.target.files[0]);
+  else if (ev.target.id === 'withWatermark') { try { localStorage.setItem('survei-cemara-watermark', ev.target.checked ? '1' : '0'); } catch (e) {} }
   else if (ev.target.id === 'withPhotos') { try { localStorage.setItem('survei-cemara-zipfoto', ev.target.checked ? '1' : '0'); } catch (e) {} }
   else save();
 });

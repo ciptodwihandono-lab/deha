@@ -294,6 +294,11 @@ a.btn { text-decoration: none; box-sizing: border-box; }
   <h1 id="title">Survei KEHATI Pantai Cemara</h1>
   <span class="pill" id="net">Offline</span>
   <button class="iconbtn" id="themeBtn" type="button" aria-label="Ganti tema">Tema</button>
+  <div class="updbar" id="installbar" hidden>
+    <span class="grow">Pasang Survei Cemara sebagai aplikasi di HP ini.</span>
+    <button type="button" id="installBtn">Pasang</button>
+    <button type="button" id="installX" aria-label="Tutup" style="background:none;color:#fff;padding:6px 4px">✕</button>
+  </div>
   <div class="updbar" id="updbar" hidden>
     <span class="grow">Versi baru aplikasi sudah siap.</span>
     <button type="button" id="updBtn">Perbarui</button>
@@ -1140,6 +1145,7 @@ function renderData() {
   const n = Object.keys(S.entries).length;
   const nRows = Object.values(S.entries).reduce((a, e) => a + rowCount(e), 0);
   app.innerHTML = `
+    <section class="section"><h2>Pasang aplikasi</h2>${installSectionHTML()}</section>
     <section class="section"><h2>Profil pencatat</h2>
       <div class="fields" data-scope="p">
         ${fieldHTML(F('nama', 'Nama pencatat (diisi otomatis di setiap lembar)', 'text', { w: 1 }), S.profile.nama, 'p')}
@@ -1166,7 +1172,7 @@ function renderData() {
       <p class="note">Hanya lakukan setelah ekspor tersimpan aman. Ketuk dua kali untuk mengonfirmasi.</p>
       <button type="button" class="btn danger block" data-act="wipe">Hapus semua data di HP ini</button>
     </section>
-    <p class="note" id="installTip">Tips: aplikasi Android (APK) bisa diunduh dari halaman Releases repo GitHub proyek ini.</p>`;
+`;
 }
 
 /* ================= Rekam track GPS =================
@@ -1714,6 +1720,7 @@ app.addEventListener('click', ev => {
     const f = S.entries[view.id].form; deletePhotos(photosOfEntry(S.entries[view.id])); delete S.entries[view.id]; save();
     go({ v: 'entries', f }, true); toast('Lembar dihapus');
   }
+  else if (a === 'install') doInstall();
   else if (a === 'zip') exportZip(false);
   else if (a === 'share') exportZip(true);
   else if (a === 'json') download(backupBlob(), fileBase() + '.json');
@@ -1980,6 +1987,40 @@ function importFile(file) {
   rd.readAsText(file);
 }
 
+/* ================= Pasang sebagai aplikasi =================
+   Chrome/Edge/Samsung Internet mengirim beforeinstallprompt bila syarat instalasi terpenuhi;
+   tombol Pasang memunculkan dialog instal resmi sehingga aplikasi masuk daftar aplikasi HP. */
+let installEvt = null;
+const isStandalone = () => NATIVE || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+function installSectionHTML() {
+  const offline = '<p class="note">Setelah dibuka sekali saat ada sinyal, aplikasi bekerja penuh <b>tanpa sinyal</b>: formulir, GPS, foto, rekap, dan ekspor. Data tersimpan di HP.</p>';
+  if (isStandalone()) return '<p class="note">Survei Cemara sudah berjalan sebagai aplikasi terpasang. Buka dari ikon "Survei Cemara" di layar utama atau daftar aplikasi.</p>' + offline;
+  const help = `<details class="legend"><summary>Tombol Pasang tidak muncul atau gagal?</summary><ol style="padding-left:20px;margin:8px 0">
+      ${isIOS ? '<li>Di iPhone/iPad: buka di <b>Safari</b> → tombol Bagikan → <b>Tambahkan ke Layar Utama</b>.</li>'
+        : '<li>Buka alamat ini di <b>aplikasi Chrome</b> (bukan dari dalam WhatsApp/Telegram): ciptodwihandono-lab.github.io/deha/</li><li>Ketuk <b>⋮</b> → <b>Instal aplikasi</b> (bukan "Buat pintasan").</li>'}
+      <li>Bila muncul "Aplikasi ini sudah diinstal" tetapi tidak bisa dibuka: hapus dulu aplikasi lama "Survei Cemara" di <b>Setelan HP → Aplikasi</b>, lalu ulangi. Data tidak hilang selama data situs Chrome tidak dihapus.</li>
+    </ol></details>`;
+  return (installEvt
+    ? '<p class="note">Pasang agar Survei Cemara muncul di daftar aplikasi dan terbuka layar penuh tanpa bar Chrome.</p><button type="button" class="btn block" data-act="install">Pasang aplikasi Survei Cemara</button>'
+    : '<p class="note">Pasang agar Survei Cemara muncul di daftar aplikasi dan terbuka layar penuh tanpa bar Chrome.</p>') + offline + help;
+}
+async function doInstall() {
+  if (!installEvt) { toast('Gunakan menu ⋮ → Instal aplikasi di Chrome.'); return; }
+  const ev = installEvt; installEvt = null; document.getElementById('installbar').hidden = true;
+  try { ev.prompt(); const r = await ev.userChoice; if (r && r.outcome === 'accepted') toast('Memasang Survei Cemara…'); } catch (e) {}
+  if (view.v === 'data') render();
+}
+function installDismissed() { try { return Date.now() - (+localStorage.getItem('survei-cemara-installX') || 0) < 3 * 86400000; } catch (e) { return false; } }
+window.addEventListener('beforeinstallprompt', ev => {
+  ev.preventDefault(); installEvt = ev;
+  if (!isStandalone() && !installDismissed()) document.getElementById('installbar').hidden = false;
+  if (view.v === 'data') render();
+});
+window.addEventListener('appinstalled', () => { installEvt = null; document.getElementById('installbar').hidden = true; toast('Survei Cemara terpasang. Buka dari ikon di layar utama atau daftar aplikasi.'); if (view.v === 'data') render(); });
+document.getElementById('installBtn').addEventListener('click', doInstall);
+document.getElementById('installX').addEventListener('click', () => { document.getElementById('installbar').hidden = true; try { localStorage.setItem('survei-cemara-installX', Date.now()); } catch (e) {} });
+
 /* ================= Mulai ================= */
 applyTheme(); updateNet(); render();
 /* ================= Pembaruan otomatis =================
@@ -2020,6 +2061,8 @@ if (!NATIVE && 'serviceWorker' in navigator && location.protocol.startsWith('htt
   // Service worker baru mengambil alih (mis. sw.js sendiri berubah): muat versi baru juga.
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) onUpdateReady(); });
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Kunjungan pertama: beri tahu bahwa aplikasi sudah tersimpan dan bisa dipakai tanpa sinyal.
+  if (!hadController) navigator.serviceWorker.ready.then(() => { try { if (!localStorage.getItem('survei-cemara-offline-ok')) { localStorage.setItem('survei-cemara-offline-ok', '1'); toast('Aplikasi tersimpan di HP: bisa dipakai tanpa sinyal.'); } } catch (e) {} }).catch(() => {});
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
   window.addEventListener('online', checkUpdate);
   setInterval(checkUpdate, 15 * 60 * 1000);

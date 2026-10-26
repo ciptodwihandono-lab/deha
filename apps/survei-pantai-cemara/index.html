@@ -1464,12 +1464,12 @@ async function shrink(file, max, wm) {
   const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', PHOTO_Q));
   return { blob, w: c.width, h: c.height };
 }
-/* Watermark di kanan bawah foto: nama lokasi, koordinat, tanggal-jam, nama kawasan.
+/* Watermark di kanan bawah foto: nama lokasi, koordinat, tanggal-jam.
    Teks putih di atas kotak gelap transparan; ukuran huruf mengikuti ukuran foto. */
 function withWatermark() { try { return localStorage.getItem('survei-cemara-watermark') !== '0'; } catch (e) { return true; } }
 function drawWatermark(c, lines) {
   const g = c.getContext('2d'), fs = Math.max(14, Math.round(Math.min(c.width, c.height) * 0.032)), lh = Math.round(fs * 1.3), pad = Math.round(fs * 0.6), m = Math.round(fs * 0.8);
-  const font = i => `${i === 0 ? '700 ' : ''}${i === lines.length - 1 ? Math.round(fs * 0.8) : fs}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  const font = i => `${i === 0 ? '700 ' : ''}${fs}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
   const w = Math.min(c.width - 2 * m, Math.max(...lines.map((t, i) => { g.font = font(i); return g.measureText(t).width; })) + 2 * pad);
   const h = lines.length * lh + 2 * pad - Math.round(fs * 0.2), x = c.width - m - w, y = c.height - m - h;
   g.fillStyle = 'rgba(0,0,0,.55)';
@@ -1488,7 +1488,6 @@ function wmLines(e, obj, isRow, lat, lon, acc, taken) {
     `${names.join(' · ') || 'Lokasi tanpa nama'} · Form ${e.form}`,
     lat != null ? `${lat.toFixed(6)}, ${lon.toFixed(6)}${acc ? ` (±${acc} m)` : ''}` : 'Koordinat belum ada',
     `${fmtDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)} · ${pad(d.getHours())}:${pad(d.getMinutes())} ${tzLabel(d)}`.trim(),
-    'KEE Mangrove Pantai Cemara',
   ];
 }
 let photoGeo = null;   // posisi GPS diminta saat tombol kamera ditekan, dipakai saat foto kembali

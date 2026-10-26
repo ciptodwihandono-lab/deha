@@ -1,23 +1,23 @@
 # Aplikasi Survei Lanjutan KEE Mangrove Pantai Cemara
 
-Aplikasi formulir lapangan untuk HP, dibuat dari
-`Form_Survei_Lanjutan_Pantai_Cemara.docx` dan
-`Panduan_Lapangan_Survei_Pantai_Cemara.xlsx`. Bekerja **tanpa sinyal**
+Aplikasi formulir lapangan untuk HP. Formulirnya mengikuti
+`Paket_Dokumen_Final_Monitoring_Pantai_Cemara_Okt2026.pdf` (Form A–F4). Bekerja **tanpa sinyal**
 setelah dibuka sekali, dan semua data tersimpan di HP.
 
 ## Isi aplikasi
 
 | Tab | Isi |
 | --- | --- |
-| **Hari ini** | Jadwal H1–H4 per blok pasang/surut (isi jam dan centang), tombol catat cepat untuk temuan ancaman (C3) dan primata (F6) |
-| **Form** | 13 formulir: A, B1, B2, C1, C2, D1, D2, E1, E2, F1, F2, F3, dan G1 (KEHATI sekitar desa, pagi hari). Setiap lembar punya kepala lembar dan tabel baris |
-| **Rekap** | Tabel ala tally sheet: jenis × waktu, sektor, aktivitas, titik, atau tanggal, dengan garis tally, Total, dan Maks (perkiraan populasi). Untuk B1, B3, B4, F4, F5, F6, E2. Bisa diunduh CSV atau dicetak/simpan PDF |
-| **Status** | Kegiatan & Metode (status Belum/Proses/Selesai, PIC, catatan lapangan), rekap otomatis, checklist persiapan alat |
+| **Form** | Tombol catat cepat (temuan ancaman C3, perjumpaan primata F6) dan 12 formulir: A, B1, B2, C1, C2, D1, D2, E1, E2, F2, F3, F4. Setiap lembar punya kepala lembar dan tabel baris. Lembar lama dari form yang tidak dipakai lagi (Kamera Jebak F1, KEHATI desa G1) tetap bisa dibuka dan diekspor |
+| **Rekap** | Tabel ala tally sheet: jenis × waktu, sektor, aktivitas, titik, atau tanggal, dengan garis tally, Total, dan Maks (perkiraan populasi). Untuk B1, B3, B4, F4, F5, F6, F7, E2. Bisa diunduh CSV atau dicetak/simpan PDF |
 | **Data** | Nama pencatat, ekspor ZIP (CSV per tabel + cadangan .json), bagikan ke WhatsApp/Drive, gabungkan data tim |
 
 Fitur lapangan:
 
-- Tombol **Ambil GPS** mengisi koordinat desimal beserta akurasinya.
+- **Koordinat otomatis**: setiap lembar dan baris data baru langsung mengambil
+  posisi GPS HP (desimal + akurasi). Tombol **Ambil GPS** mengulangnya di tempat
+  yang tepat; koordinat juga bisa diketik manual.
+- Kolom **Hari ke-** di Form A terisi otomatis H1–H4 untuk 28–31 Okt 2026.
 - **Track GPS** (Form A, C1, F3, tidak wajib) bisa diisi dua cara:
   **Rekam GPS HP** saat berjalan, atau **Unggah GPX/KML** hasil Garmin atau
   aplikasi lain (OsmAnd, Avenza, Locus). Untuk keduanya, panjang transek dan, untuk batas
@@ -27,14 +27,15 @@ Fitur lapangan:
   merekam; mengunci layar atau pindah aplikasi menghentikan perekaman titik.
 - Tombol **Kini** mengisi jam saat ini.
 - **Ambil foto lokasi** di setiap lembar dan **Ambil foto** di setiap baris membuka kamera HP; foto disimpan di aplikasi
-  (diperkecil ke 2560 px) dengan nama, jam, dan koordinat GPS otomatis.
+  (diperkecil ke 2560 px) dengan nama, jam, dan koordinat GPS otomatis (bila GPS
+  tidak menjawab, foto memakai koordinat baris).
   Ekspor ZIP memuat folder `foto/` beserta `Daftar_Foto.csv` dan
   `titik_foto.geojson`. File cadangan .json tidak memuat foto.
 - Kode formulir (PN/PT/MS/ST, MM/IS/TB/TG, dll.) tampil sebagai tombol, tidak perlu mengetik.
 - Daftar nama burung pantai dan ikan muncul sebagai saran saat mengetik.
 - **Simpan + baris baru** membawa sektor dan aktivitas ke baris berikutnya (B1).
 - Total individu per jenis langsung terlihat di Form B1.
-- Kepadatan Uca/m² (D2) dan hari-kamera (F1) dihitung otomatis.
+- Kepadatan Uca/m² (D2) dihitung otomatis.
 - Peringatan untuk nilai di luar kisaran wajar (pH, suhu, salinitas, % tutupan, arah kompas).
 - Tema **Malam** (merah redup) untuk VES dan spotlight buaya.
 
@@ -80,7 +81,7 @@ ZIP berisi satu CSV per tabel, mis. `Form_B1_hitung.csv`, `Form_D1_air.csv`:
   sebagai *delimited text*, CRS EPSG:4326);
 - angka memakai titik desimal; pilihan ganda dipisah `; `;
 - kode tetap sama dengan formulir kertas (mis. `IS`, `PT`);
-- `Status_Kegiatan.csv` dan `Jadwal.csv` menyalin lembar Excel;
+- `Status_Kegiatan.csv` dan `Jadwal.csv` hanya ada bila pernah diisi di versi sebelumnya;
 - folder `track/` berisi satu file `.gpx` per track dan
   `semua_track.geojson` (garis + poligon area) untuk langsung dibuka di QGIS.
 

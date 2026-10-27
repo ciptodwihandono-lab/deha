@@ -27,7 +27,8 @@ Fitur lapangan:
   merekam; mengunci layar atau pindah aplikasi menghentikan perekaman titik.
 - Tombol **Kini** mengisi jam saat ini.
 - **Ambil foto lokasi** di setiap lembar dan **Ambil foto** di setiap baris membuka kamera HP; foto disimpan di aplikasi
-  (diperkecil ke 2560 px) dengan nama, jam, dan koordinat GPS otomatis (bila GPS
+  pada resolusi penuh kamera (tanpa watermark: file asli apa adanya; dengan watermark:
+  kualitas JPEG 98%) dengan nama, jam, dan koordinat GPS otomatis (bila GPS
   tidak menjawab, foto memakai koordinat baris).
   Ekspor ZIP memuat folder `foto/` beserta `Daftar_Foto.csv` dan
   `titik_foto.geojson`. File cadangan .json tidak memuat foto.

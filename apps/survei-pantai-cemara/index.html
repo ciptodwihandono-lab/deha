@@ -1404,9 +1404,9 @@ function allTracks() {
 
 /* ================= Foto =================
    Foto disimpan di IndexedDB (localStorage terlalu kecil): store 'foto' berisi JPEG
-   yang diperkecil ke sisi terpanjang 2560 px, store 'thumb' berisi gambar kecil untuk daftar.
+   resolusi penuh (tidak diperkecil), store 'thumb' berisi gambar kecil untuk daftar.
    Baris data menyimpan metadata di row._photos = [{id, name, t, lat, lon, acc, w, h, size}]. */
-const PHOTO_MAX = 2560, PHOTO_Q = 0.88, THUMB_MAX = 320;
+const PHOTO_Q = 0.98, THUMB_MAX = 320, THUMB_Q = 0.85;
 let photoDB = null;
 function pdb() {
   if (!photoDB) photoDB = new Promise((ok, fail) => {
@@ -1453,7 +1453,7 @@ function photoSectionHTML(list, title, camLabel, note) {
     </section>`;
 }
 
-async function shrink(file, max, wm) {
+async function shrink(file, max, wm, q = THUMB_Q) {
   let bmp;
   try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
   catch (e) { bmp = await new Promise((ok, fail) => { const im = new Image(); im.onload = () => ok(im); im.onerror = fail; im.src = URL.createObjectURL(file); }); }
@@ -1461,8 +1461,47 @@ async function shrink(file, max, wm) {
   const c = document.createElement('canvas'); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
   if (wm) drawWatermark(c, wm);
-  const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', PHOTO_Q));
-  return { blob, w: c.width, h: c.height };
+  const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', q));
+  if (bmp.close) bmp.close();
+  c.width = c.height = 0;
+  if (!blob) throw new Error('kanvas');
+  return { blob, w: Math.round(w0 * k), h: Math.round(h0 * k) };
+}
+/* Foto disimpan tanpa kompresi tambahan: tanpa watermark, file JPEG asli kamera disimpan apa adanya
+   (resolusi dan EXIF utuh); dengan watermark, foto digambar ulang pada resolusi penuh dengan kualitas 98%.
+   Bila HP kehabisan memori untuk foto sangat besar, dicoba lagi pada sisi terpanjang 4096 px. */
+async function fullPhoto(file, wm) {
+  if (!wm && (/jpe?g/i.test(file.type) || /\.jpe?g$/i.test(file.name || ''))) {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const out = { blob: file.type === 'image/jpeg' ? file : new Blob([file], { type: 'image/jpeg' }), w: bmp.width, h: bmp.height, original: true };
+    if (bmp.close) bmp.close();
+    return out;
+  }
+  let out;
+  try { out = await shrink(file, Infinity, wm, PHOTO_Q); }
+  catch (e) { out = await shrink(file, 4096, wm, 0.95); }
+  try { out.blob = await copyExif(file, out.blob); } catch (e) {}
+  return out;
+}
+/* Salin data EXIF kamera (merek, waktu potret, GPS kamera) dari file asli ke foto ber-watermark,
+   karena kanvas membuangnya. Orientasi diset 1 (gambar sudah diputar) dan gambar mini EXIF dibuang. */
+async function copyExif(src, dst) {
+  const b = new Uint8Array(await src.slice(0, 262144).arrayBuffer());
+  if (b[0] !== 0xFF || b[1] !== 0xD8) return dst;
+  let i = 2, app1 = null;
+  while (i + 10 <= b.length && b[i] === 0xFF) {
+    const mk = b[i + 1], len = (b[i + 2] << 8) | b[i + 3];
+    if (mk === 0xE1 && String.fromCharCode(b[i + 4], b[i + 5], b[i + 6], b[i + 7]) === 'Exif') { if (i + 2 + len <= b.length) app1 = b.slice(i, i + 2 + len); break; }
+    if (mk === 0xDA) break;
+    i += 2 + len;
+  }
+  if (!app1) return dst;
+  const dv = new DataView(app1.buffer), t = 10, le = dv.getUint16(t) === 0x4949;
+  const ifd = t + dv.getUint32(t + 4, le), n = dv.getUint16(ifd, le);
+  for (let k = 0; k < n; k++) { const e = ifd + 2 + k * 12; if (dv.getUint16(e, le) === 0x0112) dv.setUint16(e + 8, 1, le); }
+  dv.setUint32(ifd + 2 + n * 12, 0, le);   // tanpa IFD1 (gambar mini lama tanpa watermark)
+  const d = new Uint8Array(await dst.arrayBuffer());
+  return new Blob([d.subarray(0, 2), app1, d.subarray(2)], { type: 'image/jpeg' });
 }
 /* Watermark di kanan bawah foto: nama lokasi, koordinat, tanggal-jam.
    Teks putih di atas kotak gelap transparan; ukuran huruf mengikuti ukuran foto. */
@@ -1516,7 +1555,7 @@ async function addPhotos(files) {
       if (geo) Object.assign(pos, { lat: +geo.latitude.toFixed(6), lon: +geo.longitude.toFixed(6), acc: Math.round(geo.accuracy) });
       else { const m = String(r0.koordinat || (tgt.isRow ? '' : e.header.koordinat) || '').match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/); if (m) Object.assign(pos, { lat: +m[1], lon: +m[2], acc: r0.koordinatAcc ?? null, geoSrc: 'koordinat baris' }); }
       const wm = withWatermark() ? wmLines(e, r0, tgt.isRow, pos.lat, pos.lon, pos.acc, taken) : null;
-      const big = await shrink(file, PHOTO_MAX, wm), small = await shrink(big.blob, THUMB_MAX);   // gambar kecil dari foto ber-watermark agar watermark terlihat di daftar
+      const big = await fullPhoto(file, wm), small = await shrink(big.blob, THUMB_MAX);   // gambar kecil dari foto ber-watermark agar watermark terlihat di daftar
       const id = rid();
       await pdbPut('foto', id, big.blob); await pdbPut('thumb', id, small.blob);
       const r = tgt.find(); if (!r) break;

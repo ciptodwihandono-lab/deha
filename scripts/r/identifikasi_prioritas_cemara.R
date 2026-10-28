@@ -232,16 +232,19 @@ if (!is.null(df_prioritas)) {
 ringkasan_prioritas <- do.call(rbind, lapply(DAFTAR_PRIORITAS, function(label) {
   ilmiah <- sub("_.*$", "", label)
   umum <- sub("^[^_]*_", "", label)
-  if (!is.null(df_prioritas)) {
-    sub_df <- df_prioritas[df_prioritas$nama_ilmiah == ilmiah, ]
+  if (is.null(df_prioritas)) {
+    n <- 0L
+    conf_max <- NA_real_
   } else {
-    sub_df <- df_prioritas[0, ]
+    sub_df <- df_prioritas[df_prioritas$nama_ilmiah == ilmiah, ]
+    n <- nrow(sub_df)
+    conf_max <- if (n > 0) max(sub_df$confidence) else NA_real_
   }
   data.frame(
     nama_ilmiah = ilmiah, nama_inggris = umum,
-    terdeteksi = nrow(sub_df) > 0,
-    jumlah_deteksi = nrow(sub_df),
-    confidence_tertinggi = if (nrow(sub_df) > 0) max(sub_df$confidence) else NA_real_,
+    terdeteksi = n > 0,
+    jumlah_deteksi = n,
+    confidence_tertinggi = conf_max,
     stringsAsFactors = FALSE
   )
 }))

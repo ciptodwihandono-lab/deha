@@ -475,7 +475,7 @@ const FORMS = [
       F('alat', 'Alat', 'multi', { o: C.alatB, w: 1 }), F('pasangMulai', 'Kondisi pasang saat mulai', 'sel', { o: C.pasang, w: 1 })],
     tables: [{ id: 'hitung', title: 'Hitungan per jenis', sum: ['jenis'], big: 'jumlah', carry: ['sektor', 'aktivitas'], fields: [
       JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis (nama lokal / ilmiah)', 'list', { o: BIRDS, w: 1 }),
-      F('aktivitas', 'Aktivitas', 'sel', { o: C.aktB, w: 1 }), F('sektor', 'Sektor / lokasi'), F('mangsa', 'Mangsa teramati'), COORD,
+      F('aktivitas', 'Aktivitas (bisa lebih dari satu)', 'multi', { o: C.aktB, w: 1 }), F('sektor', 'Sektor / lokasi'), F('mangsa', 'Mangsa teramati'), COORD,
       F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), CAT ] }] },
 
   { id: 'B2', title: 'Gangguan dan Lokasi Persinggahan', keg: ['B3', 'B4'], kegLabel: 'B3–B4',
@@ -491,7 +491,7 @@ const FORMS = [
       { id: 'singgah', title: 'Lokasi persinggahan di luar intertidal (B3)', sum: ['jenis', 'habitat'], big: 'jumlah', fields: [
         JAM, F('kodeTitik', 'Kode titik'), COORD, F('habitat', 'Tipe habitat', 'sel', { o: C.habitat, w: 1 }),
         F('jenis', 'Jenis', 'list', { o: BIRDS, w: 1 }), F('jumlah', 'Jumlah', 'int'),
-        F('aktivitas', 'Aktivitas', 'sel', { o: C.aktB, w: 1 }), CAT ] }] },
+        F('aktivitas', 'Aktivitas (bisa lebih dari satu)', 'multi', { o: C.aktB, w: 1 }), CAT ] }] },
 
   { id: 'C1', title: 'Tutupan Ipomoea dan Garis Pantai', keg: ['C1', 'C2'], kegLabel: 'C1–C2',
     intro: 'Dilakukan saat surut.',
@@ -683,9 +683,11 @@ function fmtDate(s) {
   return `${+d} ${bln} ${y}`;
 }
 function num(v) { if (v == null || v === '') return NaN; return parseFloat(String(v).replace(',', '.')); }
+// Pilihan ganda disimpan sebagai daftar; data lama dari pilihan tunggal (string) dibaca sebagai daftar satu kode.
+function asList(v) { return Array.isArray(v) ? v : v == null || v === '' ? [] : [v]; }
 function label(f, v) {
   if (v == null || v === '') return '';
-  if (f.t === 'multi') return (v || []).map(x => (f.o.find(o => o[0] === x) || [x, x])[1]).join(', ');
+  if (f.t === 'multi') return asList(v).map(x => (f.o.find(o => o[0] === x) || [x, x])[1]).join(', ');
   if (f.t === 'sel' || f.t === 'drop') { const o = f.o.find(o => o[0] === v); return o ? `${o[0]} ${o[1]}` : v; }
   if (f.t === 'date') return fmtDate(v);
   if (f.t === 'list') return String(v).split(' — ')[0];
@@ -853,7 +855,7 @@ function fieldHTML(f, val, scope, extra = {}) {
   const warnHTML = `<span class="warn" data-warn="${f.k}"${warn ? '' : ' hidden'}>${esc(warn)}</span>`;
   switch (f.t) {
     case 'sel': case 'multi': {
-      const sel = f.t === 'multi' ? (Array.isArray(v) ? v : []) : [v];
+      const sel = f.t === 'multi' ? asList(v) : [v];
       return `<div class="field${w}"><span class="lbl" id="${id}-l">${esc(f.l)}</span>
         <div class="chips" role="group" aria-labelledby="${id}-l">${f.o.map(([c, l]) =>
           `<button type="button" class="chip" data-act="${f.t}" data-k="${f.k}" data-v="${esc(c)}" aria-pressed="${sel.includes(c)}">${c !== l ? `<b>${esc(c)}</b>` : ''}${esc(l)}</button>`).join('')}</div></div>`;
@@ -1044,8 +1046,9 @@ function rkKey(src, x) {
   const [where, k] = by.split(':');
   const obj = where === 'h' ? x.e.header : x.r;
   const fdef = (where === 'h' ? x.form.header : x.t.fields).find(f => f.k === k);
-  const v = obj[k];
-  if (v == null || v === '') return ['~', '(kosong)'];
+  let v = obj[k];
+  if (Array.isArray(v)) v = [...v].sort();
+  if (v == null || v === '' || (Array.isArray(v) && !v.length)) return ['~', '(kosong)'];
   return [String(v), fdef ? label(fdef, v) : String(v)];
 }
 function rkSpecies(v) { const [a, b] = String(v).split(' — '); return { name: a, sci: b || '' }; }
@@ -1745,7 +1748,7 @@ app.addEventListener('click', ev => {
       tg.obj[k] = tg.obj[k] === v ? '' : v;
       b.parentElement.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.v === tg.obj[k]));
     } else {
-      const arr = Array.isArray(tg.obj[k]) ? tg.obj[k] : [];
+      const arr = asList(tg.obj[k]);
       tg.obj[k] = arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
       b.setAttribute('aria-pressed', tg.obj[k].includes(v));
     }

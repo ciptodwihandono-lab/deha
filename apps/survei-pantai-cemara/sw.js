@@ -72,5 +72,6 @@ self.addEventListener('fetch', (e) => {
 });
 
 self.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'check') e.waitUntil(checkAll().catch(() => {}));
+  // Pemeriksaan dari tombol "Periksa pembaruan": balas ke jendela yang meminta, berubah atau tidak.
+  if (e.data && e.data.type === 'check') e.waitUntil(checkAll().catch(() => null).then((changed) => { if (e.source) e.source.postMessage({ type: 'checked', changed, ok: changed !== null }); }));
 });

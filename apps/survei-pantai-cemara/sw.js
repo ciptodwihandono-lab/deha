@@ -17,17 +17,21 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // Hanya cache lama milik aplikasi ini; cache aplikasi lain di domain yang sama (mis. Peta Survei) dibiarkan.
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('survei-cemara') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
+// Hanya file aplikasi ini yang dilayani. Halaman lain di bawah scope yang sama
+// (mis. aplikasi Peta Survei di ./peta/) dibiarkan ke jaringan/service worker-nya sendiri.
+const OWN = new Set(FILES.map((f) => new URL(f, self.registration.scope).href));
 function keyFor(req) {
-  // Halaman aplikasi (./ atau ./index.html, dengan atau tanpa ?query) disimpan di satu kunci.
-  if (req.mode === 'navigate') return INDEX;
   const u = new URL(req.url);
-  if (u.href.split('?')[0] === self.registration.scope) return INDEX;
-  return u.origin + u.pathname;
+  const clean = u.origin + u.pathname;
+  if (clean === self.registration.scope || clean === INDEX) return INDEX;
+  if (req.mode === 'navigate') return null;
+  return OWN.has(clean) ? clean : null;
 }
 
 async function refresh(key) {
@@ -57,6 +61,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   const key = keyFor(req);
+  if (!key) return;
   e.respondWith(
     caches.match(key).then((hit) => hit || fetch(req).then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(key, copy)); }
@@ -67,5 +72,6 @@ self.addEventListener('fetch', (e) => {
 });
 
 self.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'check') e.waitUntil(checkAll().catch(() => {}));
+  // Pemeriksaan dari tombol "Periksa pembaruan": balas ke jendela yang meminta, berubah atau tidak.
+  if (e.data && e.data.type === 'check') e.waitUntil(checkAll().catch(() => null).then((changed) => { if (e.source) e.source.postMessage({ type: 'checked', changed, ok: changed !== null }); }));
 });

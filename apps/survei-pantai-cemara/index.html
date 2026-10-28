@@ -327,6 +327,9 @@ a.btn { text-decoration: none; box-sizing: border-box; }
 
 <script>
 'use strict';
+// Diisi tanggal dan kode versi oleh workflow GitHub Pages saat diterbitkan.
+const APP_BUILD = '__BUILD__';
+function buildLabel() { return APP_BUILD.startsWith('__') ? 'versi pengembangan' : APP_BUILD; }
 
 /* ================= Kode dari formulir ================= */
 const C = {
@@ -1186,6 +1189,10 @@ function renderData() {
       <label class="btn ghost block" for="importFile">Pilih file cadangan…</label>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </section>
+    <section class="section"><h2>Versi aplikasi</h2>
+      <p class="note">Versi terpasang: <b>${esc(buildLabel())}</b>. Aplikasi memeriksa versi baru sendiri setiap dibuka saat ada sinyal; tombol ini untuk memeriksa sekarang juga.</p>
+      <button type="button" class="btn ghost block" data-act="upd">Periksa pembaruan sekarang</button>
+    </section>
     <section class="section"><h2>Hapus semua data</h2>
       <p class="note">Hanya lakukan setelah ekspor tersimpan aman. Ketuk dua kali untuk mengonfirmasi.</p>
       <button type="button" class="btn danger block" data-act="wipe">Hapus semua data di HP ini</button>
@@ -1810,6 +1817,7 @@ app.addEventListener('click', ev => {
     go({ v: 'entries', f }, true); toast('Lembar dihapus');
   }
   else if (a === 'install') doInstall();
+  else if (a === 'upd') manualUpdate(b);
   else if (a === 'zip') exportZip(false);
   else if (a === 'share') exportZip(true);
   else if (a === 'json') download(backupBlob(), fileBase() + '.json');
@@ -2121,6 +2129,24 @@ function safeToReload() {
   const a = document.activeElement;
   const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
   return !REC && !typing && !['row', 'entry'].includes(view.v);
+}
+/* Tombol "Periksa pembaruan sekarang": minta service worker membandingkan file dengan server,
+   lalu muat versi baru bila ada. APP_BUILD (di awal skrip) diisi saat diterbitkan. */
+async function manualUpdate(btn) {
+  if (!navigator.onLine) { toast('Tidak ada sinyal. Periksa pembaruan saat online.'); return; }
+  const sw = navigator.serviceWorker && navigator.serviceWorker.controller;
+  if (!sw) { save(); location.reload(); return; }
+  btn.disabled = true; btn.textContent = 'Memeriksa…';
+  const res = await new Promise(ok => {
+    const t = setTimeout(() => { navigator.serviceWorker.removeEventListener('message', h); ok(null); }, 25000);
+    const h = ev => { if (ev.data && ev.data.type === 'checked') { clearTimeout(t); navigator.serviceWorker.removeEventListener('message', h); ok(ev.data); } };
+    navigator.serviceWorker.addEventListener('message', h);
+    sw.postMessage({ type: 'check' });
+  });
+  navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+  if (res && res.changed) { applyUpdate(); return; }
+  btn.disabled = false; btn.textContent = 'Periksa pembaruan sekarang';
+  toast(res && res.ok ? 'Sudah versi terbaru.' : 'Server belum menjawab. Coba lagi sebentar lagi.');
 }
 function applyUpdate() {
   save();

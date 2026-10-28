@@ -258,16 +258,19 @@ print(ringkasan_prioritas)
 # 1 contoh terbaik (confidence tertinggi) per spesies prioritas yang
 # punya minimal 1 deteksi -- sama pola seperti spektrogram_per_spesies_song_meter.R.
 
-message("\n########## BAGIAN C: SPEKTROGRAM SPESIES PRIORITAS ##########")
+message("\n########## BAGIAN C: SPEKTROGRAM ##########")
 
-if (is.null(df_prioritas) || nrow(df_prioritas) == 0) {
-  message("Tidak ada deteksi prioritas -- lewati pembuatan spektrogram.")
-} else {
-  contoh_terbaik <- df_prioritas[order(-df_prioritas$confidence), ]
-  contoh_terbaik <- contoh_terbaik[!duplicated(contoh_terbaik$nama_ilmiah), ]
+n_spektrogram_fallback <- 10  # kalau tidak ada deteksi prioritas, buat spektrogram top-N spesies umum sbg sanity check
 
+bersihkan_nama_file <- function(x) gsub("[^A-Za-z0-9_.-]", "_", x)
+
+# Fungsi dipakai ulang untuk kedua sumber (prioritas ATAU fallback umum) --
+# satu baris = satu contoh (lokasi+spesies) dengan kolom nama_ilmiah,
+# nama_umum, nama_file, waktu_mulai_detik, confidence.
+buat_spektrogram_dari_contoh <- function(contoh_terbaik, subfolder = NULL) {
+  dir_out <- if (is.null(subfolder)) dir_spektrogram else file.path(dir_spektrogram, subfolder)
+  dir.create(dir_out, showWarnings = FALSE, recursive = TRUE)
   durasi_klip <- 3  # detik, sesuai lebar jendela analisis BirdNET
-  bersihkan_nama_file <- function(x) gsub("[^A-Za-z0-9_.-]", "_", x)
   gagal_spektro <- list()
 
   for (i in seq_len(nrow(contoh_terbaik))) {
@@ -283,7 +286,7 @@ if (is.null(df_prioritas) || nrow(df_prioritas) == 0) {
       to <- from + durasi_klip
       wave <- readWave(path_file, from = from, to = to, units = "seconds")
 
-      path_png <- file.path(dir_spektrogram, paste0(bersihkan_nama_file(baris$nama_ilmiah), ".png"))
+      path_png <- file.path(dir_out, paste0(bersihkan_nama_file(baris$nama_ilmiah), ".png"))
       judul <- paste0(baris$nama_ilmiah, " (", baris$nama_umum, ")\n",
                        kode_lokasi, " -- ", baris$nama_file, " @ ", from, "-", to, "s",
                        " -- confidence ", round(baris$confidence, 3))
@@ -301,9 +304,30 @@ if (is.null(df_prioritas) || nrow(df_prioritas) == 0) {
   }
 
   if (length(gagal_spektro) > 0) {
-    write.csv(do.call(rbind, gagal_spektro), file.path(dir_output, "spektrogram_prioritas_gagal.csv"), row.names = FALSE)
+    write.csv(do.call(rbind, gagal_spektro), file.path(dir_output, "spektrogram_gagal.csv"), row.names = FALSE)
   }
-  message("Spektrogram tersimpan di: ", dir_spektrogram)
+  message("Spektrogram tersimpan di: ", dir_out)
+}
+
+if (!is.null(df_prioritas) && nrow(df_prioritas) > 0) {
+  message("Membuat spektrogram untuk ", length(unique(df_prioritas$nama_ilmiah)), " spesies prioritas yang terdeteksi...")
+  contoh_prioritas <- df_prioritas[order(-df_prioritas$confidence), ]
+  contoh_prioritas <- contoh_prioritas[!duplicated(contoh_prioritas$nama_ilmiah), ]
+  buat_spektrogram_dari_contoh(contoh_prioritas)
+} else {
+  message("Tidak ada deteksi prioritas -- sebagai gantinya, buat spektrogram top-",
+          n_spektrogram_fallback, " spesies UMUM (dari Bagian A) sebagai sanity check visual.")
+  if (!exists("df_u_bersih") || is.null(df_u_bersih) || nrow(df_u_bersih) == 0) {
+    message("  Bagian A juga tidak punya deteksi apa pun -- tidak ada bahan spektrogram sama sekali.",
+            " Ini pertanda kuat ada masalah di luar daftar spesies prioritas (lihat file_gagal_",
+            kode_lokasi, ".csv, atau cek manual apakah file .wav bisa dibuka/berisi suara).")
+  } else {
+    top_spesies <- head(rekap_umum$nama_ilmiah, n_spektrogram_fallback)
+    contoh_fallback <- df_u_bersih[df_u_bersih$nama_ilmiah %in% top_spesies, ]
+    contoh_fallback <- contoh_fallback[order(-contoh_fallback$confidence), ]
+    contoh_fallback <- contoh_fallback[!duplicated(contoh_fallback$nama_ilmiah), ]
+    buat_spektrogram_dari_contoh(contoh_fallback, subfolder = "umum_fallback")
+  }
 }
 
 cat("\n=== SELESAI ===\n")
@@ -313,6 +337,7 @@ cat("  - ringkasan_status_spesies_prioritas_", kode_lokasi, ".csv -- status tiap
 cat("  - deteksi_spesies_prioritas_", kode_lokasi, ".csv -- semua kandidat (VERIFIKASI MANUAL dulu sebelum dipakai jadi klaim final)\n", sep = "")
 cat("  - rekap_spesies_umum_", kode_lokasi, ".csv -- gambaran komunitas burung keseluruhan\n", sep = "")
 cat("  - spektrogram/*.png -- verifikasi visual tiap spesies prioritas yang terdeteksi\n")
+cat("    (kalau tidak ada deteksi prioritas: spektrogram/umum_fallback/*.png -- top spesies umum sbg sanity check)\n")
 cat("\nIngat: kandidat di Bagian B pakai ambang confidence rendah (", min_confidence_prioritas,
     ") supaya tidak ada yang lolos tak tercatat -- WAJIB didengar ulang/dicek spektrogramnya dulu",
     " sebelum dianggap deteksi pasti, terutama yang confidence-nya di bawah ~0,3.\n", sep = "")

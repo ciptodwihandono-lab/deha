@@ -27,6 +27,10 @@
 ##   terdeteksi, dibuat SATU contoh per pita yang tersedia (jadi kalau
 ##   satu spesies punya deteksi di kedua pita, ada 2 gambar -- supaya
 ##   bisa dibandingkan visual contoh "yakin" vs "perlu verifikasi").
+## Bagian D -- analisis tambahan gaya jurnal ilmiah: diagram distribusi
+##   confidence (histogram + boxplot per spesies), pola aktivitas diel
+##   (heatmap jam), kurva akumulasi spesies, kurva sensitivitas ambang
+##   confidence, dan tabel ringkasan siap tempel ke bagian Hasil.
 ##
 ## Cara pakai: cek KONFIGURASI di bawah (base_path, kode_lokasi), lalu
 ## Source seluruh skrip. Edit DAFTAR_PRIORITAS kalau daftar spesies
@@ -366,14 +370,196 @@ if (!is.null(df_prioritas) && nrow(df_prioritas) > 0) {
   }
 }
 
+# ======================= BAGIAN D: ANALISIS TAMBAHAN (GAYA JURNAL) =============
+## Lima analisis yang lazim dibahas di bagian Hasil/Diskusi artikel
+## bioakustik berbasis BirdNET (mis. Wood & Kahl 2024 di Ecological
+## Informatics, atau laporan PAM/AWC serupa):
+##   D1 -- Diagram distribusi confidence keseluruhan (histogram, 2 pita)
+##   D2 -- Distribusi confidence per spesies prioritas yang terdeteksi (boxplot)
+##   D3 -- Pola aktivitas diel (heatmap jam x spesies)
+##   D4 -- Kurva akumulasi spesies terhadap urutan file (kecukupan durasi rekam)
+##   D5 -- Kurva sensitivitas kekayaan spesies terhadap ambang confidence
+## Semua bagian ini DEGRADASI AMAN -- kalau datanya tidak cukup (mis.
+## timestamp tidak bisa di-parse, atau tidak ada deteksi prioritas),
+## skrip kasih pesan penjelasan dan lanjut, bukan error/berhenti.
+
+message("\n########## BAGIAN D: ANALISIS TAMBAHAN (GAYA JURNAL) ##########")
+
+# ---- D1: Diagram distribusi confidence (histogram, 2 pita) ----
+if (!is.null(df_umum) && nrow(df_umum) > 0) {
+  pD1 <- ggplot(df_umum, aes(x = confidence, fill = kategori_confidence)) +
+    geom_histogram(binwidth = 0.02, boundary = AMBANG_BAWAH, color = "white", linewidth = 0.1) +
+    geom_vline(xintercept = AMBANG_TINGGI, linetype = "dashed", color = "grey30") +
+    scale_fill_manual(values = setNames(c("#1565c0", "#90caf9"), c(LABEL_TINGGI, LABEL_VERIFIKASI))) +
+    labs(title = paste("Distribusi Confidence BirdNET -- Semua Deteksi --", kode_lokasi),
+         subtitle = paste0("n = ", nrow(df_umum), " deteksi mentah (semua jendela, belum di-dedup); garis putus-putus = batas pita (", fmt_id(AMBANG_TINGGI), ")"),
+         x = "Confidence", y = "Jumlah deteksi", fill = "Pita confidence") +
+    theme_minimal()
+  ggsave(file.path(dir_output, paste0("diagram_confidence_umum_", kode_lokasi, ".png")), pD1, width = 9, height = 6, dpi = 150)
+  message("D1: diagram_confidence_umum_", kode_lokasi, ".png tersimpan.")
+} else {
+  message("D1: dilewati -- tidak ada deteksi umum untuk digambar.")
+}
+
+# ---- D2: Distribusi confidence per spesies prioritas (boxplot + titik) ----
+if (!is.null(df_prioritas) && nrow(df_prioritas) > 0) {
+  urutan_sp <- aggregate(confidence ~ nama_umum, data = df_prioritas, FUN = median)
+  urutan_sp <- urutan_sp[order(urutan_sp$confidence), ]
+  df_prioritas$nama_umum_f <- factor(df_prioritas$nama_umum, levels = urutan_sp$nama_umum)
+
+  pD2 <- ggplot(df_prioritas, aes(x = nama_umum_f, y = confidence)) +
+    geom_boxplot(outlier.shape = NA, fill = "#90caf9", alpha = 0.5) +
+    geom_jitter(aes(color = kategori_confidence), width = 0.15, height = 0, size = 1.6, alpha = 0.8) +
+    geom_hline(yintercept = AMBANG_TINGGI, linetype = "dashed", color = "grey30") +
+    coord_flip() +
+    scale_color_manual(values = setNames(c("#1565c0", "#e65100"), c(LABEL_TINGGI, LABEL_VERIFIKASI))) +
+    labs(title = paste("Distribusi Confidence per Spesies Prioritas --", kode_lokasi),
+         subtitle = "Tiap titik = 1 kandidat deteksi; garis putus-putus = batas pita tinggi",
+         x = NULL, y = "Confidence", color = "Pita confidence") +
+    theme_minimal()
+  ggsave(file.path(dir_output, paste0("diagram_confidence_prioritas_", kode_lokasi, ".png")), pD2, width = 9,
+         height = max(4, 0.5 * length(unique(df_prioritas$nama_umum)) + 2), dpi = 150)
+  message("D2: diagram_confidence_prioritas_", kode_lokasi, ".png tersimpan.")
+} else {
+  message("D2: dilewati -- tidak ada deteksi spesies prioritas untuk digambar.")
+}
+
+# ---- D3: Pola aktivitas diel (heatmap jam x spesies) ----
+if (!is.null(df_u_bersih) && nrow(df_u_bersih) > 0 && !all(is.na(df_u_bersih$timestamp))) {
+  df_diel <- df_u_bersih[!is.na(df_u_bersih$timestamp), ]
+  df_diel$jam <- as.integer(format(df_diel$timestamp, "%H"))
+
+  jumlah_top_diel <- 20
+  total_per_spesies <- aggregate(confidence ~ nama_umum, data = df_diel, FUN = length)
+  names(total_per_spesies)[2] <- "total"
+  total_per_spesies <- total_per_spesies[order(-total_per_spesies$total), ]
+  top_spesies_diel <- head(total_per_spesies$nama_umum, jumlah_top_diel)
+
+  df_top_diel <- df_diel[df_diel$nama_umum %in% top_spesies_diel, ]
+  tabel_diel <- aggregate(confidence ~ nama_umum + jam, data = df_top_diel, FUN = length)
+  names(tabel_diel)[3] <- "jumlah_deteksi"
+  grid_lengkap <- expand.grid(nama_umum = top_spesies_diel, jam = 0:23)
+  tabel_diel <- merge(grid_lengkap, tabel_diel, by = c("nama_umum", "jam"), all.x = TRUE)
+  tabel_diel$jumlah_deteksi[is.na(tabel_diel$jumlah_deteksi)] <- 0
+  tabel_diel$nama_umum <- factor(tabel_diel$nama_umum, levels = rev(top_spesies_diel))
+  write.csv(tabel_diel, file.path(dir_output, paste0("pola_diel_spesies_", kode_lokasi, ".csv")), row.names = FALSE)
+
+  pD3 <- ggplot(tabel_diel, aes(x = jam, y = nama_umum, fill = jumlah_deteksi)) +
+    geom_tile(color = "white", linewidth = 0.3) +
+    scale_fill_gradient(low = "#fff7ec", high = "#7f0000") +
+    scale_x_continuous(breaks = seq(0, 23, 3)) +
+    labs(title = paste0("Pola Aktivitas Diel -- Top ", jumlah_top_diel, " Spesies --", kode_lokasi),
+         subtitle = "1 deteksi per jendela 3 detik (confidence tertinggi); confidence >= 0,1",
+         x = "Jam (0-23)", y = NULL, fill = "Jumlah\ndeteksi") +
+    theme_minimal() + theme(panel.grid = element_blank())
+  ggsave(file.path(dir_output, paste0("heatmap_diel_umum_", kode_lokasi, ".png")), pD3, width = 10, height = 7, dpi = 150)
+  message("D3: heatmap_diel_umum_", kode_lokasi, ".png + pola_diel_spesies_", kode_lokasi, ".csv tersimpan.")
+
+  if (!is.null(df_prioritas) && nrow(df_prioritas) > 0 && !all(is.na(df_prioritas$timestamp))) {
+    df_prioritas_diel <- df_prioritas[!is.na(df_prioritas$timestamp), ]
+    df_prioritas_diel$jam <- as.integer(format(df_prioritas_diel$timestamp, "%H"))
+    pD3b <- ggplot(df_prioritas_diel, aes(x = jam, fill = kategori_confidence)) +
+      geom_histogram(binwidth = 1, boundary = 0, color = "white") +
+      facet_wrap(~nama_umum, scales = "free_y") +
+      scale_x_continuous(breaks = seq(0, 23, 6), limits = c(0, 24)) +
+      scale_fill_manual(values = setNames(c("#1565c0", "#90caf9"), c(LABEL_TINGGI, LABEL_VERIFIKASI))) +
+      labs(title = paste("Jam Kemunculan Kandidat Deteksi Spesies Prioritas --", kode_lokasi),
+           x = "Jam (0-23)", y = "Jumlah kandidat", fill = "Pita confidence") +
+      theme_minimal()
+    ggsave(file.path(dir_output, paste0("diel_spesies_prioritas_", kode_lokasi, ".png")), pD3b, width = 10, height = 7, dpi = 150)
+    message("D3b: diel_spesies_prioritas_", kode_lokasi, ".png tersimpan.")
+  }
+} else {
+  message("D3: dilewati -- timestamp tidak bisa diparse dari nama file (lihat parse_timestamp_dari_nama()),",
+          " jadi pola jam tidak bisa dihitung. Kalau nama file Audiomoth kamu formatnya beda dari",
+          " YYYYMMDD_HHMMSS, sesuaikan fungsi itu dulu.")
+}
+
+# ---- D4: Kurva akumulasi spesies terhadap urutan file ----
+if (!is.null(df_u_bersih) && nrow(df_u_bersih) > 0) {
+  urutan_file <- data.frame(nama_file = basename(file_wav), urutan = seq_along(file_wav), stringsAsFactors = FALSE)
+  df_akum <- merge(df_u_bersih, urutan_file, by = "nama_file", all.x = TRUE)
+  df_akum <- df_akum[order(df_akum$urutan), ]
+
+  spesies_terlihat <- character(0)
+  urutan_unik <- sort(unique(df_akum$urutan))
+  baris_akum <- lapply(urutan_unik, function(u) {
+    sp_file <- unique(df_akum$nama_ilmiah[df_akum$urutan == u])
+    spesies_terlihat <<- union(spesies_terlihat, sp_file)
+    data.frame(urutan_file = u, kekayaan_kumulatif = length(spesies_terlihat))
+  })
+  akumulasi <- do.call(rbind, baris_akum)
+  write.csv(akumulasi, file.path(dir_output, paste0("kurva_akumulasi_spesies_", kode_lokasi, ".csv")), row.names = FALSE)
+
+  pD4 <- ggplot(akumulasi, aes(x = urutan_file, y = kekayaan_kumulatif)) +
+    geom_step(color = "#2e7d32", linewidth = 0.9) + geom_point(size = 1.2, color = "#2e7d32") +
+    labs(title = paste("Kurva Akumulasi Spesies --", kode_lokasi),
+         subtitle = paste0("Kekayaan spesies kumulatif sepanjang ", length(file_wav), " file rekaman (confidence >= ", AMBANG_BAWAH, ")"),
+         x = "Urutan file rekaman (kronologis)", y = "Jumlah spesies kumulatif") +
+    theme_minimal()
+  ggsave(file.path(dir_output, paste0("kurva_akumulasi_spesies_", kode_lokasi, ".png")), pD4, width = 9, height = 6, dpi = 150)
+  message("D4: kurva_akumulasi_spesies_", kode_lokasi, ".png + .csv tersimpan (kurva landai di akhir = durasi rekam sudah cukup).")
+} else {
+  message("D4: dilewati -- tidak ada deteksi umum untuk dihitung akumulasinya.")
+}
+
+# ---- D5: Sensitivitas kekayaan spesies terhadap ambang confidence ----
+# Berbeda dari skrip UT2026 (analisis_lanjutan_song_meter.R): valid untuk
+# SELURUH rentang 0,1-0,9 karena skrip ini sudah menyimpan sejak AMBANG_BAWAH,
+# bukan cuma >= 0,5.
+if (!is.null(df_umum) && nrow(df_umum) > 0) {
+  ambang_uji <- seq(AMBANG_BAWAH, AMBANG_TINGGI, by = 0.1)
+  sensitivitas <- do.call(rbind, lapply(ambang_uji, function(ambang) {
+    d <- df_umum[df_umum$confidence >= ambang, ]
+    data.frame(ambang_confidence = ambang, kekayaan_spesies = length(unique(d$nama_ilmiah)), jumlah_deteksi = nrow(d))
+  }))
+  write.csv(sensitivitas, file.path(dir_output, paste0("sensitivitas_ambang_confidence_", kode_lokasi, ".csv")), row.names = FALSE)
+
+  pD5 <- ggplot(sensitivitas, aes(x = ambang_confidence, y = kekayaan_spesies)) +
+    geom_line(linewidth = 0.9, color = "#6a1b9a") + geom_point(size = 2, color = "#6a1b9a") +
+    scale_x_continuous(breaks = ambang_uji) +
+    labs(title = paste("Sensitivitas Kekayaan Spesies terhadap Ambang Confidence --", kode_lokasi),
+         subtitle = paste0("Diuji penuh dari ", fmt_id(AMBANG_BAWAH), " sampai ", fmt_id(AMBANG_TINGGI)),
+         x = "Ambang confidence", y = "Kekayaan spesies (spesies unik)") +
+    theme_minimal()
+  ggsave(file.path(dir_output, paste0("sensitivitas_ambang_confidence_", kode_lokasi, ".png")), pD5, width = 9, height = 6, dpi = 150)
+  message("D5: sensitivitas_ambang_confidence_", kode_lokasi, ".png + .csv tersimpan.")
+} else {
+  message("D5: dilewati -- tidak ada deteksi umum untuk uji sensitivitas.")
+}
+
+# ---- Tabel ringkasan siap-jurnal: 1 baris per spesies prioritas ----
+if (!is.null(df_prioritas) && nrow(df_prioritas) > 0) {
+  ringkasan_jurnal <- do.call(rbind, lapply(split(df_prioritas, df_prioritas$nama_ilmiah), function(d) {
+    data.frame(
+      nama_ilmiah = d$nama_ilmiah[1], nama_inggris = d$nama_umum[1],
+      n_kandidat = nrow(d),
+      n_pita_tinggi = sum(d$confidence >= AMBANG_TINGGI),
+      confidence_min = min(d$confidence), confidence_median = median(d$confidence), confidence_maks = max(d$confidence),
+      jam_pertama = if (!all(is.na(d$timestamp))) format(min(d$timestamp, na.rm = TRUE), "%H:%M") else NA,
+      jam_terakhir = if (!all(is.na(d$timestamp))) format(max(d$timestamp, na.rm = TRUE), "%H:%M") else NA,
+      stringsAsFactors = FALSE
+    )
+  }))
+  ringkasan_jurnal <- ringkasan_jurnal[order(-ringkasan_jurnal$n_pita_tinggi, -ringkasan_jurnal$n_kandidat), ]
+  write.csv(ringkasan_jurnal, file.path(dir_output, paste0("tabel_ringkasan_jurnal_prioritas_", kode_lokasi, ".csv")), row.names = FALSE)
+  message("Tabel ringkasan siap-jurnal: tabel_ringkasan_jurnal_prioritas_", kode_lokasi, ".csv tersimpan.")
+}
+
 cat("\n=== SELESAI ===\n")
 cat("Semua hasil tersimpan di:", dir_output, "\n")
 cat("File penting untuk laporan:\n")
 cat("  - ringkasan_status_spesies_prioritas_", kode_lokasi, ".csv -- status tiap spesies target, per pita confidence\n", sep = "")
 cat("  - deteksi_spesies_prioritas_", kode_lokasi, ".csv -- semua kandidat + kolom kategori_confidence (VERIFIKASI MANUAL dulu sebelum dipakai jadi klaim final, terutama pita 'perlu verifikasi')\n", sep = "")
 cat("  - rekap_spesies_umum_", kode_lokasi, ".csv -- gambaran komunitas burung keseluruhan, per pita\n", sep = "")
+cat("  - tabel_ringkasan_jurnal_prioritas_", kode_lokasi, ".csv -- tabel ringkas siap tempel ke bagian Hasil laporan\n", sep = "")
 cat("  - spektrogram/*_tinggi.png dan *_verifikasi.png -- verifikasi visual tiap spesies & pita yang terdeteksi\n")
 cat("    (kalau tidak ada deteksi prioritas: spektrogram/umum_fallback/*.png -- top spesies umum sbg sanity check)\n")
+cat("  - diagram_confidence_umum_", kode_lokasi, ".png -- histogram distribusi confidence (D1)\n", sep = "")
+cat("  - diagram_confidence_prioritas_", kode_lokasi, ".png -- boxplot confidence per spesies prioritas (D2)\n", sep = "")
+cat("  - heatmap_diel_umum_", kode_lokasi, ".png, diel_spesies_prioritas_", kode_lokasi, ".png -- pola aktivitas per jam (D3)\n", sep = "")
+cat("  - kurva_akumulasi_spesies_", kode_lokasi, ".png -- kecukupan durasi rekam (D4)\n", sep = "")
+cat("  - sensitivitas_ambang_confidence_", kode_lokasi, ".png -- kekokohan hasil terhadap pilihan ambang (D5)\n", sep = "")
 cat("\nIngat: pita '", LABEL_VERIFIKASI, "' WAJIB didengar ulang/dicek spektrogramnya dulu sebelum",
     " dianggap deteksi pasti -- pita ini sengaja dibuat lebar supaya tidak ada deteksi yang lolos",
     " tak tercatat, bukan berarti semuanya pasti benar.\n", sep = "")

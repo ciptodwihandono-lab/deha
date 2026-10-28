@@ -594,7 +594,7 @@ const FORMS = [
       F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('jenis', 'Jenis', 'sel', { o: C.primata, w: 1 }), COORD,
       F('total', 'Jumlah total', 'int'), F('minimum', 'Perkiraan minimum (≥)?', 'sel', { o: C.yn }),
       F('jd', 'Jantan dewasa', 'int'), F('bd', 'Betina dewasa', 'int'), F('rmj', 'Remaja', 'int'), F('anak', 'Anak', 'int'),
-      F('aktivitas', 'Aktivitas', 'sel', { o: C.aktP, w: 1 }), F('pohonTidur', 'Pohon tidur?', 'sel', { o: C.yn }),
+      F('aktivitas', 'Aktivitas (bisa lebih dari satu)', 'multi', { o: C.aktP, w: 1 }), F('pohonTidur', 'Pohon tidur?', 'sel', { o: C.yn }),
       F('arahGerak', 'Arah gerak'), CAT ] }] },
 
   { id: 'F3', title: 'Survei Malam: Herpetofauna dan Buaya', keg: ['F4', 'F5'], kegLabel: 'F4–F5', night: true,
@@ -607,7 +607,7 @@ const FORMS = [
     tables: [
       { id: 'ves', title: 'VES herpetofauna (F4)', sum: ['jenis', 'mikro'], big: 'jumlah', fields: [
         JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis', 'text', { w: 1 }), F('mikro', 'Mikrohabitat', 'sel', { o: C.mikro, w: 1 }),
-        F('aktivitas', 'Aktivitas', 'sel', { o: C.aktH, w: 1 }), COORD, F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), CAT ] },
+        F('aktivitas', 'Aktivitas (bisa lebih dari satu)', 'multi', { o: C.aktH, w: 1 }), COORD, F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), CAT ] },
       { id: 'buaya', title: 'Spotlight buaya muara (F5)', sum: ['kelas', 'posisi'], big: 'jumlah', fields: [
         JAM, F('jumlah', 'Jumlah', 'int'), COORD, F('kelas', 'Kelas ukuran', 'sel', { o: C.kelas, w: 1 }),
         F('posisi', 'Posisi', 'sel', { o: C.posisi, w: 1 }), F('reaksi', 'Reaksi', 'sel', { o: C.reaksi, w: 1 }), CAT ] }] },

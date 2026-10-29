@@ -75,6 +75,16 @@ akan terduplikasi.
 
 ## Format ekspor
 
+**Baca foto dengan AI (Claude)**
+- Setiap foto baru bisa dibaca Claude (Anthropic, model `claude-opus-5-5`) untuk mengisi Deskripsi dan Catatan.
+  Isian yang sudah diketik tidak ditimpa; teks AI ditambahkan di baris baru dengan awalan "AI:".
+  Hasil AI juga disimpan di data foto (kolom `deskripsi_ai`, `catatan_ai` di `Daftar_Foto.csv`).
+- Butuh kunci API Anthropic milik pengguna (tab Data). Kunci hanya disimpan di HP itu, dipakai bersama oleh
+  Survei Cemara dan Peta Survei, dan tidak ikut file cadangan.
+- Tanpa sinyal, foto diantrekan lalu dibaca otomatis saat ada sinyal. Foto dikirim diperkecil ke 1280 px.
+- Pustaka: `vendor/anthropic-sdk.js` (Anthropic TypeScript SDK 1.3.0, dibundel dengan esbuild; lisensi di
+  `vendor/LICENSE-anthropic-sdk.txt`).
+
 ZIP berisi satu CSV per tabel, mis. `Form_B1_hitung.csv`, `Form_D1_air.csv`:
 
 - satu baris per baris data; kolom kepala lembar diberi awalan `h_`;

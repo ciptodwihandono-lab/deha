@@ -3,7 +3,7 @@
 // halaman diberi tahu agar memuat versi baru. Tidak perlu menaikkan versi
 // manual: perubahan apa pun di index.html terdeteksi dengan membandingkan isi.
 const CACHE = 'survei-cemara';
-const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
+const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './vendor/anthropic-sdk.js'];
 const INDEX = new URL('./index.html', self.registration.scope).href;
 
 self.addEventListener('install', (e) => {

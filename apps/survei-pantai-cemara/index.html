@@ -346,7 +346,12 @@ const C = {
   substrat: [['LM','Lumpur'],['LP','Lumpur berpasir'],['PS','Pasir']],
   garis: [['AB','Abrasi'],['AK','Akresi'],['ST','Stabil']],
   ancaman: [['SM','Sampah'],['TI','Tangkapan/alat tangkap ikan'],['PB','Perburuan burung']],
-  tipeSt: [['B','Area mencari makan burung'],['P','Pembanding']],
+  tipeSt: [['B','Area mencari makan burung'],['P','Pembanding'],['L','Titik lama (PCM, REHAB, Pemanfaatan)']],
+  sumberIkan: [['Foto','Terfoto di pendaratan'],['Wawancara','Hanya disebut nelayan']],
+  kegPrim: [['F1','Pemetaan kelompok'],['F6','Perjumpaan oportunistik']],
+  malam: [['F4','VES herpetofauna (jalan kaki)'],['F5','Spotlight buaya (perahu)']],
+  satuanTDS: [['ppm','TDS (ppm)'],['µS/cm','Konduktivitas (µS/cm)']],
+  bulan: [['Jan','Jan'],['Feb','Feb'],['Mar','Mar'],['Apr','Apr'],['Mei','Mei'],['Jun','Jun'],['Jul','Jul'],['Agu','Agu'],['Sep','Sep'],['Okt','Okt'],['Nov','Nov'],['Des','Des']],
   yn: [['Y','Ya'],['T','Tidak']],
   kalib: [['PH','pH meter'],['TDS','TDS/konduktivitas'],['REF','Refraktometer']],
   bagian: [['PRW','Perawakan'],['DA','Daun atas'],['DB','Daun bawah'],['UD','Ujung daun'],['SD','Susunan daun'],['BG','Bunga'],['BH','Buah/propagul'],['KB','Kulit batang'],['AK','Akar'],['SK','Skala']],
@@ -451,7 +456,11 @@ const COORD = F('koordinat', 'Koordinat', 'coord', { w: 1 });
 const CAT = F('catatan', 'Catatan', 'area', { w: 1 });
 const JAM = F('jam', 'Jam', 'time', { def: 'now' });
 const FOTO = F('foto', 'No. foto kamera lain (bila ada)');
-const pengamat = (l = 'Pengamat') => F('pengamat', l, 'text', { def: 'profile' });
+// Nama pengamat sesuai daftar di lembar entri digital (tetap bisa diketik bebas).
+const PENGAMAT = ['Cipto', 'Fatih', 'Yaumud', 'Mas Iwan', 'Mas Teguh', 'Pak Najmudin'];
+const pengamat = (l = 'Pengamat') => F('pengamat', l, 'list', { def: 'profile', o: PENGAMAT });
+// Kolom lama yang sudah dipecah: hanya tampil bila lembar lama sudah berisi nilai di situ (tetap ikut ekspor).
+const LEGACY = (k, l) => F(k, l + ' (isian lama)', 'text', { w: 1, legacy: true });
 
 const FORMS = [
   { id: 'A', title: 'Metadata Sesi Survei', keg: ['A1', 'A2'], kegLabel: 'A1–A2',
@@ -463,7 +472,7 @@ const FORMS = [
       F('kode', 'Kode kegiatan', 'drop', { o: KEG_CODES }), F('lokasi', 'Lokasi / stasiun'), COORD,
       F('mulai', 'Jam mulai', 'time', { def: 'now' }), F('selesai', 'Jam selesai', 'time'),
       F('rekam', 'Rekam track GPS', 'track', { w: 1, len: 'transek', file: 'track', start: 'mulai', end: 'selesai', area: true, fmt: 'text' }),
-      F('nPengamat', 'Jumlah pengamat', 'int'), F('transek', 'Panjang transek (m) / luas (ha)'),
+      F('nPengamat', 'Jumlah pengamat', 'int'), F('transek', 'Panjang transek (m)', 'num'), F('luas', 'Luas (ha) — dari QGIS', 'num'),
       F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 }),
       F('track', 'File track GPS', 'text', { w: 1, hide: true }), CAT ] }] },
 
@@ -472,14 +481,14 @@ const FORMS = [
     legend: 'Satu baris = satu jenis dalam satu kelompok pada satu waktu; kelompok campuran dicatat per jenis. Gangguan dicatat di Form B2.',
     key: 'titik', tally: { table: 'hitung', by: 'jenis', n: 'jumlah' },
     header: [TGL, F('titik', 'Titik pengamatan'), COORD, pengamat(),
-      F('jamPT', 'Jam pasang tertinggi', 'time'), F('tinggiPT', 'Tinggi pasang (m)', 'num'),
+      F('jamPT', 'Jam pasang tertinggi (observasi)', 'time'), F('tinggiPT', 'Tinggi pasang (m)', 'num'),
       F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
       F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 }), F('vis', 'Visibilitas', 'sel', { o: C.vis, w: 1 }),
       F('alat', 'Alat', 'multi', { o: C.alatB, w: 1 }), F('pasangMulai', 'Kondisi pasang saat mulai', 'sel', { o: C.pasang, w: 1 })],
-    tables: [{ id: 'hitung', title: 'Hitungan per jenis', sum: ['jenis'], big: 'jumlah', carry: ['sektor', 'aktivitas'], fields: [
-      JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis (nama lokal / ilmiah)', 'list', { o: BIRDS, w: 1 }),
+    tables: [{ id: 'hitung', title: 'Hitungan per jenis', sum: ['jenis'], big: 'jumlah', carry: ['scan', 'sektor', 'aktivitas'], fields: [
+      JAM, F('scan', 'Scan ke-', 'int', { dv: '1' }), F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis (nama lokal / ilmiah)', 'list', { o: BIRDS, w: 1 }),
       F('aktivitas', 'Aktivitas (bisa lebih dari satu)', 'multi', { o: C.aktB, w: 1 }), F('sektor', 'Sektor / lokasi'), F('mangsa', 'Mangsa teramati'), COORD,
-      F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), CAT ] }] },
+      F('dok', 'Dokumentasi', 'multi', { o: C.dok, w: 1 }), F('foto', 'No. foto/video kamera lain (bila ada)'), CAT ] }] },
 
   { id: 'B2', title: 'Gangguan dan Lokasi Persinggahan', keg: ['B3', 'B4'], kegLabel: 'B3–B4',
     intro: 'Gangguan dicatat selama pengamatan burung; lokasi persinggahan di luar intertidal saat pasang tinggi (opsional).',
@@ -506,7 +515,7 @@ const FORMS = [
       F('track', 'File track batas tutupan Ipomoea', 'text', { hide: true }), F('panjangTrack', 'Panjang track (m)', 'num')],
     tables: [
       { id: 'plot', title: 'Plot tutupan Ipomoea pes-caprae (C1)', sum: ['kodePlot', 'substrat'], big: 'tutupan', bigU: '%', fields: [
-        F('kodePlot', 'Kode plot'), F('ukuran', 'Ukuran plot (m × m)', 'text', { ph: '5 × 5' }), COORD,
+        F('kodePlot', 'Kode plot'), F('pPanjang', 'Panjang plot (m)', 'num'), F('pLebar', 'Lebar plot (m)', 'num'), LEGACY('ukuran', 'Ukuran plot (m × m)'), COORD,
         F('tutupan', 'Tutupan Ipomoea (%)', 'num', { min: 0, max: 100 }), F('jarak', 'Jarak ke tepi mudflat (m)', 'num'),
         F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), FOTO, CAT ] },
       { id: 'garis', title: 'Titik garis pantai (C2)', sum: ['kodeTitik', 'kondisi'], fields: [
@@ -520,23 +529,28 @@ const FORMS = [
     header: [TGL, pengamat('Pencatat')],
     tables: [{ id: 'temuan', title: 'Temuan', sum: ['kategori', 'uraian'], fields: [
       F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('kategori', 'Kategori', 'sel', { o: C.ancaman, w: 1 }),
-      F('uraian', 'Jenis / uraian', 'area', { w: 1 }), F('jumlah', 'Jumlah / volume'), FOTO, COORD, CAT ] }] },
+      F('uraian', 'Jenis / uraian', 'area', { w: 1 }), F('jumlah', 'Jumlah / volume'), F('satuan', 'Satuan', 'text', { ph: 'buah, karung, kg, m²' }), FOTO, COORD, CAT ] }] },
 
   { id: 'D1', title: 'Stasiun Tetap dan Parameter Air', keg: ['D1', 'D2'], kegLabel: 'D1–D2',
     intro: 'Ukur saat surut, segera setelah pengamatan burung di stasiun.',
-    legend: 'Burung MM: Y bila ada burung mencari makan di stasiun saat pengukuran, T bila tidak. Titik lama (PCM, REHAB, Pemanfaatan) dicatat dengan kode lamanya bila diukur.',
+    legend: 'Burung MM: Y bila ada burung mencari makan di stasiun saat pengukuran, T bila tidak. Isi pembacaan #1–#3 (bila hanya sekali, isi #1 saja); rata-rata dihitung otomatis. Titik lama (PCM, REHAB, Pemanfaatan) dicatat dengan kode lamanya, tipe L.',
     key: 'alat',
     header: [pengamat(), F('alat', 'Alat (merek/tipe)'), F('kalibrasi', 'Kalibrasi', 'multi', { o: C.kalib, w: 1 }),
       F('tglKalibrasi', 'Tanggal kalibrasi', 'date')],
     tables: [
       { id: 'stasiun', title: 'Daftar stasiun tetap (D1)', sum: ['kode', 'tipe'], fields: [
         F('kode', 'Kode stasiun'), F('tglDitetapkan', 'Tanggal ditetapkan', 'date', { def: 'today' }),
-        F('tipe', 'Tipe', 'sel', { o: C.tipeSt, w: 1 }), COORD, F('deskripsi', 'Deskripsi habitat dan substrat', 'area', { w: 1 }), FOTO ] },
+        F('tipe', 'Tipe', 'sel', { o: C.tipeSt, w: 1 }), COORD, F('deskripsi', 'Deskripsi habitat dan substrat', 'area', { w: 1 }),
+        F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), FOTO, CAT ] },
       { id: 'air', title: 'Pengukuran parameter air (D2)', sum: ['stasiun', 'pasang'], fields: [
         F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('stasiun', 'Kode stasiun', 'list', { o: 'stations', w: 1 }),
         F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }), F('mm', 'Burung mencari makan saat ukur?', 'sel', { o: C.yn, w: 1 }),
-        F('ph', 'pH', 'num', { min: 0, max: 14 }), F('suhu', 'Suhu (°C)', 'num', { min: 15, max: 45 }),
-        F('salinitas', 'Salinitas (‰)', 'num', { min: 0, max: 60 }), F('tds', 'TDS (ppm) / Kond. (µS/cm)', 'num'), COORD, CAT ] }] },
+        F('kalHari', 'Alat dikalibrasi hari ini?', 'sel', { o: C.yn, w: 1 }),
+        F('ph', 'pH #1', 'num', { min: 0, max: 14 }), F('ph2', 'pH #2', 'num', { min: 0, max: 14 }), F('ph3', 'pH #3', 'num', { min: 0, max: 14 }),
+        F('suhu', 'Suhu °C #1', 'num', { min: 15, max: 45 }), F('suhu2', 'Suhu °C #2', 'num', { min: 15, max: 45 }), F('suhu3', 'Suhu °C #3', 'num', { min: 15, max: 45 }),
+        F('salinitas', 'Salinitas ‰ #1', 'num', { min: 0, max: 60 }), F('sal2', 'Salinitas ‰ #2', 'num', { min: 0, max: 60 }), F('sal3', 'Salinitas ‰ #3', 'num', { min: 0, max: 60 }),
+        F('tds', 'TDS/Kond. #1', 'num'), F('tds2', 'TDS/Kond. #2', 'num'), F('tds3', 'TDS/Kond. #3', 'num'),
+        F('satuan', 'Satuan TDS/Kond.', 'sel', { o: C.satuanTDS, w: 1, dv: 'ppm' }), COORD, CAT ] }] },
 
   { id: 'D2', title: 'Kuadrat Epifauna', keg: ['D3'], kegLabel: 'D3',
     intro: 'Satu lembar untuk satu stasiun per kunjungan.',
@@ -544,13 +558,14 @@ const FORMS = [
     key: 'stasiun',
     header: [TGL, F('stasiun', 'Kode stasiun', 'list', { o: 'stations' }), F('tipe', 'Tipe stasiun', 'sel', { o: C.tipeSt, w: 1 }), COORD,
       F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'), F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 }),
-      F('kuadrat', 'Ukuran kuadrat (m × m)', 'text', { ph: '0,5 × 0,5' }), pengamat(),
+      F('kPanjang', 'Panjang kuadrat (m)', 'num'), F('kLebar', 'Lebar kuadrat (m)', 'num'), LEGACY('kuadrat', 'Ukuran kuadrat (m × m)'), pengamat(),
       F('burungMM', 'Burung mencari makan di stasiun?', 'sel', { o: C.yn, w: 1 }), F('jenisBurung', 'Jenis burung', 'list', { o: BIRDS }),
       F('jarakKuadrat', 'Jarak antarkuadrat (m)', 'num')],
     tables: [{ id: 'kuadrat', title: 'Kuadrat', sum: ['ke'], numbered: 'ke', fields: [
-      F('ke', 'Kuadrat ke-', 'int'), F('uca', 'Uca (individu)', 'int'), F('lubang', 'Lubang Uca aktif', 'int'), F('bivalvia', 'Bivalvia (jumlah)', 'int'),
-      F('kepiting', 'Kepiting lain (jenis: jml)', 'text', { w: 1, ph: 'Ocypode: 2' }), F('gastropoda', 'Gastropoda (jenis: jml)', 'text', { w: 1, ph: 'Cerithidea: 14; Cassidula: 3' }),
-      F('lainnya', 'Lainnya (jenis: jml)', 'text', { w: 1 }), F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), COORD, FOTO, CAT ] }] },
+      F('ke', 'Kuadrat ke-', 'int'), F('uca', 'Uca (individu)', 'int'), F('lubang', 'Lubang Uca aktif', 'int'), F('lubangTA', 'Lubang Uca tidak aktif', 'int'),
+      F('kepitingJml', 'Kepiting lain (jml)', 'int'), F('kepiting', 'Kepiting lain (jenis)', 'text', { ph: 'Ocypode' }),
+      F('gastropodaJml', 'Gastropoda (jml)', 'int'), F('gastropoda', 'Gastropoda (jenis)', 'text', { ph: 'Cerithidea, Cassidula' }),
+      F('bivalvia', 'Bivalvia (jumlah)', 'int'), F('lainnyaJml', 'Lainnya (jml)', 'int'), F('lainnya', 'Lainnya (jenis)', 'text'), F('substrat', 'Substrat', 'sel', { o: C.substrat, w: 1 }), COORD, FOTO, CAT ] }] },
 
   { id: 'E1', title: 'Dokumentasi Foto Tumbuhan', keg: ['E1'], kegLabel: 'E1',
     intro: 'Fokus Avicennia sp. dan 19 jenis berkode numerik. Tandai setiap bagian yang sudah difoto; selalu sertakan pembanding skala.',
@@ -559,7 +574,7 @@ const FORMS = [
     header: [TGL, pengamat(), F('lokasi', 'Lokasi'), F('kamera', 'Kamera')],
     tables: [{ id: 'foto', title: 'Set foto per jenis', sum: ['kode', 'fotoNo'], fields: [
       F('kode', 'Kode jenis / nama sementara', 'text', { w: 1 }), COORD,
-      F('bagian', 'Bagian yang sudah difoto', 'multi', { o: C.bagian, w: 1 }), F('fotoNo', 'No. foto (dari–sampai)'),
+      F('bagian', 'Bagian yang sudah difoto', 'multi', { o: C.bagian, w: 1 }), F('fotoDari', 'No. foto dari'), F('fotoSampai', 'No. foto sampai'), LEGACY('fotoNo', 'No. foto (dari–sampai)'),
       F('akar', 'Tipe akar', 'sel', { o: C.akar, w: 1 }), CAT ] }] },
 
   { id: 'E2', title: 'Dokumentasi Jenis Ikan', keg: ['E2'], kegLabel: 'E2',
@@ -569,9 +584,9 @@ const FORMS = [
     header: [TGL, pengamat('Pewawancara / pencatat'), F('lokasiPendaratan', 'Lokasi pendaratan'), F('jam', 'Jam', 'time', { def: 'now' }),
       F('informan', 'Informan (nama, asal)', 'text', { w: 1 }), COORD],
     tables: [{ id: 'ikan', title: 'Jenis ikan', sum: ['lokal', 'musim'], big: 'jumlah', fields: [
-      F('lokal', 'Nama lokal', 'list', { o: FISH }), F('ilmiah', 'Nama ilmiah (bila tahu)'), F('jumlah', 'Jumlah', 'int'),
-      F('panjang', 'Panjang (cm)', 'text', { ph: '25–32' }), F('alat', 'Alat tangkap'), F('lokasiTangkap', 'Lokasi tangkap'),
-      F('musim', 'Musim muncul (menurut nelayan)', 'area', { w: 1 }), COORD, FOTO, CAT ] }] },
+      F('lokal', 'Nama lokal', 'list', { o: FISH }), F('ilmiah', 'Nama ilmiah (bila tahu)'), F('sumber', 'Sumber', 'sel', { o: C.sumberIkan, w: 1 }), F('jumlah', 'Jumlah', 'int'),
+      F('pMin', 'Panjang min (cm)', 'num'), F('pMax', 'Panjang maks (cm)', 'num'), LEGACY('panjang', 'Panjang (cm)'), F('alat', 'Alat tangkap'), F('lokasiTangkap', 'Lokasi tangkap'),
+      F('musim', 'Musim muncul (istilah nelayan)', 'area', { w: 1 }), F('bulan', 'Bulan muncul', 'multi', { o: C.bulan, w: 1 }), COORD, FOTO, CAT ] }] },
 
   // Kamera jebak dibatalkan (Paket Dokumen Final Okt 2026); tetap ada agar lembar lama bisa dibuka dan diekspor.
   { id: 'F1', title: 'Kamera Jebak', keg: [], kegLabel: 'F2–F3 (dibatalkan)', old: true,
@@ -594,7 +609,7 @@ const FORMS = [
     key: 'periode',
     header: [pengamat('Pencatat'), F('periode', 'Periode survei')],
     tables: [{ id: 'jumpa', title: 'Perjumpaan', sum: ['jenis', 'aktivitas'], big: 'total', fields: [
-      F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('jenis', 'Jenis', 'sel', { o: C.primata, w: 1 }), COORD,
+      F('tanggal', 'Tanggal', 'date', { def: 'today' }), JAM, F('jenis', 'Jenis', 'sel', { o: C.primata, w: 1 }), F('kegiatan', 'Kegiatan', 'sel', { o: C.kegPrim, w: 1 }), COORD,
       F('total', 'Jumlah total', 'int'), F('minimum', 'Perkiraan minimum (≥)?', 'sel', { o: C.yn }),
       F('jd', 'Jantan dewasa', 'int'), F('bd', 'Betina dewasa', 'int'), F('rmj', 'Remaja', 'int'), F('anak', 'Anak', 'int'),
       F('aktivitas', 'Aktivitas (bisa lebih dari satu)', 'multi', { o: C.aktP, w: 1 }), F('pohonTidur', 'Pohon tidur?', 'sel', { o: C.yn }),
@@ -604,9 +619,10 @@ const FORMS = [
     intro: 'VES menyusuri genangan, parit, dan tepi mangrove; spotlight di sungai atau kuala.',
     legend: 'Kelas ukuran buaya: I < 1 m · II 1–2 m · III 2–3 m · IV > 3 m · MO hanya mata terlihat. Gunakan tema Malam agar layar tidak menyilaukan.',
     key: 'rute',
-    header: [TGL, F('rute', 'Rute / lokasi'), F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
+    header: [F('idSesi', 'ID sesi', 'text', { ph: 'mis. M1' }), TGL, F('jenisSesi', 'Jenis sesi', 'sel', { o: C.malam, w: 1 }), F('rute', 'Rute / lokasi'),
+      F('mulai', 'Jam mulai', 'time'), F('selesai', 'Jam selesai', 'time'),
       F('rekam', 'Rekam track rute', 'track', { w: 1, len: 'panjang', start: 'mulai', end: 'selesai', fmt: 'num' }),
-      F('panjang', 'Panjang rute (m)', 'num'), pengamat(), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 })],
+      F('panjang', 'Panjang rute (m)', 'num'), F('nPengamat', 'Jumlah pengamat', 'int'), pengamat(), F('cuaca', 'Cuaca', 'sel', { o: C.cuaca, w: 1 })],
     tables: [
       { id: 'ves', title: 'VES herpetofauna (F4)', sum: ['jenis', 'mikro'], big: 'jumlah', fields: [
         JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Jenis', 'text', { w: 1 }), F('mikro', 'Mikrohabitat', 'sel', { o: C.mikro, w: 1 }),
@@ -637,7 +653,7 @@ const FORMS = [
     header: [TGL, pengamat(), F('lokasi', 'Lokasi / plot'), COORD, F('mulai', 'Jam mulai', 'time', { def: 'now' }), F('selesai', 'Jam selesai', 'time'),
       F('pasang', 'Kondisi pasang', 'sel', { o: C.pasang, w: 1 })],
     tables: [{ id: 'serangga', title: 'Temuan serangga', sum: ['jenis', 'mikro'], big: 'jumlah', carry: ['mikro', 'roosting'], fields: [
-      JAM, F('jumlah', 'Jumlah', 'int'), F('jenis', 'Ordo / jenis (nama sementara)', 'text', { w: 1, ph: 'mis. Diptera sp. 1' }),
+      JAM, F('kodeTitik', 'Kode titik'), F('durasi', 'Durasi pencarian (menit)', 'num'), F('jumlah', 'Jumlah', 'int'), F('jenis', 'Ordo / jenis (nama sementara)', 'text', { w: 1, ph: 'mis. Diptera sp. 1' }),
       F('mikro', 'Mikrohabitat', 'sel', { o: C.mikroS, w: 1 }), F('roosting', 'Area roosting?', 'sel', { o: C.yn, w: 1 }), COORD, FOTO, CAT ] }] },
 ];
 // Urutan tampil sesuai Paket Dokumen Final: A, B1, B2, C1, C2, D1, D2, E1, E2, F2, F3, F4.
@@ -726,22 +742,43 @@ function defaultFor(f) {
     case 'profile': return S.profile.nama || '';
     case 'gps': return S.profile.gps || '';
     case 'day': return SURVEY_DAYS[today()] || S.profile.hari || '';
-    default: return '';
+    default: return f.dv || '';
   }
 }
 function entriesOf(formId) {
   return Object.values(S.entries).filter(e => e.form === formId).sort((a, b) => (b.created || 0) - (a.created || 0));
 }
 function rowCount(e) { return Object.values(e.tables || {}).reduce((n, rows) => n + rows.length, 0); }
+function avgOf(...v) { const n = v.map(num).filter(x => !isNaN(x)); return n.length ? +(n.reduce((a, b) => a + b, 0) / n.length).toFixed(2) : NaN; }
 function computed(form, table, row, entry) {
   const out = [];
   if (form.id === 'D2' && table.id === 'kuadrat') {
-    const a = quadArea(entry.header.kuadrat);
+    const pj = num(entry.header.kPanjang), lb = num(entry.header.kLebar);
+    const a = pj > 0 && lb > 0 ? pj * lb : quadArea(entry.header.kuadrat);
     if (a > 0) {
       const u = num(row.uca), l = num(row.lubang);
+      out.push(['luasKuadrat', 'Luas kuadrat (m²)', +a.toFixed(3)]);
       if (!isNaN(u)) out.push(['ucaPerM2', 'Uca/m²', +(u / a).toFixed(2)]);
       if (!isNaN(l)) out.push(['lubangPerM2', 'Lubang/m²', +(l / a).toFixed(2)]);
     }
+    const parts = [row.uca, row.kepitingJml, row.gastropodaJml, row.bivalvia, row.lainnyaJml].map(num).filter(x => !isNaN(x));
+    if (parts.length) { const t = parts.reduce((x, y) => x + y, 0); out.push(['totalEpifauna', 'Total epifauna (ind.)', t]); if (a > 0) out.push(['totalPerM2', 'Total/m²', +(t / a).toFixed(2)]); }
+  }
+  if (form.id === 'D1' && table.id === 'air') {
+    [['ph', 'ph2', 'ph3', 'phRata', 'pH rata-rata'], ['suhu', 'suhu2', 'suhu3', 'suhuRata', 'Suhu rata-rata'], ['salinitas', 'sal2', 'sal3', 'salRata', 'Salinitas rata-rata'], ['tds', 'tds2', 'tds3', 'tdsRata', 'TDS/Kond. rata-rata']]
+      .forEach(([a, b, c, k, l]) => { const v = avgOf(row[a], row[b], row[c]); if (!isNaN(v) && [row[b], row[c]].some(x => x !== undefined && x !== '')) out.push([k, l, v]); });
+  }
+  if (form.id === 'C1' && table.id === 'plot') {
+    const pj = num(row.pPanjang), lb = num(row.pLebar);
+    if (pj > 0 && lb > 0) out.push(['luasPlot', 'Luas plot (m²)', +(pj * lb).toFixed(2)]);
+  }
+  if (form.id === 'F4' && table.id === 'serangga') {
+    const d = num(row.durasi), n = num(row.jumlah);
+    if (d > 0 && !isNaN(n)) out.push(['per10mnt', 'Ind. per 10 menit', +(n / d * 10).toFixed(2)]);
+  }
+  if (form.id === 'F2' && table.id === 'jumpa') {
+    const c = [row.jd, row.bd, row.rmj, row.anak].map(num).filter(x => !isNaN(x));
+    if (c.length) { const s = c.reduce((x, y) => x + y, 0); out.push(['komposisi', 'Σ komposisi', s]); if (!isNaN(num(row.total))) out.push(['selisih', 'Selisih total − komposisi', num(row.total) - s]); }
   }
   if (form.id === 'F1' && table.id === 'unit' && row.pasang && row.tglAmbil) {
     const d = (new Date(row.tglAmbil) - new Date(row.pasang.slice(0, 10))) / 86400000;
@@ -845,6 +882,7 @@ function renderEntries() {
 
 function fieldHTML(f, val, scope, extra = {}) {
   if (f.hide) return '';   // diisi dari dalam kotak Rekam track
+  if (f.legacy && (val == null || val === '')) return '';
   const id = `${scope}-${f.k}`;
   const w = f.w ? ' w' : '';
   const attrs = `id="${id}" data-k="${f.k}"`;
@@ -982,7 +1020,7 @@ function renderRow() {
   const comp = computed(form, t, row, e);
   app.innerHTML = `
     <div class="fields" data-scope="r">${t.fields.map(f => fieldHTML(f, row[f.k], 'r', { acc: row[f.k + 'Acc'], obj: row })).join('')}
-      ${(form.id === 'D2' || form.id === 'F1') ? `<div class="field w"><span class="computed" id="computed">${comp.map(c => `${c[1]}: ${c[2]}`).join(' · ')}</span></div>` : ''}
+      <div class="field w"><span class="computed" id="computed">${comp.map(c => `${c[1]}: ${c[2]}`).join(' · ')}</span></div>
     </div>
     ${photoSectionHTML(row._photos || [], 'Foto data ini', 'Ambil foto', 'Untuk foto satwa, tumbuhan, sampel, atau temuan pada baris ini. Nama, jam, dan koordinat GPS dicatat otomatis dan ditulis sebagai watermark di kanan bawah foto; ikut dalam ekspor ZIP (folder foto/).')}
     <div class="sticky-actions">

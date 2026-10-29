@@ -375,6 +375,8 @@ if (!is.null(df_prioritas) && nrow(df_prioritas) > 0) {
 ## bioakustik berbasis BirdNET (mis. Wood & Kahl 2024 di Ecological
 ## Informatics, atau laporan PAM/AWC serupa):
 ##   D1 -- Diagram distribusi confidence keseluruhan (histogram, 2 pita)
+##   D1b -- Diagram distribusi confidence PER SPESIES yang teridentifikasi
+##     (boxplot, top-N spesies terbanyak dari komunitas umum Bagian A)
 ##   D2 -- Distribusi confidence per spesies prioritas yang terdeteksi (boxplot)
 ##   D3 -- Pola aktivitas diel (heatmap jam x spesies)
 ##   D4 -- Kurva akumulasi spesies terhadap urutan file (kecukupan durasi rekam)
@@ -399,6 +401,44 @@ if (!is.null(df_umum) && nrow(df_umum) > 0) {
   message("D1: diagram_confidence_umum_", kode_lokasi, ".png tersimpan.")
 } else {
   message("D1: dilewati -- tidak ada deteksi umum untuk digambar.")
+}
+
+# ---- D1b: Diagram distribusi confidence PER SPESIES teridentifikasi ----
+# Beda dari D1 (satu histogram gabungan): di sini tiap spesies yang
+# teridentifikasi suaranya dapat baris sendiri, diurutkan dari
+# confidence median tertinggi ke terendah -- supaya langsung kelihatan
+# spesies mana yang "suaranya khas" (confidence konsisten tinggi) vs
+# yang ambigu/sering tertukar spesies lain. Dibatasi top-N spesies
+# terbanyak deteksinya supaya diagram tetap terbaca kalau komunitasnya
+# kaya (puluhan spesies).
+n_diagram_spesies <- 25  # naikkan/turunkan sesuai jumlah spesies yang mau ditampilkan
+
+if (!is.null(df_umum) && nrow(df_umum) > 0) {
+  jumlah_spesies_umum <- length(unique(df_umum$nama_ilmiah))
+  top_sp_diagram <- head(rekap_umum$nama_ilmiah, n_diagram_spesies)
+  df_diagram_sp <- df_umum[df_umum$nama_ilmiah %in% top_sp_diagram, ]
+
+  urutan_sp_umum <- aggregate(confidence ~ nama_umum, data = df_diagram_sp, FUN = median)
+  urutan_sp_umum <- urutan_sp_umum[order(urutan_sp_umum$confidence), ]
+  df_diagram_sp$nama_umum_f <- factor(df_diagram_sp$nama_umum, levels = urutan_sp_umum$nama_umum)
+
+  pD1b <- ggplot(df_diagram_sp, aes(x = nama_umum_f, y = confidence)) +
+    geom_boxplot(outlier.shape = NA, fill = "#90caf9", alpha = 0.5) +
+    geom_jitter(aes(color = kategori_confidence), width = 0.15, height = 0, size = 1.1, alpha = 0.55) +
+    geom_hline(yintercept = AMBANG_TINGGI, linetype = "dashed", color = "grey30") +
+    coord_flip() +
+    scale_color_manual(values = setNames(c("#1565c0", "#e65100"), c(LABEL_TINGGI, LABEL_VERIFIKASI))) +
+    labs(title = paste("Distribusi Confidence per Spesies Teridentifikasi --", kode_lokasi),
+         subtitle = paste0("Top ", length(top_sp_diagram), " dari ", jumlah_spesies_umum,
+                            " spesies (diurutkan dari confidence median tertinggi); tiap titik = 1 kandidat deteksi"),
+         x = NULL, y = "Confidence", color = "Pita confidence") +
+    theme_minimal()
+  ggsave(file.path(dir_output, paste0("diagram_confidence_per_spesies_", kode_lokasi, ".png")), pD1b, width = 9,
+         height = max(4, 0.35 * length(top_sp_diagram) + 2), dpi = 150)
+  message("D1b: diagram_confidence_per_spesies_", kode_lokasi, ".png tersimpan (", length(top_sp_diagram),
+          " dari ", jumlah_spesies_umum, " spesies).")
+} else {
+  message("D1b: dilewati -- tidak ada deteksi umum untuk digambar.")
 }
 
 # ---- D2: Distribusi confidence per spesies prioritas (boxplot + titik) ----
@@ -555,7 +595,8 @@ cat("  - rekap_spesies_umum_", kode_lokasi, ".csv -- gambaran komunitas burung k
 cat("  - tabel_ringkasan_jurnal_prioritas_", kode_lokasi, ".csv -- tabel ringkas siap tempel ke bagian Hasil laporan\n", sep = "")
 cat("  - spektrogram/*_tinggi.png dan *_verifikasi.png -- verifikasi visual tiap spesies & pita yang terdeteksi\n")
 cat("    (kalau tidak ada deteksi prioritas: spektrogram/umum_fallback/*.png -- top spesies umum sbg sanity check)\n")
-cat("  - diagram_confidence_umum_", kode_lokasi, ".png -- histogram distribusi confidence (D1)\n", sep = "")
+cat("  - diagram_confidence_umum_", kode_lokasi, ".png -- histogram distribusi confidence gabungan (D1)\n", sep = "")
+cat("  - diagram_confidence_per_spesies_", kode_lokasi, ".png -- boxplot confidence per spesies teridentifikasi, top ", n_diagram_spesies, " (D1b)\n", sep = "")
 cat("  - diagram_confidence_prioritas_", kode_lokasi, ".png -- boxplot confidence per spesies prioritas (D2)\n", sep = "")
 cat("  - heatmap_diel_umum_", kode_lokasi, ".png, diel_spesies_prioritas_", kode_lokasi, ".png -- pola aktivitas per jam (D3)\n", sep = "")
 cat("  - kurva_akumulasi_spesies_", kode_lokasi, ".png -- kecukupan durasi rekam (D4)\n", sep = "")

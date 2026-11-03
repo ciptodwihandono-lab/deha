@@ -234,7 +234,7 @@ const TAXA = [
   { k: 'lain', l: 'Lainnya', c: '#6e6e6e', det: ['Lihat', 'Foto'], akt: [] },
 ];
 const TAX = Object.fromEntries(TAXA.map(t => [t.k, t]));
-const FOTO_TAX = { k: 'foto', l: 'Titik foto', c: '#ffffff' };
+const FOTO_TAX = { k: 'foto', l: 'Belum dikelompokkan', c: '#ffffff' };   // catatan baru / foto yang jenisnya belum dipilih
 const taxOf = k => TAX[k] || FOTO_TAX;
 
 const HABITAT = [['MG', 'Mangrove'], ['MF', 'Mudflat / hamparan lumpur'], ['PP', 'Pantai pasir'], ['VP', 'Vegetasi pantai (cemara, pandan)'],
@@ -710,6 +710,7 @@ function render() {
   document.querySelectorAll('nav.tabs [data-tab]').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
   $('backBtn').hidden = !['survey', 'obs', 'sp'].includes(view.v);
   document.body.classList.toggle('v-obs', view.v === 'obs');
+  $('fab').hidden = view.v !== 'peta';   // di halaman survei/catatan sudah ada tombol Foto sendiri
   const isMap = view.v === 'peta';
   $('mapWrap').hidden = !isMap; app.hidden = isMap;
   if (view.v === 'survey' && !S.surveys[view.id]) view = { v: 'list' };
@@ -719,137 +720,128 @@ function render() {
 }
 
 /* ---------- Daftar survei ---------- */
+let OBS_DETAIL = false;
 function renderList() {
   setTitle('Survei KEHATI', S.profile.pengamat ? `Pengamat: ${S.profile.pengamat}` : 'Keanekaragaman hayati, tanpa sinyal');
-  const list = surveysSorted();
+  const list = surveysSorted(), live = activeSurvey();
   $('app').innerHTML = `
-    <section class="section">
-      <button type="button" class="btn block" data-a="newsurvey">+ Survei baru</button>
-      <p class="note">Satu survei = satu lokasi pada satu waktu (jam mulai–selesai). Di dalamnya dicatat semua taksa, foto bertitik koordinat, luasan, dan deskripsi habitat. Tombol kamera bulat di kanan bawah langsung membuat titik foto di survei yang sedang berjalan.</p>
-    </section>
-    <section class="section"><h2>Survei (${list.length})</h2>
+    ${live ? `<div class="box" style="border-color:var(--bad)"><b>● Survei sedang berjalan</b><span>${esc(surveyName(live))} · mulai ${esc(live.jamMulai)}</span><button type="button" class="btn" data-a="opensurvey" data-id="${live.id}">Lanjutkan survei</button></div>`
+      : `<button type="button" class="btn block" style="min-height:64px;font-size:18px" data-a="startnew">▶ Mulai survei</button>
+         <p class="note">Satu ketukan: tanggal, jam mulai, dan koordinat GPS tercatat otomatis. Lalu cukup tulis nama lokasi dan catat jenis yang ditemukan.</p>`}
+    <section class="section"><h2>Riwayat survei (${list.length})</h2>
       ${list.length ? `<div class="list">${list.map(s => {
         const o = Object.values(s.obs), sp = new Set(o.filter(x => x.tax !== 'foto' && (x.ilmiah || x.nama)).map(x => x.tax + (x.ilmiah || x.nama))).size;
-        const live = activeSurvey() === s, a = areaOf(s).m2;
-        return `<button type="button" class="item" data-a="opensurvey" data-id="${s.id}"><span class="main"><span class="t">${live ? '● ' : ''}${esc(surveyName(s))}</span><br><span class="s">${fmtDate(s.tanggal)}${s.jamMulai ? ` · ${s.jamMulai}–${s.jamSelesai || (live ? 'berjalan' : '?')}` : ''} · ${sp} jenis · ${o.length} catatan${a ? ` · ${fmtArea(a)}` : ''}</span></span><span class="chev">›</span></button>`;
-      }).join('')}</div>` : '<div class="empty">Belum ada survei. Tekan "Survei baru" untuk mulai.</div>'}
+        const isLive = live === s, a = areaOf(s).m2;
+        return `<button type="button" class="item" data-a="opensurvey" data-id="${s.id}"><span class="main"><span class="t">${isLive ? '● ' : ''}${esc(surveyName(s))}</span><br><span class="s">${fmtDate(s.tanggal)}${s.jamMulai ? ` · ${s.jamMulai}–${s.jamSelesai || (isLive ? 'berjalan' : '?')}` : ''} · ${sp} jenis · ${o.length} catatan${a ? ` · ${fmtArea(a)}` : ''}</span></span><span class="chev">›</span></button>`;
+      }).join('')}</div>` : '<div class="empty">Belum ada survei.</div>'}
     </section>`;
 }
 
-/* ---------- Detail survei ---------- */
+/* ---------- Detail survei: lokasi, tombol Foto / Catat jenis, daftar temuan; info lain dilipat ---------- */
 function chipsHTML(opts, sel, attr) { const s = asList(sel); return `<div class="chips">${opts.map(([v, l]) => `<button type="button" class="chip" ${attr} data-v="${esc(v)}" aria-pressed="${s.includes(v)}">${esc(l)}</button>`).join('')}</div>`; }
 function renderSurvey() {
   const s = S.surveys[view.id]; if (!s) return;
   setTitle(surveyName(s), fmtDate(s.tanggal));
   const live = activeSurvey() === s, a = areaOf(s), len = pathLen(s.track), dur = duration(s);
-  const obs = obsList(s), byTax = {};
-  obs.forEach(o => { byTax[o.tax] = (byTax[o.tax] || 0) + 1; });
+  const obs = obsList(s);
   const nsp = new Set(obs.filter(o => o.tax !== 'foto' && (o.ilmiah || o.nama)).map(o => o.tax + (o.ilmiah || o.nama))).size;
-  const nfoto = obs.reduce((n, o) => n + (o._photos || []).length, 0);
+  const nind = obs.filter(o => o.tax !== 'foto').reduce((n, o) => n + (+o.jumlah || 0), 0);
   $('app').innerHTML = `
-    <div class="stats"><div class="stat"><div class="v">${nsp}</div><div class="k">jenis</div></div><div class="stat"><div class="v">${obs.length}</div><div class="k">catatan / titik</div></div><div class="stat"><div class="v">${nfoto}</div><div class="k">foto</div></div></div>
-    <section class="section"><h2>Waktu survei</h2>
-      <div class="timebox">
-        <div class="tb"><span class="k">Jam mulai</span><input type="time" data-s="jamMulai" value="${esc(s.jamMulai)}">${s.mulai ? '' : `<button type="button" class="btn sm" data-a="start">Mulai sekarang</button>`}</div>
-        <div class="tb"><span class="k">Jam selesai</span><input type="time" data-s="jamSelesai" value="${esc(s.jamSelesai)}">${live ? `<button type="button" class="btn sm danger" data-a="stop">Selesai sekarang</button>` : ''}</div>
-      </div>
-      <p class="note">${dur ? `Durasi ${fmtDur(dur)}${live ? ' (berjalan)' : ''}.` : 'Tekan "Mulai sekarang" saat survei dimulai: jam dan koordinat awal dicatat otomatis.'}${s.mulai && s.mulai.lat != null ? ` Titik awal ${fmtCoord(s.mulai.lat, s.mulai.lon)}.` : ''}</p>
-      ${live ? `<label class="check"><input type="checkbox" id="trkOn" ${s.trackOn ? 'checked' : ''}>Rekam jalur GPS selama survei (untuk panjang jalur dan luasan)</label>` : ''}
+    <div class="fields" style="grid-template-columns:1fr">
+      <div class="field"><label>Lokasi survei</label><input type="text" data-s="lokasi" value="${esc(s.lokasi)}" placeholder="mis. Mangrove Pantai Cemara, Jepara"></div>
+      <span class="note">${fmtDate(s.tanggal)} · ${s.jamMulai ? `${esc(s.jamMulai)}–${live ? 'berjalan' : esc(s.jamSelesai || '?')}` : 'belum dimulai'}${dur ? ` · ${fmtDur(dur)}` : ''}${len ? ` · jalur ${fmtLen(len)}` : ''}</span>
+      ${live ? '<button type="button" class="btn danger" data-a="stop">■ Selesai survei</button>' : !s.mulai ? '<button type="button" class="btn" data-a="start">▶ Mulai survei sekarang</button>' : ''}
+    </div>
+    <div class="row"><button type="button" class="btn" style="min-height:60px" data-a="sfoto">📷 Foto</button><button type="button" class="btn" style="min-height:60px" data-a="catat">+ Catat jenis</button></div>
+    <section class="section"><h2>Temuan · ${nsp} jenis · ${nind} individu</h2>
+      ${obs.length ? `<div class="list">${obs.map(o => obsItemHTML(s, o)).join('')}</div>` : '<div class="empty">Belum ada temuan. Tekan <b>Catat jenis</b> atau <b>Foto</b>.</div>'}
     </section>
-    <section class="section"><h2>Lokasi & keterangan</h2>
-      <div class="fields">
-        <div class="field w"><label>Nama survei / stasiun</label><input type="text" data-s="nama" value="${esc(s.nama)}" placeholder="mis. Transek Mangrove 1"></div>
-        <div class="field w"><label>Lokasi (desa, kecamatan, kabupaten)</label><input type="text" data-s="lokasi" value="${esc(s.lokasi)}"></div>
+    <details class="legend"><summary>Info survei (opsional): jam, cuaca, metode, pengamat</summary>
+      <div class="fields" style="margin-top:10px">
+        <div class="field"><label>Jam mulai</label><input type="time" data-s="jamMulai" value="${esc(s.jamMulai)}"></div>
+        <div class="field"><label>Jam selesai</label><input type="time" data-s="jamSelesai" value="${esc(s.jamSelesai)}"></div>
         <div class="field"><label>Tanggal</label><input type="date" data-s="tanggal" value="${esc(s.tanggal)}"></div>
         <div class="field"><label>Cuaca</label><select data-s="cuaca"><option value="">-</option>${CUACA.map(c => `<option ${s.cuaca === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
         <div class="field w"><label>Pengamat / tim</label><input type="text" data-s="pengamat" value="${esc(s.pengamat)}"></div>
         <div class="field w"><span class="lbl">Metode</span>${chipsHTML(METODE.map(m => [m, m]), s.metode, 'data-met')}</div>
+        ${live ? `<div class="field w"><label class="check"><input type="checkbox" id="trkOn" ${s.trackOn ? 'checked' : ''}>Rekam jalur GPS selama survei</label></div>` : ''}
+        <div class="field w"><label>Catatan umum</label><textarea data-s="catatan" rows="2">${esc(s.catatan)}</textarea></div>
       </div>
-    </section>
-    <section class="section"><h2>Luasan survei</h2>
-      <div class="box">
-        <div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><div class="v">${a.m2 ? fmtArea(a.m2) : '-'}</div><div class="k">luas${a.m2 ? ` (${fmtNum(a.m2 / 10000, 3)} ha)` : ''}</div></div><div class="stat"><div class="v">${len ? fmtLen(len) : '-'}</div><div class="k">panjang jalur GPS</div></div></div>
-        <p class="note">${a.how ? 'Dihitung dari ' + esc(a.how) + '.' : 'Pilih cara menghitung luas di bawah.'}</p>
-        <div class="field"><span class="lbl">Cara menghitung</span><div class="chips">
-          <button type="button" class="chip" data-amode="" aria-pressed="${!s.area.mode}">Poligon di peta</button>
+    </details>
+    <details class="legend"><summary>Luasan & deskripsi habitat${a.m2 ? ` · ${fmtArea(a.m2)}` : ''}</summary>
+      <div class="box" style="margin-top:10px">
+        <span>Luas: <b>${a.m2 ? fmtArea(a.m2) + ` (${fmtNum(a.m2 / 10000, 3)} ha)` : 'belum'}</b>${a.how ? ` <span class="note">dari ${esc(a.how)}</span>` : ''}</span>
+        <div class="chips">
+          <button type="button" class="chip" data-amode="" aria-pressed="${!s.area.mode}">Gambar di peta</button>
           <button type="button" class="chip" data-amode="track" aria-pressed="${s.area.mode === 'track'}">Jalur GPS keliling</button>
-          <button type="button" class="chip" data-amode="transek" aria-pressed="${s.area.mode === 'transek'}">Transek (panjang × lebar)</button></div></div>
-        ${s.area.mode === 'transek' ? `<div class="field"><label>Lebar transek / jarak pandang (m)</label><input type="number" inputmode="decimal" data-s="lebarTransek" value="${esc(s.lebarTransek)}"></div>` : ''}
-        ${!s.area.mode ? `<button type="button" class="btn ghost" data-a="drawarea">${s.area.coords.length ? 'Ubah poligon di peta' : 'Gambar poligon di peta'}</button>` : ''}
+          <button type="button" class="chip" data-amode="transek" aria-pressed="${s.area.mode === 'transek'}">Transek (panjang × lebar)</button></div>
+        ${s.area.mode === 'transek' ? `<div class="field"><label>Lebar transek (m)</label><input type="number" inputmode="decimal" data-s="lebarTransek" value="${esc(s.lebarTransek)}"></div>` : ''}
+        ${!s.area.mode ? `<button type="button" class="btn ghost" data-a="drawarea">${s.area.coords.length ? 'Ubah batas di peta' : 'Gambar batas di peta'}</button>` : ''}
+        <label>Deskripsi habitat lokasi</label>
+        <textarea data-s="deskripsi" rows="3" placeholder="Diisi otomatis oleh AI dari foto, atau ketik sendiri">${esc(s.deskripsi)}</textarea>
+        <button type="button" class="btn ghost sm" data-a="aisurvey" ${obs.some(o => (o._photos || []).length) ? '' : 'disabled'}>Isi dengan AI dari foto survei ini</button>
       </div>
-    </section>
-    <section class="section"><h2>Deskripsi habitat lokasi</h2>
-      <textarea data-s="deskripsi" rows="3" placeholder="Tipe habitat, substrat, vegetasi dominan, kondisi, gangguan">${esc(s.deskripsi)}</textarea>
-      <button type="button" class="btn ghost" data-a="aisurvey" ${nfoto ? '' : 'disabled'}>Isi dengan AI dari foto-foto survei ini</button>
-    </section>
-    <section class="section"><h2>Catat temuan</h2>
-      <div class="taxgrid">${TAXA.map(t => `<button type="button" data-a="addobs" data-tax="${t.k}"><span class="dotc" style="background:${t.c}"></span>${t.l}<span class="n">${byTax[t.k] || 0}</span></button>`).join('')}</div>
-    </section>
-    <section class="section"><h2>Catatan & titik (${obs.length})</h2>
-      ${obs.length ? `<div class="list">${obs.map(o => obsItemHTML(s, o)).join('')}</div>` : '<div class="empty">Belum ada catatan. Pilih taksa di atas, atau tekan tombol kamera untuk membuat titik foto.</div>'}
-    </section>
-    <section class="section"><h2>Catatan umum</h2><textarea data-s="catatan" rows="2">${esc(s.catatan)}</textarea></section>
-    <div class="row no-print"><button type="button" class="btn ghost" data-a="mapsurvey">Lihat di peta</button><button type="button" class="btn ghost" data-a="anasurvey">Analisis survei ini</button></div>
+    </details>
+    <div class="row no-print"><button type="button" class="btn ghost" data-a="mapsurvey">Peta</button><button type="button" class="btn ghost" data-a="anasurvey">Analisis</button></div>
     <button type="button" class="btn danger block" data-a="delsurvey">Hapus survei ini</button>`;
 }
 function obsItemHTML(s, o) {
   const t = taxOf(o.tax), sp = o.sp && SP_BY_SCI[o.sp];
-  const name = o.tax === 'foto' ? (o.nama || 'Titik foto') : (o.nama || '(jenis belum diisi)');
-  const tags = [sp && sp.iucn && !['LC', 'DD'].includes(sp.iucn) ? `<span class="tag iucn">${sp.iucn}</span>` : '', sp && sp.p ? '<span class="tag p">Dilindungi</span>' : '', o.aiTax && o.tax === 'foto' ? `<span class="tag ai">AI: ${esc(taxOf(o.aiTax.k).l)}?</span>` : ''].join(' ');
-  return `<button type="button" class="item" data-a="openobs" data-id="${o.id}"><span class="dotc" style="background:${t.c}"></span><span class="main"><span class="t">${esc(name)} ${tags}</span><br><span class="s">${esc(t.l)}${o.ilmiah ? ` · <i class="sci">${esc(o.ilmiah)}</i>` : ''} · ${esc(o.waktu || '')}${o.lat != null ? '' : ' · tanpa GPS'}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}</span></span>${o.tax !== 'foto' && o.jumlah !== '' ? `<span class="count">${esc(o.jumlah)}</span>` : ''}<span class="chev">›</span></button>`;
+  const name = o.nama || ((o._photos || []).length ? 'Foto (jenis belum diisi)' : '(jenis belum diisi)');
+  const tags = [sp && sp.iucn && !['LC', 'DD'].includes(sp.iucn) ? `<span class="tag iucn">${sp.iucn}</span>` : '', sp && sp.p ? '<span class="tag p">Dilindungi</span>' : ''].join(' ');
+  return `<button type="button" class="item" data-a="openobs" data-id="${o.id}"><span class="dotc" style="background:${t.c}"></span><span class="main"><span class="t">${esc(name)} ${tags}</span><br><span class="s">${o.tax !== 'foto' ? esc(t.l) + ' · ' : ''}${o.ilmiah ? `<i class="sci">${esc(o.ilmiah)}</i> · ` : ''}${esc(o.waktu || '')}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}${asList(o.akt).length ? ' · ' + esc(asList(o.akt).join(', ')) : ''}</span></span>${o.tax !== 'foto' && o.jumlah !== '' ? `<span class="count">${esc(o.jumlah)}</span>` : ''}<span class="chev">›</span></button>`;
 }
 
-/* ---------- Form pengamatan ---------- */
+/* ---------- Form catatan: cari jenis → jumlah → aktivitas; sisanya di "Detail lainnya" ---------- */
 function renderObs() {
   const s = S.surveys[view.sid], o = s.obs[view.id], t = taxOf(o.tax);
-  setTitle(o.nama || t.l, surveyName(s));
-  const sp = o.sp && SP_BY_SCI[o.sp], isVeg = o.tax === 'tumbuhan';
-  const aiSug = o.tax === 'foto' && o.aiTax && o.aiTax.k ? `<div class="aibox"><span>AI menduga foto ini berisi <b>${esc(taxOf(o.aiTax.k).l)}</b> (${Math.round(o.aiTax.p * 100)}%).</span><button type="button" class="btn sm" data-a="useaitax">Jadikan ${esc(taxOf(o.aiTax.k).l)}</button></div>` : '';
+  setTitle(o.nama || 'Catat jenis', surveyName(s));
+  const sp = o.sp && SP_BY_SCI[o.sp], picked = !!(o.sp || (o.nama && o.tax !== 'foto'));
   const idp = ID.res && ID.res.target && ID.res.target.oid === o.id ? idPanelHTML('obs') : '';
+  const nph = (o._photos || []).length, isVeg = o.tax === 'tumbuhan';
   $('app').innerHTML = `${idp}
-    <section class="section"><h2>Taksa</h2>
-      <div class="chips">${[...TAXA, FOTO_TAX].map(x => `<button type="button" class="chip" data-tax="${x.k}" aria-pressed="${o.tax === x.k}"><span class="sw" style="background:${x.c};border:1px solid #999"></span>${x.l}</button>`).join('')}</div>
-      ${aiSug}
-    </section>
-    <div class="fields">
-      <div class="field w"><label for="spIn">${o.tax === 'foto' ? 'Nama titik / keterangan' : 'Jenis (ketik nama lokal, Indonesia, atau ilmiah)'}</label>
-        <input type="search" id="spIn" data-o="nama" value="${esc(o.nama)}" autocomplete="off" placeholder="${o.tax === 'foto' ? 'mis. Tepi mangrove utara' : 'mis. kuntul, Egretta, bakau…'}">
+    ${nph ? `<div class="photos" id="photos">${o._photos.map(p => `<button type="button" data-ph="${p.id}" aria-label="${esc(p.name)}"></button>`).join('')}</div>` : ''}
+    ${picked ? `<div class="box"><div style="display:flex;gap:10px;align-items:center"><span class="dotc" style="background:${t.c}"></span><span style="flex:1;min-width:0"><b style="font-size:18px">${esc(o.nama)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br><span class="note">${esc(t.l)}${o.famili ? ' · ' + esc(o.famili) : ''}${sp && sp.iucn ? ' · IUCN ' + esc(sp.iucn) : ''}${sp && sp.p ? ' · <b>Dilindungi</b>' : ''}</span></span><button type="button" class="btn ghost sm" data-a="gantijenis">Ganti</button></div></div>`
+      : `<div class="field"><label for="spIn" style="font-weight:700;font-size:15px">Jenis apa?</label>
+        <input type="search" id="spIn" data-o="nama" value="${esc(o.nama)}" autocomplete="off" placeholder="Ketik nama lokal, Indonesia, atau ilmiah" style="font-size:17px">
         <div id="spSug"></div>
-        ${o.tax !== 'foto' || (o._photos || []).length ? `<button type="button" class="btn ghost sm" data-a="idobs" ${(o._photos || []).length ? '' : 'disabled'}>Identifikasi jenis dari foto (AI)</button>` : ''}
-        ${sp ? `<span class="hint">${esc(sp.f)}${sp.iucn ? ` · IUCN: ${esc(IUCN_LABEL[sp.iucn] || sp.iucn)}` : ''}${sp.p ? ' · <b>Dilindungi</b> (P.106/2018)' : ''}</span>` : ''}</div>
-      ${o.tax !== 'foto' ? `<div class="field"><label>Nama ilmiah</label><input type="text" data-o="ilmiah" value="${esc(o.ilmiah)}" style="font-style:italic"></div>
-      <div class="field"><label>Famili</label><input type="text" data-o="famili" value="${esc(o.famili)}"></div>
-      <div class="field"><label>Jumlah individu</label><input type="number" inputmode="numeric" data-o="jumlah" value="${esc(o.jumlah)}"></div>` : ''}
-      <div class="field"><label>Jam</label><input type="time" data-o="waktu" value="${esc(o.waktu)}"></div>
-      <div class="field${o.tax === 'foto' ? '' : ''}"><label>Stasiun / titik / plot</label><input type="text" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. ST1, P3"></div>
-      ${isVeg ? `<div class="field w"><span class="lbl">Tingkat pertumbuhan</span>${chipsHTML(TINGKAT, o.tingkat, 'data-ting')}</div>
-      <div class="field"><label>Keliling batang (cm)</label><input type="number" inputmode="decimal" data-o="keliling" value="${esc(o.keliling)}"><span class="hint" id="dbhHint">${num(o.keliling) ? `DBH ${fmtNum(num(o.keliling) / Math.PI, 1)} cm` : 'setinggi dada (1,3 m); DBH dihitung otomatis'}</span></div>
-      <div class="field"><label>Tinggi (m)</label><input type="number" inputmode="decimal" data-o="tinggi" value="${esc(o.tinggi)}"></div>` : ''}
-      ${t.det && t.det.length ? `<div class="field w"><span class="lbl">Cara perjumpaan</span>${chipsHTML(t.det.map(x => [x, x]), o.det, 'data-det')}</div>` : ''}
-      ${t.akt && t.akt.length ? `<div class="field w"><span class="lbl">Aktivitas (boleh lebih dari satu)</span>${chipsHTML(t.akt.map(x => [x, x]), o.akt, 'data-akt')}</div>` : ''}
-      <div class="field w"><span class="lbl">Koordinat</span><div class="combo"><input type="text" readonly value="${o.lat != null ? fmtCoord(o.lat, o.lon) + (o.acc ? ` (±${o.acc} m)` : '') : ''}" placeholder="belum ada"><button type="button" class="mini" data-a="gps">Ambil GPS</button></div></div>
-      <div class="field w"><span class="lbl">Habitat</span>${chipsHTML(HABITAT, o.hab, 'data-hab')}</div>
-      <div class="field w"><label>Deskripsi habitat</label><textarea data-o="deskripsi" rows="3">${esc(o.deskripsi)}</textarea><button type="button" class="btn ghost sm" data-a="aiobs" ${(o._photos || []).length ? '' : 'disabled'}>Isi dengan AI dari foto</button></div>
-      <div class="field w"><label>Catatan</label><textarea data-o="catatan" rows="2">${esc(o.catatan)}</textarea></div>
-    </div>
-    <section class="section"><h2>Foto (${(o._photos || []).length})</h2>
-      ${(o._photos || []).length ? `<div class="photos" id="photos">${o._photos.map(p => `<button type="button" data-ph="${p.id}" aria-label="${esc(p.name)}"></button>`).join('')}</div>` : ''}
-      <div class="row"><button type="button" class="btn ghost" data-a="cam">Kamera</button><button type="button" class="btn ghost" data-a="gal">Dari galeri</button></div>
-      <p class="note">Foto diberi watermark (lokasi, jenis, koordinat, tanggal-jam) di kanan bawah dan disimpan tanpa kompresi tambahan.</p>
-    </section>
-    <div class="sticky-actions"><button type="button" class="btn" data-a="obsdone">Selesai</button><button type="button" class="btn ghost" data-a="obsnext">Simpan & catat lagi</button></div>
+        ${nph ? '<button type="button" class="btn ghost sm" data-a="idobs">Bantu kenali dari foto (AI)</button>' : ''}</div>`}
+    ${o.tax !== 'foto' ? `<div class="field"><span class="lbl">Jumlah individu</span><div class="combo"><button type="button" class="mini" data-a="minus" style="font-size:22px;min-width:56px">−</button><input type="number" inputmode="numeric" data-o="jumlah" value="${esc(o.jumlah)}" style="text-align:center;font-size:20px;font-weight:700"><button type="button" class="mini" data-a="plus" style="font-size:22px;min-width:56px">+</button></div></div>` : ''}
+    ${t.akt && t.akt.length ? `<div class="field"><span class="lbl">Aktivitas (boleh lebih dari satu)</span>${chipsHTML(t.akt.map(x => [x, x]), o.akt, 'data-akt')}</div>` : ''}
+    <div class="row"><button type="button" class="btn ghost" data-a="cam">📷 ${nph ? 'Tambah foto' : 'Foto'}</button><button type="button" class="btn ghost" data-a="gal">Dari galeri</button></div>
+    <details class="legend" ${OBS_DETAIL ? 'open' : ''} id="obsDetail"><summary>Detail lainnya (opsional)</summary>
+      <div class="fields" style="margin-top:10px">
+        ${!o.sp && o.tax !== 'foto' ? '' : ''}
+        ${!o.sp ? `<div class="field w"><span class="lbl">Kelompok ${o.nama ? '(jenis diketik bebas)' : ''}</span><div class="chips">${TAXA.map(x => `<button type="button" class="chip" data-tax="${x.k}" aria-pressed="${o.tax === x.k}"><span class="sw" style="background:${x.c}"></span>${x.l}</button>`).join('')}</div></div>
+        <div class="field"><label>Nama ilmiah</label><input type="text" data-o="ilmiah" value="${esc(o.ilmiah)}" style="font-style:italic"></div>
+        <div class="field"><label>Famili</label><input type="text" data-o="famili" value="${esc(o.famili)}"></div>` : ''}
+        ${isVeg ? `<div class="field w"><span class="lbl">Tingkat pertumbuhan (untuk INP)</span>${chipsHTML(TINGKAT, o.tingkat, 'data-ting')}</div>
+        <div class="field"><label>Keliling batang (cm)</label><input type="number" inputmode="decimal" data-o="keliling" value="${esc(o.keliling)}"><span class="hint" id="dbhHint">${num(o.keliling) ? `DBH ${fmtNum(num(o.keliling) / Math.PI, 1)} cm` : 'setinggi dada; DBH dihitung otomatis'}</span></div>
+        <div class="field"><label>Tinggi (m)</label><input type="number" inputmode="decimal" data-o="tinggi" value="${esc(o.tinggi)}"></div>` : ''}
+        <div class="field"><label>Stasiun / plot</label><input type="text" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. ST1, P3"></div>
+        <div class="field"><label>Jam</label><input type="time" data-o="waktu" value="${esc(o.waktu)}"></div>
+        ${t.det && t.det.length ? `<div class="field w"><span class="lbl">Cara perjumpaan</span>${chipsHTML(t.det.map(x => [x, x]), o.det, 'data-det')}</div>` : ''}
+        <div class="field w"><span class="lbl">Habitat</span>${chipsHTML(HABITAT, o.hab, 'data-hab')}</div>
+        <div class="field w"><span class="lbl">Koordinat (otomatis)</span><div class="combo"><input type="text" readonly value="${o.lat != null ? fmtCoord(o.lat, o.lon) + (o.acc ? ` (±${o.acc} m)` : '') : 'mencari GPS…'}"><button type="button" class="mini" data-a="gps">Ulangi</button></div></div>
+        <div class="field w"><label>Deskripsi habitat</label><textarea data-o="deskripsi" rows="2" placeholder="Diisi otomatis oleh AI dari foto">${esc(o.deskripsi)}</textarea>${nph ? '<button type="button" class="btn ghost sm" data-a="aiobs">Isi dengan AI dari foto</button>' : ''}</div>
+        <div class="field w"><label>Catatan</label><textarea data-o="catatan" rows="2">${esc(o.catatan)}</textarea></div>
+      </div>
+    </details>
+    <div class="sticky-actions"><button type="button" class="btn" data-a="obsdone">Simpan</button><button type="button" class="btn ghost" data-a="obsnext">Simpan & catat lagi</button></div>
     <button type="button" class="btn danger block" data-a="delobs">Hapus catatan ini</button>`;
   loadThumbs();
+  const d = $('obsDetail'); if (d) d.addEventListener('toggle', () => { OBS_DETAIL = d.open; });
 }
 function spSearch(q, tax) { return q.trim().length < 2 ? [] : spFind(q, tax, 15); }
+const hintTax = o => o.tax !== 'foto' ? o.tax : (o.hint || '');
 function renderSug() {
   const box = $('spSug'); if (!box) return;
   const s = S.surveys[view.sid], o = s.obs[view.id];
-  const q = $('spIn').value, res = o.tax === 'foto' ? [] : spSearch(q, o.tax);
-  if (o.tax !== 'foto' && res.length < 8) inatSearch(q, renderSug); else INAT.res = [];
-  const local = res.map(x => `<button type="button" data-pick="${esc(x.id)}">${esc(x.n)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''}${x.f ? ` <i>· ${esc(x.f)}</i>` : ''}${x.tax !== o.tax ? ` <span class="tag ai">${esc(taxOf(x.tax).l)}</span>` : ''}</button>`).join('');
-  const remote = o.tax === 'foto' ? '' : inatSugHTML(new Set(res.map(x => x.id)), 'sug');
-  box.innerHTML = local || remote ? `<div class="suggest">${local}${remote}</div>` : (q.trim().length >= 3 && o.tax !== 'foto' ? `<p class="note">Tidak ada di daftar HP${navigator.onLine ? '' : ' (pencarian iNaturalist butuh sinyal)'}. Nama boleh diketik bebas; isi nama ilmiah dan famili bila tahu.</p>` : '');
+  const q = $('spIn').value, res = spSearch(q, hintTax(o));
+  if (res.length < 8) inatSearch(q, renderSug); else INAT.res = [];
+  const local = res.map(x => `<button type="button" data-pick="${esc(x.id)}">${esc(x.n)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''}${x.f ? ` <i>· ${esc(x.f)}</i>` : ''}<span class="tag ai">${esc(taxOf(x.tax).l)}</span></button>`).join('');
+  const remote = inatSugHTML(new Set(res.map(x => x.id)), 'sug');
+  box.innerHTML = local || remote ? `<div class="suggest">${local}${remote}</div>` : (q.trim().length >= 3 ? `<p class="note">Tidak ada di daftar HP${navigator.onLine ? '' : ' (pencarian iNaturalist butuh sinyal)'}. Nama boleh diketik bebas; pilih kelompoknya di <b>Detail lainnya</b>.</p>` : '');
 }
 function pickSpecies(o, x) { Object.assign(o, { sp: x.id, nama: x.n, ilmiah: x.s, famili: x.f, tax: x.tax }); }
 
@@ -890,13 +882,18 @@ $('app').addEventListener('click', async ev => {
     if (b.dataset.akt != null) { toggle(o, 'akt', b.dataset.v); touch(s); return; }
     if (b.dataset.hab != null) { toggle(o, 'hab', b.dataset.v); touch(s); return; }
     if (b.dataset.ting != null) { o.tingkat = o.tingkat === b.dataset.v ? '' : b.dataset.v; touch(s); render(); return; }
-    if (b.dataset.tax != null) { o.tax = b.dataset.tax; if (o.tax !== 'foto' && o.jumlah === '') o.jumlah = 1; touch(s); render(); return; }
-    if (b.dataset.pick) { const x = SP_BY_SCI[b.dataset.pick] || (INAT.cache[b.dataset.pick] && inatAdopt(INAT.cache[b.dataset.pick])); if (x) { pickSpecies(o, x); touch(s); render(); } return; }
+    if (b.dataset.tax != null) { o.tax = b.dataset.tax; if (o.jumlah === '') o.jumlah = 1; OBS_DETAIL = true; touch(s); render(); return; }
+    if (b.dataset.pick) { const x = SP_BY_SCI[b.dataset.pick] || (INAT.cache[b.dataset.pick] && inatAdopt(INAT.cache[b.dataset.pick])); if (x) { pickSpecies(o, x); if (o.jumlah === '') o.jumlah = 1; touch(s); render(); } return; }
     if (b.dataset.ph) { openViewer(b.dataset.ph); return; }
   }
   if (b.dataset.sel) { if (!SP_BY_SCI[b.dataset.sel] && INAT.cache[b.dataset.sel]) inatAdopt(INAT.cache[b.dataset.sel]); go({ v: 'sp', id: b.dataset.sel }); return; }
   switch (a) {
     case 'newsurvey': { const ns = newSurvey(); go({ v: 'survey', id: ns.id }); break; }
+    case 'startnew': { const ns = newSurvey(); go({ v: 'survey', id: ns.id }); await startSurvey(ns); const el = document.querySelector('[data-s=lokasi]'); if (el && !el.value) el.focus(); break; }
+    case 'sfoto': PHOTO_TO = { sid: s.id, oid: null }; askPhotoGeo(); $('camIn').click(); break;
+    case 'catat': { const last = obsList(s).find(x => x.tax !== 'foto'); const no = newObs(s, 'foto', { hint: last ? last.tax : '', jumlah: '', stasiun: last ? last.stasiun : '', hab: last ? [...asList(last.hab)] : [] }); OBS_DETAIL = false; autoGPS(s, no); go({ v: 'obs', sid: s.id, id: no.id }); setTimeout(() => { const el = $('spIn'); if (el) el.focus(); }, 60); break; }
+    case 'gantijenis': Object.assign(o, { sp: '', nama: '', ilmiah: '', famili: '', hint: o.tax !== 'foto' ? o.tax : o.hint, tax: 'foto' }); touch(s); render(); setTimeout(() => { const el = $('spIn'); if (el) el.focus(); }, 60); break;
+    case 'minus': case 'plus': { o.jumlah = Math.max(0, (+o.jumlah || 0) + (a === 'plus' ? 1 : -1)); const el = document.querySelector('[data-o=jumlah]'); if (el) el.value = o.jumlah; touch(s); break; }
     case 'opensurvey': go({ v: 'survey', id: b.dataset.id }); break;
     case 'start': startSurvey(s); break;
     case 'stop': stopSurvey(s); break;
@@ -918,8 +915,13 @@ $('app').addEventListener('click', async ev => {
     case 'idclose': ID.res = null; render(); break;
     case 'cam': PHOTO_TO = { sid: s.id, oid: o.id }; askPhotoGeo(); $('camIn').click(); break;
     case 'gal': PHOTO_TO = { sid: s.id, oid: o.id }; $('galIn').click(); break;
-    case 'obsdone': save(); history.back(); break;
-    case 'obsnext': { save(); const no = newObs(s, o.tax === 'foto' ? 'burung' : o.tax, { stasiun: o.stasiun, hab: [...asList(o.hab)], lat: o.lat, lon: o.lon, acc: o.acc }); autoGPS(s, no); go({ v: 'obs', sid: s.id, id: no.id }, true); break; }
+    case 'obsdone': case 'obsnext': {
+      if (o.nama && !o.sp && o.tax === 'foto') { OBS_DETAIL = true; render(); toast('Jenis diketik bebas: pilih kelompoknya (burung, mamalia, …) di Detail lainnya.'); return; }
+      if (!o.nama && !(o._photos || []).length && o.tax === 'foto') { delete s.obs[o.id]; touch(s); }   // catatan kosong tidak disimpan
+      save();
+      if (a === 'obsdone') { history.back(); break; }
+      const no = newObs(s, 'foto', { hint: hintTax(o), jumlah: '', stasiun: o.stasiun, hab: [...asList(o.hab)], lat: o.lat, lon: o.lon, acc: o.acc }); OBS_DETAIL = false; autoGPS(s, no);
+      go({ v: 'obs', sid: s.id, id: no.id }, true); setTimeout(() => { const el = $('spIn'); if (el) el.focus(); }, 60); break; }
     case 'delobs':
       if (!arm(b, 'delo', 'Ketuk lagi untuk menghapus')) return;
       await deletePhotos(o._photos); delete s.obs[o.id]; touch(s); save(); history.back(); toast('Catatan dihapus'); break;
@@ -976,7 +978,7 @@ async function keepAwake() { try { if ('wakeLock' in navigator) wakeLock = await
 function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && activeSurvey()) { keepAwake(); startTrack(activeSurvey()); } });
 function refreshLive() {
-  const s = activeSurvey(); $('livebar').hidden = !s;
+  const s = activeSurvey(); $('livebar').hidden = !s || (view.v === 'survey' && view.id === s.id);
   if (s) $('liveOpen').textContent = `● ${surveyName(s)} · mulai ${s.jamMulai}${s.trackOn ? ` · jalur ${fmtLen(pathLen(s.track))}` : ''}`;
   setTopVar();
 }
@@ -1112,10 +1114,10 @@ async function addPhotos(files, to) {
   }
   if (!n) { if (made && !o._photos.length) { delete s.obs[o.id]; } save(); return; }
   touch(s); save();
-  toast(`${made ? 'Titik foto dibuat' : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)})` : ' — GPS belum dapat, ambil koordinat nanti'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
+  toast(`${made ? 'Foto tersimpan sebagai titik baru' : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)})` : ' — GPS belum dapat, ambil koordinat nanti'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
   if (aiOn()) aiEnqueue({ sid: s.id, oid: o.id }, true);
   if (view.v === 'peta') { drawSurveyLayers(); }
-  else if (made) go({ v: 'obs', sid: s.id, id: o.id });
+  else if (made) { OBS_DETAIL = false; go({ v: 'obs', sid: s.id, id: o.id }); if (idReady()) idFromObs(s, o); }
   else if (view.v === 'obs' && view.id === o.id) render();
 }
 let thumbURLs = [];

@@ -1,0 +1,17 @@
+{
+ "model_type": "clip",
+ "architectures": [
+  "CLIPModel"
+ ],
+ "projection_dim": 512,
+ "vision_config": {
+  "model_type": "clip_vision_model",
+  "image_size": 224,
+  "patch_size": 16,
+  "hidden_size": 768
+ },
+ "text_config": {
+  "model_type": "clip_text_model"
+ },
+ "_sumber": "imageomics/bioclip (MIT), diekspor untuk Survei KEHATI"
+}

@@ -10,6 +10,8 @@ const SCOPE = self.registration.scope;
 const INDEX = new URL('./index.html', SCOPE).href;
 const OWN = new Set(FILES.map((f) => new URL(f, SCOPE).href));
 const AI_DIR = new URL('./vendor/ai/', SCOPE).href;
+const DATA = 'kehati-data';
+const DATA_DIR = new URL('./data/', SCOPE).href;
 const TILE_HOSTS = ['server.arcgisonline.com', 'tile.openstreetmap.org'];
 
 self.addEventListener('install', (e) => {
@@ -55,6 +57,15 @@ async function aiFile(req, key) {
   if (res.ok) await c.put(key, res.clone());
   return res;
 }
+// Daftar jenis (data/*.json): dipakai dari cache bila ada, lalu diperbarui diam-diam dari server.
+async function dataFile(e, key) {
+  const c = await caches.open(DATA);
+  const hit = await c.match(key);
+  const net = fetch(e.request, { cache: 'no-cache' }).then((res) => { if (res.ok) c.put(key, res.clone()); return res; });
+  if (hit) { e.waitUntil(net.catch(() => {})); return hit; }
+  return net;
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -63,6 +74,7 @@ self.addEventListener('fetch', (e) => {
   if (u.origin !== self.location.origin) return;
   const clean = u.origin + u.pathname;
   if (clean.startsWith(AI_DIR)) { e.respondWith(aiFile(req, clean)); return; }
+  if (clean.startsWith(DATA_DIR)) { e.respondWith(dataFile(e, clean)); return; }
   const isApp = req.mode === 'navigate' ? (clean === SCOPE || clean === INDEX) : OWN.has(clean);
   if (!isApp) return;
   const key = req.mode === 'navigate' || clean === SCOPE ? INDEX : clean;

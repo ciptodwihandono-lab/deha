@@ -49,8 +49,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: build-kehati
-          path: build/*.json
+          name: data-kehati
+          path: |
+            apps/survei-kehati/data
+            tools/taxo
       - name: Simpan hasil
         if: always()
         run: |
@@ -59,5 +61,9 @@ jobs:
           git add apps/survei-kehati/data apps/survei-kehati/model tools/taxo
           git diff --cached --quiet && exit 0
           git commit -m "Daftar jenis Indonesia & data identifikasi BioCLIP ($(date +%F))"
-          git pull --rebase origin "$GITHUB_REF_NAME"
-          git push origin HEAD:"$GITHUB_REF_NAME"
+          # Cabang bisa berubah selama workflow berjalan: ulangi tarik + dorong beberapa kali.
+          for i in 1 2 3 4 5 6; do
+            git pull --rebase origin "$GITHUB_REF_NAME" && git push origin HEAD:"$GITHUB_REF_NAME" && exit 0
+            echo "dorong gagal, coba lagi ($i)"; sleep $((i * 15))
+          done
+          exit 1

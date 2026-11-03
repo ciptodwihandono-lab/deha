@@ -639,6 +639,8 @@ function today() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getM
 function hm(t) { const d = t ? new Date(t * 1000) : new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 const nowS = () => Math.round(Date.now() / 1000);
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+/* Nama jenis untuk tampilan: nama ilmiah selalu miring (italic); nama lokal/Indonesia tegak. */
+function spName(n, s) { n = String(n || ''); s = String(s || ''); return !n || n === s || (!s && /^[A-Z][a-z]+ [a-z-]+( [a-z-]+)?$/.test(n)) ? `<i>${esc(n || s)}</i>` : esc(n); }
 function num(v) { if (v == null || v === '') return NaN; return parseFloat(String(v).replace(',', '.')); }
 const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 function fmtDate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? `${+m[3]} ${BULAN[+m[2] - 1]} ${m[1]}` : (s || '-'); }
@@ -723,7 +725,7 @@ $('tabs').addEventListener('click', ev => {
   const t = b.dataset.tab;
   go(t === 'survei' ? { v: 'list' } : t === 'jenis' ? { v: 'jenis' } : { v: t });
 });
-function setTitle(t, sub) { $('title').innerHTML = esc(t) + (sub ? `<span class="sub">${esc(sub)}</span>` : ''); }
+function setTitle(t, sub, sci) { $('title').innerHTML = (sci && t === sci ? `<i>${esc(t)}</i>` : esc(t)) + (sub ? `<span class="sub">${sci && sub === sci ? `<i>${esc(sub)}</i>` : esc(sub)}</span>` : ''); }
 function render() {
   const app = $('app');
   const tab = TAB_OF[view.v] || 'survei';
@@ -749,7 +751,7 @@ function renderKoleksi() {
   $('app').innerHTML = `
     <div class="row"><button type="button" class="btn" style="min-height:60px" data-a="kfoto">📷 Foto pengamatan</button><button type="button" class="btn ghost" style="min-height:60px" data-a="kgal">Dari galeri</button></div>
     <p class="note">Setiap foto menjadi satu pengamatan (tanggal, jam, dan koordinat otomatis). ${idReady() ? 'AI langsung memberi saran jenis.' : 'Unduh data identifikasi di tab Data agar AI bisa memberi saran jenis.'} Pengamatan juga bisa disimpan ke sini dari tab Jenis.</p>
-    ${obs.length ? `<div class="kgrid">${obs.map(o => { const ph = (o._photos || [])[0]; return `<button type="button" class="kcard" data-a="openobs" data-sid="koleksi" data-id="${o.id}"><span class="kimg" ${ph ? `data-kth="${ph.id}"` : ''}>${ph ? '' : 'tanpa foto'}</span><span class="kt"><b>${esc(o.nama || 'Belum dikenali')}</b>${o.ilmiah && o.ilmiah !== o.nama ? `<i>${esc(o.ilmiah)}</i><br>` : ''}${fmtDate(isoDate(o.t))} · ${esc(o.waktu || '')}</span></button>`; }).join('')}</div>` : '<div class="empty">Belum ada pengamatan. Tekan <b>Foto pengamatan</b>.</div>'}
+    ${obs.length ? `<div class="kgrid">${obs.map(o => { const ph = (o._photos || [])[0]; return `<button type="button" class="kcard" data-a="openobs" data-sid="koleksi" data-id="${o.id}"><span class="kimg" ${ph ? `data-kth="${ph.id}"` : ''}>${ph ? '' : 'tanpa foto'}</span><span class="kt"><b>${o.nama ? spName(o.nama, o.ilmiah) : 'Belum dikenali'}</b>${o.ilmiah && o.ilmiah !== o.nama ? `<i>${esc(o.ilmiah)}</i><br>` : ''}${fmtDate(isoDate(o.t))} · ${esc(o.waktu || '')}</span></button>`; }).join('')}</div>` : '<div class="empty">Belum ada pengamatan. Tekan <b>Foto pengamatan</b>.</div>'}
     <div class="row no-print"><button type="button" class="btn ghost" data-a="mapsurvey" data-sid="koleksi">Peta koleksi</button><button type="button" class="btn ghost" data-a="anasurvey" data-sid="koleksi">Analisis koleksi</button></div>`;
   loadKThumbs();
 }
@@ -827,19 +829,19 @@ function obsItemHTML(s, o) {
   const t = taxOf(o.tax), sp = o.sp && SP_BY_SCI[o.sp];
   const name = o.nama || ((o._photos || []).length ? 'Foto (jenis belum diisi)' : '(jenis belum diisi)');
   const tags = [sp && sp.iucn && !['LC', 'DD'].includes(sp.iucn) ? `<span class="tag iucn">${sp.iucn}</span>` : '', sp && sp.p ? '<span class="tag p">Dilindungi</span>' : ''].join(' ');
-  return `<button type="button" class="item" data-a="openobs" data-id="${o.id}"><span class="dotc" style="background:${t.c}"></span><span class="main"><span class="t">${esc(name)} ${tags}</span><br><span class="s">${o.tax !== 'foto' ? esc(t.l) + ' · ' : ''}${o.ilmiah ? `<i class="sci">${esc(o.ilmiah)}</i> · ` : ''}${esc(o.waktu || '')}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}${asList(o.akt).length ? ' · ' + esc(asList(o.akt).join(', ')) : ''}</span></span>${o.tax !== 'foto' && o.jumlah !== '' ? `<span class="count">${esc(o.jumlah)}</span>` : ''}<span class="chev">›</span></button>`;
+  return `<button type="button" class="item" data-a="openobs" data-id="${o.id}"><span class="dotc" style="background:${t.c}"></span><span class="main"><span class="t">${o.nama ? spName(o.nama, o.ilmiah) : esc(name)} ${tags}</span><br><span class="s">${o.tax !== 'foto' ? esc(t.l) + ' · ' : ''}${o.ilmiah ? `<i class="sci">${esc(o.ilmiah)}</i> · ` : ''}${esc(o.waktu || '')}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}${asList(o.akt).length ? ' · ' + esc(asList(o.akt).join(', ')) : ''}</span></span>${o.tax !== 'foto' && o.jumlah !== '' ? `<span class="count">${esc(o.jumlah)}</span>` : ''}<span class="chev">›</span></button>`;
 }
 
 /* ---------- Form catatan: cari jenis → jumlah → aktivitas; sisanya di "Detail lainnya" ---------- */
 function renderObs() {
   const s = S.surveys[view.sid], o = s.obs[view.id], t = taxOf(o.tax);
-  setTitle(o.nama || 'Catat jenis', surveyName(s));
+  setTitle(o.nama || 'Catat jenis', surveyName(s), o.ilmiah);
   const sp = o.sp && SP_BY_SCI[o.sp], picked = !!(o.sp || (o.nama && o.tax !== 'foto'));
   const idp = ID.res && ID.res.target && ID.res.target.oid === o.id ? idPanelHTML('obs') : '';
   const nph = (o._photos || []).length, isVeg = o.tax === 'tumbuhan';
   $('app').innerHTML = `${idp}
     ${nph ? `<div class="photos" id="photos">${o._photos.map(p => `<button type="button" data-ph="${p.id}" aria-label="${esc(p.name)}"></button>`).join('')}</div>` : ''}
-    ${picked ? `<div class="box"><div style="display:flex;gap:10px;align-items:center"><span class="dotc" style="background:${t.c}"></span><span style="flex:1;min-width:0"><b style="font-size:18px">${esc(o.nama)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br><span class="note">${esc(t.l)}${o.famili ? ' · ' + esc(o.famili) : ''}${sp && sp.iucn ? ' · IUCN ' + esc(sp.iucn) : ''}${sp && sp.p ? ' · <b>Dilindungi</b>' : ''}</span></span><button type="button" class="btn ghost sm" data-a="gantijenis">Ganti</button></div></div>`
+    ${picked ? `<div class="box"><div style="display:flex;gap:10px;align-items:center"><span class="dotc" style="background:${t.c}"></span><span style="flex:1;min-width:0"><b style="font-size:18px">${spName(o.nama, o.ilmiah)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br><span class="note">${esc(t.l)}${o.famili ? ' · ' + esc(o.famili) : ''}${sp && sp.iucn ? ' · IUCN ' + esc(sp.iucn) : ''}${sp && sp.p ? ' · <b>Dilindungi</b>' : ''}</span></span><button type="button" class="btn ghost sm" data-a="gantijenis">Ganti</button></div></div>`
       : `<div class="field"><label for="spIn" style="font-weight:700;font-size:15px">Jenis apa?</label>
         <input type="search" id="spIn" data-o="nama" value="${esc(o.nama)}" autocomplete="off" placeholder="Ketik nama lokal, Indonesia, atau ilmiah" style="font-size:17px">
         <div id="spSug"></div>
@@ -877,7 +879,7 @@ function renderSug() {
   const s = S.surveys[view.sid], o = s.obs[view.id];
   const q = $('spIn').value, res = spSearch(q, hintTax(o));
   if (res.length < 8) inatSearch(q, renderSug); else INAT.res = [];
-  const local = res.map(x => `<button type="button" data-pick="${esc(x.id)}">${esc(x.n)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''}${x.f ? ` <i>· ${esc(x.f)}</i>` : ''}<span class="tag ai">${esc(taxOf(x.tax).l)}</span></button>`).join('');
+  const local = res.map(x => `<button type="button" data-pick="${esc(x.id)}">${spName(x.n, x.s)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''}${x.f ? ` <i>· ${esc(x.f)}</i>` : ''}<span class="tag ai">${esc(taxOf(x.tax).l)}</span></button>`).join('');
   const remote = inatSugHTML(new Set(res.map(x => x.id)), 'sug');
   box.innerHTML = local || remote ? `<div class="suggest">${local}${remote}</div>` : (q.trim().length >= 3 ? `<p class="note">Tidak ada di daftar HP${navigator.onLine ? '' : ' (pencarian iNaturalist butuh sinyal)'}. Nama boleh diketik bebas; pilih kelompoknya di <b>Detail lainnya</b>.</p>` : '');
 }
@@ -943,7 +945,7 @@ $('app').addEventListener('click', async ev => {
     case 'openobs': go({ v: 'obs', sid: b.dataset.sid || s.id, id: b.dataset.id }); break;
     case 'openkoleksi': koleksi(); go({ v: 'koleksi' }); break;
     case 'kfoto': PHOTO_TO = { sid: 'koleksi', oid: null }; askPhotoGeo(); $('camIn').click(); break;
-    case 'kgal': PHOTO_TO = { sid: 'koleksi', oid: null }; $('galIn').click(); break;
+    case 'kgal': PHOTO_TO = { sid: 'koleksi', oid: null }; askPhotoGeo(); $('galIn').click(); break;
     case 'delsurvey':
       if (!arm(b, 'dels', 'Ketuk lagi untuk menghapus survei & fotonya')) return;
       for (const x of Object.values(s.obs)) await deletePhotos(x._photos);
@@ -955,7 +957,7 @@ $('app').addEventListener('click', async ev => {
     case 'idpick': { const x = SP_BY_SCI[b.dataset.id]; if (x) { pickSpecies(o, x); if (o.jumlah === '') o.jumlah = 1; ID.res = null; touch(s); render(); window.scrollTo(0, 0); toast(`Jenis dipilih: ${x.n}`); } break; }
     case 'idclose': ID.res = null; render(); break;
     case 'cam': PHOTO_TO = { sid: s.id, oid: o.id }; askPhotoGeo(); $('camIn').click(); break;
-    case 'gal': PHOTO_TO = { sid: s.id, oid: o.id }; $('galIn').click(); break;
+    case 'gal': PHOTO_TO = { sid: s.id, oid: o.id }; askPhotoGeo(); $('galIn').click(); break;
     case 'obsdone': case 'obsnext': {
       if (o.nama && !o.sp && o.tax === 'foto') { OBS_DETAIL = true; render(); toast('Jenis diketik bebas: pilih kelompoknya (burung, mamalia, …) di Detail lainnya.'); return; }
       if (!o.nama && !(o._photos || []).length && o.tax === 'foto') { delete s.obs[o.id]; touch(s); }   // catatan kosong tidak disimpan
@@ -1124,7 +1126,7 @@ $('fab').addEventListener('click', () => {
 });
 ['camIn', 'galIn'].forEach(id => $(id).addEventListener('change', ev => {
   const files = [...ev.target.files]; ev.target.value = '';
-  if (files.length && PHOTO_TO) addPhotos(files, PHOTO_TO);
+  if (files.length && PHOTO_TO) addPhotos(files, Object.assign({}, PHOTO_TO, { gallery: id === 'galIn' }));
   PHOTO_TO = null;
 }));
 function photoName(s, o, taken) {
@@ -1132,31 +1134,88 @@ function photoName(s, o, taken) {
   const base = (o.tax === 'foto' ? 'FOTO' : (o.nama || taxOf(o.tax).l)).replace(/[^\w-]+/g, '_').slice(0, 30);
   return `${base}_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
+/* Baca lokasi GPS dan waktu potret dari data EXIF foto (untuk foto dari galeri). */
+async function readExif(file) {
+  try {
+    const b = new Uint8Array(await file.slice(0, 262144).arrayBuffer());
+    if (b[0] !== 0xFF || b[1] !== 0xD8) return {};
+    let i = 2;
+    while (i + 10 < b.length && b[i] === 0xFF) {
+      const mk = b[i + 1], len = (b[i + 2] << 8) | b[i + 3];
+      if (mk === 0xE1 && b[i + 4] === 0x45 && b[i + 5] === 0x78 && b[i + 6] === 0x69 && b[i + 7] === 0x66) return parseTiff(new DataView(b.buffer, i + 10, Math.min(len - 8, b.length - i - 10)));
+      if (mk === 0xDA) break;
+      i += 2 + len;
+    }
+  } catch (e) { console.warn(e); }
+  return {};
+}
+function parseTiff(dv) {
+  const out = {};
+  try {
+    const le = dv.getUint16(0) === 0x4949, u16 = o => dv.getUint16(o, le), u32 = o => dv.getUint32(o, le);
+    const SZ = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+    const ifd = off => { const n = u16(off), m = {}; for (let k = 0; k < n; k++) { const e = off + 2 + k * 12; m[u16(e)] = { type: u16(e + 2), count: u32(e + 4), off: e + 8 }; } return m; };
+    const at = en => en.count * (SZ[en.type] || 1) > 4 ? u32(en.off) : en.off;
+    const str = en => { const o = at(en); let s = ''; for (let k = 0; k < en.count; k++) { const c = dv.getUint8(o + k); if (!c) break; s += String.fromCharCode(c); } return s; };
+    const rat = o => u32(o) / (u32(o + 4) || 1);
+    const i0 = ifd(u32(4));
+    if (i0[0x8825]) {
+      const g = ifd(u32(i0[0x8825].off));
+      if (g[2] && g[4]) {
+        const dms = en => { const o = at(en); return rat(o) + rat(o + 8) / 60 + rat(o + 16) / 3600; };
+        let lat = dms(g[2]), lon = dms(g[4]);
+        if (g[1] && str(g[1]) === 'S') lat = -lat;
+        if (g[3] && str(g[3]) === 'W') lon = -lon;
+        if (isFinite(lat) && isFinite(lon) && (lat || lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) Object.assign(out, { lat: +lat.toFixed(7), lon: +lon.toFixed(7) });
+      }
+    }
+    const x = i0[0x8769] ? ifd(u32(i0[0x8769].off)) : {};
+    const en = x[0x9003] || x[0x9004] || i0[0x0132];
+    const m = en && /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(str(en));
+    if (m) out.t = Math.round(new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) / 1000);
+  } catch (e) { console.warn(e); }
+  return out;
+}
+/* Simpan foto ke catatan (atau buat catatan baru). Foto kamera diberi watermark; foto dari galeri disimpan
+   asli tanpa watermark, lokasi dan waktunya diambil dari data foto (EXIF) dan dicatat di Catatan. */
 async function addPhotos(files, to) {
   const s = S.surveys[to.sid]; if (!s) return;
+  const gal = !!to.gallery;
   let o = to.oid && s.obs[to.oid], made = false;
   const geo = roundC(await (photoGeo || Promise.resolve(null)).catch(() => null)); photoGeo = null;
   if (!o) { o = newObs(s, 'foto'); made = true; }
-  if (o.lat == null && geo) Object.assign(o, geo);
+  const firstPhoto = !(o._photos || []).length;
+  if (o.lat == null && geo && !gal) Object.assign(o, geo);
   toast(files.length > 1 ? `Menyimpan ${files.length} foto…` : 'Menyimpan foto…');
   let n = 0;
+  const notes = [];
   for (const file of files) {
     try {
-      const taken = Math.round((file.lastModified || Date.now()) / 1000);
-      const pos = geo || (o.lat != null ? { lat: o.lat, lon: o.lon, acc: o.acc } : null);
-      const wm = withWatermark() ? wmLines(s, o, pos && pos.lat, pos && pos.lon, pos && pos.acc, taken) : null;
+      const ex = gal ? await readExif(file) : {};
+      const taken = ex.t || Math.round((file.lastModified || Date.now()) / 1000);
+      const hasGps = ex.lat != null;
+      const pos = hasGps ? { lat: ex.lat, lon: ex.lon, acc: null } : gal ? (o.lat != null ? { lat: o.lat, lon: o.lon, acc: o.acc } : geo) : (geo || (o.lat != null ? { lat: o.lat, lon: o.lon, acc: o.acc } : null));
+      if (gal && firstPhoto && n === 0) {
+        // Catatan mengikuti foto: lokasi dan waktu tempat foto diambil.
+        if (pos) Object.assign(o, { lat: pos.lat, lon: pos.lon, acc: pos.acc });
+        if (ex.t) { o.t = ex.t; o.waktu = hm(ex.t); }
+      }
+      const wm = !gal && withWatermark() ? wmLines(s, o, pos && pos.lat, pos && pos.lon, pos && pos.acc, taken) : null;
       const big = await fullPhoto(file, wm), small = await shrink(big.blob, THUMB_MAX), id = rid();
       await pdbPut('foto', id, big.blob); await pdbPut('thumb', id, small.blob);
       let name = photoName(s, o, taken), k = 1; const all = Object.values(s.obs).flatMap(x => x._photos || []);
       while (all.some(p => p.name === name + '.jpg')) name = photoName(s, o, taken) + '_' + (++k);
-      o._photos.push({ id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size, ...(pos || {}), wm: !!wm });
+      const ket = gal ? `Foto galeri ${name}.jpg: diambil ${fmtDate(isoDate(taken))} ${hm(taken)}${hasGps ? `, lokasi dari foto ${fmtCoord(pos.lat, pos.lon)}` : pos ? `, foto tanpa data lokasi (dipakai lokasi ${fmtCoord(pos.lat, pos.lon)})` : ', foto tanpa data lokasi'}.` : '';
+      if (ket) notes.push(ket);
+      o._photos.push({ id, name: name + '.jpg', t: taken, w: big.w, h: big.h, size: big.blob.size, ...(pos || {}), wm: !!wm, src: gal ? 'galeri' : 'kamera', gps: hasGps ? 'foto' : pos ? 'hp' : '', ket });
       n++;
     } catch (e) { console.warn(e); toast('Foto gagal disimpan. Memori HP mungkin penuh.'); }
   }
   if (!n) { if (made && !o._photos.length) { delete s.obs[o.id]; } save(); return; }
+  if (notes.length) o.catatan = [String(o.catatan || '').trim(), ...notes].filter(Boolean).join('\n');
   touch(s); save();
   if (o.lat == null) autoGPS(s, o);   // GPS belum dapat saat foto disimpan: coba lagi di latar belakang
-  toast(`${made ? 'Foto tersimpan sebagai titik baru' : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)})` : ' — GPS belum dapat, ambil koordinat nanti'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
+  toast(`${made ? 'Foto tersimpan sebagai titik baru' : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)}${gal ? (o._photos[o._photos.length - 1].gps === 'foto' ? ', lokasi dari foto' : ', foto tanpa data lokasi') : ''})` : ' — lokasi belum ada'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
   if (aiOn()) aiEnqueue({ sid: s.id, oid: o.id }, true);
   if (view.v === 'peta') { drawSurveyLayers(); }
   else if (made) { OBS_DETAIL = false; go({ v: 'obs', sid: s.id, id: o.id }); if (idReady()) idFromObs(s, o); }
@@ -1176,7 +1235,7 @@ async function openViewer(id) {
   if (!b) { toast('File foto ini tidak ada di HP ini.'); return; }
   viewerPhoto = ph; if (viewerURL) URL.revokeObjectURL(viewerURL); viewerURL = URL.createObjectURL(b);
   $('viewerImg').src = viewerURL;
-  $('viewerCap').textContent = `${ph.name} · ${hm(ph.t)}${ph.lat != null ? ` · ${fmtCoord(ph.lat, ph.lon)}${ph.acc ? ` (±${ph.acc} m)` : ''}` : ''}`;
+  $('viewerCap').textContent = ph.ket || `${ph.name} · ${hm(ph.t)}${ph.lat != null ? ` · ${fmtCoord(ph.lat, ph.lon)}${ph.acc ? ` (±${ph.acc} m)` : ''}` : ''}`;
   const del = $('viewerDel'); del.classList.remove('armed'); del.textContent = 'Hapus foto';
   $('viewer').hidden = false;
 }
@@ -1227,7 +1286,7 @@ function drawSurveyLayers() {
       const mk = o.tax === 'foto'
         ? L.marker([o.lat, o.lon], { icon: L.divIcon({ className: '', html: `<div class="pin cam">${CAM_SVG}</div>`, iconSize: [24, 24] }) })
         : L.marker([o.lat, o.lon], { icon: L.divIcon({ className: '', html: `<div class="pin" style="background:${t.c}"></div>`, iconSize: [18, 18] }) });
-      mk.bindPopup(`<b>${esc(o.tax === 'foto' ? o.nama || 'Titik foto' : o.nama || t.l)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' ? ` · ${esc(o.jumlah)} ind.` : ''}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}<br><button type="button" class="btn sm" style="margin-top:6px" data-mopen="${s.id}|${o.id}">Buka</button>`);
+      mk.bindPopup(`<b>${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? 'Titik foto' : t.l)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' ? ` · ${esc(o.jumlah)} ind.` : ''}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}<br><button type="button" class="btn sm" style="margin-top:6px" data-mopen="${s.id}|${o.id}">Buka</button>`);
       mk.addTo(MAP.layers);
     }
   }
@@ -1372,10 +1431,10 @@ function faunaHTML(st, title) {
       <div class="stat"><div class="v">${fmtNum(st.R)}</div><div class="k">kekayaan Margalef R</div></div>
     </div>
     <p class="note">${st.nst} stasiun/titik. H' &lt; 1 rendah, 1–3 sedang, &gt; 3 tinggi; E &lt; 0,4 rendah, 0,4–0,6 sedang, &gt; 0,6 tinggi. Dominansi: &gt; 5% dominan, 2–5% subdominan.</p>
-    ${prot.length ? `<div class="box"><b>Jenis penting (${prot.length})</b>${prot.map(x => `<span>${esc(x.nama)} <i>${esc(x.ilmiah)}</i> ${x.sp.iucn ? `<span class="tag iucn">${x.sp.iucn}</span>` : ''} ${x.sp.p ? '<span class="tag p">Dilindungi</span>' : ''} · ${x.n} ind.</span>`).join('')}</div>` : ''}
-    <div class="box"><b>Jumlah individu terbanyak</b><div class="bars">${top.map(x => `<div class="b"><span>${esc(x.nama)}</span><span class="m"><i style="width:${(x.n / mx * 100).toFixed(1)}%"></i></span><span class="count">${x.n}</span></div>`).join('')}</div></div>
+    ${prot.length ? `<div class="box"><b>Jenis penting (${prot.length})</b>${prot.map(x => `<span>${spName(x.nama, x.ilmiah)} <i>${esc(x.ilmiah)}</i> ${x.sp.iucn ? `<span class="tag iucn">${x.sp.iucn}</span>` : ''} ${x.sp.p ? '<span class="tag p">Dilindungi</span>' : ''} · ${x.n} ind.</span>`).join('')}</div>` : ''}
+    <div class="box"><b>Jumlah individu terbanyak</b><div class="bars">${top.map(x => `<div class="b"><span>${spName(x.nama, x.ilmiah)}</span><span class="m"><i style="width:${(x.n / mx * 100).toFixed(1)}%"></i></span><span class="count">${x.n}</span></div>`).join('')}</div></div>
     <div class="scroll"><table class="tbl"><tr><th>Jenis</th><th>n</th><th>Di %</th><th>Frek.</th><th>Status</th></tr>
-      ${st.list.map(x => `<tr><td>${esc(x.nama)}<br><i>${esc(x.ilmiah || '')}${x.famili ? ' · ' + esc(x.famili) : ''}</i></td><td>${x.n}</td><td>${fmtNum(x.di, 1)}<br><i>${dClass(x.di)}</i></td><td>${fmtNum(x.fr)}</td><td>${x.sp ? [x.sp.iucn, x.sp.p ? 'P' : ''].filter(Boolean).join(' · ') : ''}</td></tr>`).join('')}
+      ${st.list.map(x => `<tr><td>${spName(x.nama, x.ilmiah)}<br><i>${esc(x.ilmiah || '')}${x.famili ? ' · ' + esc(x.famili) : ''}</i></td><td>${x.n}</td><td>${fmtNum(x.di, 1)}<br><i>${dClass(x.di)}</i></td><td>${fmtNum(x.fr)}</td><td>${x.sp ? [x.sp.iucn, x.sp.p ? 'P' : ''].filter(Boolean).join(' · ') : ''}</td></tr>`).join('')}
       <tr class="tot"><td>Total ${st.S} jenis</td><td>${st.N}</td><td>100</td><td></td><td></td></tr></table></div>
     <div class="box"><b>Komposisi famili</b><div class="bars">${famList.map(([f, n]) => `<div class="b"><span>${esc(f)}</span><span class="m"><i style="width:${(n / famList[0][1] * 100).toFixed(1)}%"></i></span><span class="count">${n} jenis</span></div>`).join('')}</div></div>
   </section>`;
@@ -1388,7 +1447,7 @@ function vegHTML(rows) {
     ${Object.keys(v.res).length ? '' : '<div class="empty">Isi "Tingkat pertumbuhan" (pohon/tiang/pancang/semai) pada catatan tumbuhan agar INP bisa dihitung.</div>'}
     ${TINGKAT.filter(([k]) => v.res[k]).map(([k, l]) => { const r = v.res[k]; return `<div class="box"><b>${esc(l)}</b><span class="note">${r.nPlot} plot × ${side[k]}×${side[k]} m = ${fmtNum(r.areaHa, 4)} ha · H' ${fmtNum(r.H)} (${hLabel(r.H)})${r.noDbh ? ' · keliling batang belum diisi, DR = 0' : ''}</span>
       <div class="scroll"><table class="tbl"><tr><th>Jenis</th><th>n</th><th>K/ha</th><th>KR</th><th>FR</th>${r.withD ? '<th>DR</th>' : ''}<th>INP</th></tr>
-      ${r.list.map(x => `<tr><td>${esc(x.nama)}<br><i>${esc(x.ilmiah || '')}</i></td><td>${x.n}</td><td>${fmtNum(x.K, 0)}</td><td>${fmtNum(x.KR, 1)}</td><td>${fmtNum(x.FR, 1)}</td>${r.withD ? `<td>${fmtNum(x.DR, 1)}</td>` : ''}<td><b>${fmtNum(x.INP, 1)}</b></td></tr>`).join('')}</table></div></div>`; }).join('')}
+      ${r.list.map(x => `<tr><td>${spName(x.nama, x.ilmiah)}<br><i>${esc(x.ilmiah || '')}</i></td><td>${x.n}</td><td>${fmtNum(x.K, 0)}</td><td>${fmtNum(x.KR, 1)}</td><td>${fmtNum(x.FR, 1)}</td>${r.withD ? `<td>${fmtNum(x.DR, 1)}</td>` : ''}<td><b>${fmtNum(x.INP, 1)}</b></td></tr>`).join('')}</table></div></div>`; }).join('')}
   </section>`;
 }
 $('app').addEventListener('click', ev => {
@@ -1453,20 +1512,20 @@ function renderJenisList() {
   $('jnCount').textContent = `${list.length.toLocaleString('id-ID')} jenis${nrec ? ` · ${nrec} sudah tercatat` : ''}${list.length > 200 ? ' · tampil 200 teratas, persempit pencarian' : ''}`;
   if (words.length && list.length < 8) inatSearch(q, renderJenisList); else INAT.res = [];
   const remote = words.length ? inatSugHTML(new Set(list.map(x => x.id)), 'list') : '';
-  $('jnList').innerHTML = (list.slice(0, 200).map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${esc(x.n)} ${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span>` : ''} ${x.p ? '<span class="tag p">Dilindungi</span>' : ''}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s || '')}</i> · ` : ''}${esc(x.f || '')}${x.en ? ' · ' + esc(x.en) : ''}</span></span>${x.rec ? `<span class="count">${x.ind}</span>` : ''}<span class="chev">›</span></button>`).join('') ) + remote || `<div class="empty">Tidak ada di daftar HP.${navigator.onLine ? '' : ' Pencarian iNaturalist butuh sinyal.'}</div>`;
+  $('jnList').innerHTML = (list.slice(0, 200).map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${spName(x.n, x.s)} ${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span>` : ''} ${x.p ? '<span class="tag p">Dilindungi</span>' : ''}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s || '')}</i> · ` : ''}${esc(x.f || '')}${x.en ? ' · ' + esc(x.en) : ''}</span></span>${x.rec ? `<span class="count">${x.ind}</span>` : ''}<span class="chev">›</span></button>`).join('') ) + remote || `<div class="empty">Tidak ada di daftar HP.${navigator.onLine ? '' : ' Pencarian iNaturalist butuh sinyal.'}</div>`;
 }
 $('app').addEventListener('click', ev => { const b = ev.target.closest('[data-jtax]'); if (b) { JN.tax = b.dataset.jtax; renderJenis(); } });
 function renderSp() {
   const rec = recordedSpecies();
   const x = SP_BY_SCI[view.id] || rec.get(view.id);
   if (!x && !SP_META.loaded) { loadSpeciesData().then(() => { if (view.v === 'sp') render(); }); $('app').innerHTML = '<div class="empty">Memuat…</div>'; return; } if (!x) { go({ v: 'jenis' }, true); return; }
-  setTitle(x.n, x.s);
+  setTitle(x.n, x.n !== x.s ? x.s : '', x.s);
   const recs = [];
   Object.values(S.surveys).forEach(s => Object.values(s.obs).forEach(o => { if ((o.sp && o.sp === x.id) || (!o.sp && x.custom && 'custom:' + o.tax + ':' + spKey(o) === x.id)) recs.push([s, o]); }));
   recs.sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
   const act = activeSurvey();
   $('app').innerHTML = `
-    <div class="box"><span class="t" style="font-size:20px;font-weight:700">${esc(x.n)}</span><i>${esc(x.s || '')}</i>
+    <div class="box"><span class="t" style="font-size:20px;font-weight:700">${spName(x.n, x.s)}</span>${x.n !== x.s ? `<i>${esc(x.s || '')}</i>` : ''}
       <span>Famili: <b>${esc(x.f || '-')}</b> · Kelompok: <b>${esc(taxOf(x.tax).l)}</b></span>
       <span>Status IUCN: <b>${esc(IUCN_LABEL[x.iucn] || x.iucn || 'belum diisi')}</b></span>
       <span>Perlindungan (P.106/2018): <b>${x.p ? 'Dilindungi' : 'tidak tercantum di daftar acuan'}</b></span>
@@ -1694,11 +1753,11 @@ function surveyCSV() {
   return toCSV(rows);
 }
 function obsCSV() {
-  const rows = [['survei', 'tanggal', 'lokasi', 'taksa', 'jenis', 'nama_ilmiah', 'famili', 'IUCN', 'dilindungi', 'jumlah', 'jam', 'stasiun_plot', 'lat', 'lon', 'akurasi_m', 'cara_perjumpaan', 'aktivitas', 'habitat', 'tingkat', 'keliling_cm', 'dbh_cm', 'tinggi_m', 'deskripsi_habitat', 'catatan', 'foto']];
+  const rows = [['survei', 'tanggal', 'lokasi', 'taksa', 'jenis', 'nama_ilmiah', 'famili', 'IUCN', 'dilindungi', 'jumlah', 'jam', 'stasiun_plot', 'lat', 'lon', 'akurasi_m', 'cara_perjumpaan', 'aktivitas', 'habitat', 'tingkat', 'keliling_cm', 'dbh_cm', 'tinggi_m', 'deskripsi_habitat', 'catatan', 'foto', 'sumber_foto']];
   for (const s of surveysSorted()) for (const o of obsList(s).reverse()) {
     const sp = o.sp && SP_BY_SCI[o.sp];
     rows.push([surveyName(s), s.koleksi ? isoDate(o.t) : s.tanggal, s.lokasi, taxOf(o.tax).l, o.nama, o.ilmiah, o.famili, sp ? sp.iucn : '', sp && sp.p ? 'ya' : '', o.tax === 'foto' ? '' : o.jumlah, o.waktu, o.stasiun, o.lat ?? '', o.lon ?? '', o.acc ?? '',
-      asList(o.det).join('; '), asList(o.akt).join('; '), asList(o.hab).map(k => HAB[k] || k).join('; '), o.tingkat || '', o.keliling || '', num(o.keliling) ? (num(o.keliling) / Math.PI).toFixed(1) : '', o.tinggi || '', o.deskripsi, o.catatan, (o._photos || []).map(p => p.name).join('; ')]);
+      asList(o.det).join('; '), asList(o.akt).join('; '), asList(o.hab).map(k => HAB[k] || k).join('; '), o.tingkat || '', o.keliling || '', num(o.keliling) ? (num(o.keliling) / Math.PI).toFixed(1) : '', o.tinggi || '', o.deskripsi, o.catatan, (o._photos || []).map(p => p.name).join('; '), (o._photos || []).map(p => `${p.src || 'kamera'}${p.gps === 'foto' ? ' (lokasi dari foto)' : ''}`).join('; ')]);
   }
   return toCSV(rows);
 }
@@ -1844,7 +1903,7 @@ $('importIn').addEventListener('change', async ev => {
   try { const n = mergeBackup(JSON.parse(await f.text())); toast(`${n} survei/catatan ditambahkan.`); render(); } catch (e) { toast('File ini bukan cadangan Survei KEHATI.'); }
 });
 const idIn = document.createElement('input'); idIn.type = 'file'; idIn.accept = 'image/*'; idIn.id = 'idIn'; idIn.hidden = true; document.body.appendChild(idIn);
-idIn.addEventListener('change', () => { const f = idIn.files[0]; idIn.value = ''; if (!f) return; if (idReady()) runIdentify(f, idTaxFor(JN.tax), null); else guessFromPhoto(f); });
+idIn.addEventListener('change', () => { const f = idIn.files[0]; idIn.value = ''; if (!f) return; f._galeri = !idIn.hasAttribute('capture'); if (idReady()) runIdentify(f, idTaxFor(JN.tax), null); else guessFromPhoto(f); });
 
 /* ================= Pasang, tema, pembaruan ================= */
 let installEvt = null;
@@ -1980,9 +2039,9 @@ function idPanelHTML(mode) {
   const rec = recordedSpecies(), pct = p => p >= 0.995 ? '>99' : p < 0.01 ? '<1' : Math.round(p * 100);
   const sure = r.list[0].p >= 0.5 ? r.list[0] : null;
   return `<section class="section" id="idBox"><h2>Saran identifikasi AI</h2>
-    <div class="idhead"><img src="${r.url}" alt="Foto yang diidentifikasi"><span>${sure ? `Kami cukup yakin ini <b>${esc(sure.x.n)}</b> <i>${esc(sure.x.s)}</i>.` : r.genus ? `Kami cukup yakin ini anggota genus <b><i>${esc(r.genus.g)}</i></b> (${esc(r.genus.f)}), ${pct(r.genus.p)}%. Jenisnya belum pasti; pilih dari saran di bawah atau periksa ciri pembedanya.` : 'Belum yakin. Berikut jenis yang paling mirip secara visual.'}</span></div>
+    <div class="idhead"><img src="${r.url}" alt="Foto yang diidentifikasi"><span>${sure ? `Kami cukup yakin ini <b>${spName(sure.x.n, sure.x.s)}</b>${sure.x.n !== sure.x.s ? ` <i>${esc(sure.x.s)}</i>` : ''}.` : r.genus ? `Kami cukup yakin ini anggota genus <b><i>${esc(r.genus.g)}</i></b> (${esc(r.genus.f)}), ${pct(r.genus.p)}%. Jenisnya belum pasti; pilih dari saran di bawah atau periksa ciri pembedanya.` : 'Belum yakin. Berikut jenis yang paling mirip secara visual.'}</span></div>
     <div class="list">${r.list.map(({ x, p }) => `<div class="item idsug">${x.ph ? `<img src="${esc(x.ph)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ph0'}))">` : '<span class="ph0"></span>'}
-      <span class="main"><span class="t">${esc(x.n)}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(x.f)} · ${esc(taxOf(x.tax).l)}</span>
+      <span class="main"><span class="t">${spName(x.n, x.s)}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(x.f)} · ${esc(taxOf(x.tax).l)}</span>
       <br><span class="s">${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span> ` : ''}${x.p ? '<span class="tag p">Dilindungi</span> ' : ''}${rec.get(x.id) ? '<span class="tag ai">Pernah Anda catat</span> ' : ''}${x.ci ? `${x.ci.toLocaleString('id-ID')} pengamatan iNat di Indonesia` : x.c ? `${x.c.toLocaleString('id-ID')} catatan GBIF` : ''}</span>
       <span class="meter"><i style="width:${Math.max(2, p * 100).toFixed(0)}%"></i></span></span>
       <span class="count">${pct(p)}%</span>
@@ -2020,7 +2079,7 @@ async function idRemove() {
 function destHTML(x, withPhoto) {
   const act = activeSurvey(), others = surveysSorted().filter(s => !s.koleksi && s !== act).slice(0, 4);
   const btn = (sid, label) => `<button type="button" class="btn ${sid === 'koleksi' || (act && sid === act.id) ? '' : 'ghost'} sm" data-a="saveto" data-sid="${sid}" data-id="${esc(x.id)}" data-photo="${withPhoto ? 1 : ''}">${label}</button>`;
-  return `<div class="dest"><b>Simpan ${esc(x.n)}${withPhoto ? ' beserta fotonya' : ''} ke:</b>
+  return `<div class="dest"><b>Simpan ${spName(x.n, x.s)}${withPhoto ? ' beserta fotonya' : ''} ke:</b>
     ${act ? btn(act.id, `● Survei berjalan: ${esc(surveyName(act))}`) : ''}
     ${btn('koleksi', 'Koleksi pengamatan saya (seperti iNaturalist)')}
     ${others.length ? `<span class="note">atau ke survei lain:</span>${others.map(s => btn(s.id, `${esc(surveyName(s))} · ${fmtDate(s.tanggal)}`)).join('')}` : ''}</div>`;
@@ -2034,7 +2093,7 @@ async function saveTo(spId, sid, withPhoto) {
   if (blob) {
     askPhotoGeo();
     const f = blob instanceof File ? blob : new File([blob], 'foto.jpg', { type: 'image/jpeg', lastModified: Date.now() });
-    await addPhotos([f], { sid: s.id, oid: o.id });
+    await addPhotos([f], { sid: s.id, oid: o.id, gallery: !!blob._galeri });
   } else autoGPS(s, o);
   OBS_DETAIL = false; go({ v: 'obs', sid: s.id, id: o.id });
   toast(`${x.n} disimpan ke ${s.koleksi ? 'Koleksi pengamatan saya' : surveyName(s)}.`);
@@ -2117,8 +2176,8 @@ function inatSugHTML(localIds, mode) {
   if (INAT.busy) return '<div class="note" style="padding:6px 2px">Mencari juga di iNaturalist…</div>';
   if (!extra.length) return '';
   return mode === 'sug'
-    ? extra.map(x => `<button type="button" data-pick="${esc(x.id)}">${esc(x.n)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''} <span class="tag ai">iNaturalist · ${esc(taxOf(x.tax).l)}</span></button>`).join('')
-    : extra.map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${esc(x.n)} <span class="tag ai">iNaturalist</span></span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(taxOf(x.tax).l)}${x.ci ? ` · ${x.ci.toLocaleString('id-ID')} pengamatan di dunia` : ''}</span></span><span class="chev">›</span></button>`).join('');
+    ? extra.map(x => `<button type="button" data-pick="${esc(x.id)}">${spName(x.n, x.s)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''} <span class="tag ai">iNaturalist · ${esc(taxOf(x.tax).l)}</span></button>`).join('')
+    : extra.map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${spName(x.n, x.s)} <span class="tag ai">iNaturalist</span></span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(taxOf(x.tax).l)}${x.ci ? ` · ${x.ci.toLocaleString('id-ID')} pengamatan di dunia` : ''}</span></span><span class="chev">›</span></button>`).join('');
 }
 /* ================= Mulai ================= */
 applyTheme(); updateNet(); inatLoadSaved();

@@ -132,6 +132,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 .aibox { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-size: 14px; display: flex; flex-direction: column; gap: 8px; }
 .fab { position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); z-index: 1001; width: 64px; height: 64px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-fg); box-shadow: 0 4px 14px rgba(0,0,0,.3); display: grid; place-items: center; cursor: pointer; }
 .fab svg { width: 30px; height: 30px; }
+.idhead { display: flex; gap: 12px; align-items: center; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px; padding: 10px; font-size: 15px; }
+.idhead img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; flex: none; }
+.idsug { cursor: default; align-items: flex-start; }
+.idsug img, .idsug .ph0 { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex: none; background: var(--surface-2); border: 1px solid var(--line); }
+.idsug .meter { display: block; height: 6px; border-radius: 3px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+.idsug .meter i { display: block; height: 100%; background: var(--accent); }
+.idsug .btn { align-self: center; }
 body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width: 56px; height: 56px; }
 #mapWrap { position: fixed; left: 0; right: 0; top: var(--top, 56px); bottom: calc(58px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
 #map { position: absolute; inset: 0; background: #cfd8d3; }
@@ -199,7 +206,7 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 <div class="progress" id="progress" hidden><div class="pbox"><b id="progT"></b><div class="pbar"><i id="progBar"></i></div><span class="note" id="progS"></span></div></div>
 <div class="viewer" id="viewer" hidden>
   <img id="viewerImg" alt="">
-  <div class="vbar"><span class="grow" id="viewerCap"></span><button type="button" id="viewerDel">Hapus foto</button><button type="button" id="viewerClose">Tutup</button></div>
+  <div class="vbar"><span class="grow" id="viewerCap"></span><button type="button" id="viewerId">Identifikasi</button><button type="button" id="viewerDel">Hapus foto</button><button type="button" id="viewerClose">Tutup</button></div>
 </div>
 <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
 <input type="file" id="galIn" accept="image/*" multiple hidden>
@@ -564,6 +571,7 @@ const SP_BY_SCI = Object.fromEntries(SPECIES.map(x => [x.tax + ':' + x.s, x]));
    Baris: [nama ilmiah, nama Indonesia, nama Inggris, famili, IUCN, jumlah catatan GBIF di Indonesia].
    Daftar acuan di atas didahulukan untuk nama Indonesia dan status dilindungi; kategori IUCN dari GBIF dipakai bila ada.
    File disimpan service worker sehingga tetap tersedia tanpa sinyal setelah sekali dimuat. */
+const SP_ROWS = {};   // per taksa: jenis dalam urutan baris file data (sama dengan urutan embedding identifikasi)
 const SP_META = { loaded: false, total: 0, perTax: {}, dibuat: '', sumber: '' };
 let spLoadP = null;
 function loadSpeciesData() {
@@ -573,11 +581,12 @@ function loadSpeciesData() {
     for (const d of res) {
       if (!d || !Array.isArray(d.rows)) continue;
       SP_META.perTax[d.tax] = d.rows.length; SP_META.dibuat = d.dibuat || SP_META.dibuat; SP_META.sumber = d.sumber || SP_META.sumber;
-      for (const [sci, ind, eng, fam, iucn, cnt] of d.rows) {
+      const rowsObj = SP_ROWS[d.tax] = [];
+      for (const [sci, ind, eng, fam, iucn, cnt, ninat, ph] of d.rows) {
         const id = d.tax + ':' + sci, cur = SP_BY_SCI[id];
-        if (cur) { if (iucn) cur.iucn = iucn; cur.en = cur.en || eng; cur.c = cnt; if (!cur.f) cur.f = fam; continue; }
-        const x = { id, tax: d.tax, n: ind || eng || sci, s: sci, f: fam || '', iucn: iucn || '', p: false, en: ind ? eng : '', c: cnt, g: 1 };
-        SPECIES.push(x); SP_BY_SCI[id] = x; added++;
+        if (cur) { if (iucn) cur.iucn = iucn; cur.en = cur.en || eng; cur.c = cnt || 0; cur.ci = ninat || 0; cur.ph = ph || ''; if (!cur.f) cur.f = fam; rowsObj.push(cur); continue; }
+        const x = { id, tax: d.tax, n: ind || eng || sci, s: sci, f: fam || '', iucn: iucn || '', p: false, en: ind ? eng : '', c: cnt || 0, ci: ninat || 0, ph: ph || '', g: 1 };
+        SPECIES.push(x); SP_BY_SCI[id] = x; rowsObj.push(x); added++;
       }
     }
     SP_META.loaded = true; SP_META.total = SPECIES.length;
@@ -586,6 +595,7 @@ function loadSpeciesData() {
   })();
   return spLoadP;
 }
+const spPop = x => (x.c || 0) + 3 * (x.ci || 0);
 const spText = x => x._q || (x._q = `${x.n} ${x.s} ${x.f} ${x.en || ''}`.toLowerCase());
 /* Pencarian: semua kata harus cocok; urutan: kelompok yang sedang dicatat, awal nama cocok, jenis yang paling sering tercatat. */
 function spFind(q, tax, limit) {
@@ -594,7 +604,7 @@ function spFind(q, tax, limit) {
   for (const x of SPECIES) { if (words.every(w => spText(x).includes(w))) res.push(x); }
   const w0 = words[0] || '';
   const score = x => (tax && x.tax === tax ? 4 : 0) + (x.n.toLowerCase().startsWith(w0) || x.s.toLowerCase().startsWith(w0) ? 2 : 0) + (x.g ? 0 : 1);
-  res.sort((a, b) => score(b) - score(a) || (b.c || 0) - (a.c || 0) || a.n.localeCompare(b.n));
+  res.sort((a, b) => score(b) - score(a) || spPop(b) - spPop(a) || a.n.localeCompare(b.n));
   return limit ? res.slice(0, limit) : res;
 }
 const IUCN_LABEL = { CR: 'Kritis (CR)', EN: 'Genting (EN)', VU: 'Rentan (VU)', NT: 'Hampir terancam (NT)', LC: 'Risiko rendah (LC)', DD: 'Kurang data (DD)' };
@@ -795,7 +805,8 @@ function renderObs() {
   setTitle(o.nama || t.l, surveyName(s));
   const sp = o.sp && SP_BY_SCI[o.sp], isVeg = o.tax === 'tumbuhan';
   const aiSug = o.tax === 'foto' && o.aiTax && o.aiTax.k ? `<div class="aibox"><span>AI menduga foto ini berisi <b>${esc(taxOf(o.aiTax.k).l)}</b> (${Math.round(o.aiTax.p * 100)}%).</span><button type="button" class="btn sm" data-a="useaitax">Jadikan ${esc(taxOf(o.aiTax.k).l)}</button></div>` : '';
-  $('app').innerHTML = `
+  const idp = ID.res && ID.res.target && ID.res.target.oid === o.id ? idPanelHTML('obs') : '';
+  $('app').innerHTML = `${idp}
     <section class="section"><h2>Taksa</h2>
       <div class="chips">${[...TAXA, FOTO_TAX].map(x => `<button type="button" class="chip" data-tax="${x.k}" aria-pressed="${o.tax === x.k}"><span class="sw" style="background:${x.c};border:1px solid #999"></span>${x.l}</button>`).join('')}</div>
       ${aiSug}
@@ -804,6 +815,7 @@ function renderObs() {
       <div class="field w"><label for="spIn">${o.tax === 'foto' ? 'Nama titik / keterangan' : 'Jenis (ketik nama lokal, Indonesia, atau ilmiah)'}</label>
         <input type="search" id="spIn" data-o="nama" value="${esc(o.nama)}" autocomplete="off" placeholder="${o.tax === 'foto' ? 'mis. Tepi mangrove utara' : 'mis. kuntul, Egretta, bakau…'}">
         <div id="spSug"></div>
+        ${o.tax !== 'foto' || (o._photos || []).length ? `<button type="button" class="btn ghost sm" data-a="idobs" ${(o._photos || []).length ? '' : 'disabled'}>Identifikasi jenis dari foto (AI)</button>` : ''}
         ${sp ? `<span class="hint">${esc(sp.f)}${sp.iucn ? ` · IUCN: ${esc(IUCN_LABEL[sp.iucn] || sp.iucn)}` : ''}${sp.p ? ' · <b>Dilindungi</b> (P.106/2018)' : ''}</span>` : ''}</div>
       ${o.tax !== 'foto' ? `<div class="field"><label>Nama ilmiah</label><input type="text" data-o="ilmiah" value="${esc(o.ilmiah)}" style="font-style:italic"></div>
       <div class="field"><label>Famili</label><input type="text" data-o="famili" value="${esc(o.famili)}"></div>
@@ -898,6 +910,9 @@ $('app').addEventListener('click', async ev => {
     case 'gps': getGPS(s, o, b); break;
     case 'useaitax': o.tax = o.aiTax.k; if (o.jumlah === '') o.jumlah = 1; touch(s); render(); break;
     case 'aiobs': aiEnqueue({ sid: s.id, oid: o.id }); break;
+    case 'idobs': idFromObs(s, o); break;
+    case 'idpick': { const x = SP_BY_SCI[b.dataset.id]; if (x) { pickSpecies(o, x); if (o.jumlah === '') o.jumlah = 1; ID.res = null; touch(s); render(); window.scrollTo(0, 0); toast(`Jenis dipilih: ${x.n}`); } break; }
+    case 'idclose': ID.res = null; render(); break;
     case 'cam': PHOTO_TO = { sid: s.id, oid: o.id }; askPhotoGeo(); $('camIn').click(); break;
     case 'gal': PHOTO_TO = { sid: s.id, oid: o.id }; $('galIn').click(); break;
     case 'obsdone': save(); history.back(); break;
@@ -1120,6 +1135,7 @@ async function openViewer(id) {
 }
 function closeViewer() { $('viewer').hidden = true; viewerPhoto = null; if (viewerURL) { URL.revokeObjectURL(viewerURL); viewerURL = null; } }
 $('viewerClose').addEventListener('click', closeViewer);
+$('viewerId').addEventListener('click', () => { const s = S.surveys[view.sid], o = s && s.obs[view.id], ph = viewerPhoto; closeViewer(); if (o && ph) idFromObs(s, o, ph); });
 $('viewerDel').addEventListener('click', async ev => {
   const b = ev.currentTarget;
   if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; return; }
@@ -1368,10 +1384,11 @@ function renderJenis() {
     <section class="section">
       <input type="search" id="spQ" placeholder="Cari nama lokal, Indonesia, ilmiah, atau famili" value="${esc(JN.q)}" autocomplete="off">
       <div class="chips"><button type="button" class="chip" data-jtax="" aria-pressed="${!JN.tax}">Semua</button>${TAXA.filter(t => t.k !== 'lain').map(t => `<button type="button" class="chip" data-jtax="${t.k}" aria-pressed="${JN.tax === t.k}"><span class="sw" style="background:${t.c}"></span>${t.l}</button>`).join('')}</div>
-      <div class="aibox"><span><b>Bantu identifikasi dari foto (AI di HP).</b> AI menebak kelompok satwa/tumbuhan di foto, lalu daftar disaring ke kelompok itu. Penentuan jenis tetap oleh pengamat dengan buku panduan.</span>
-        <button type="button" class="btn sm" data-a="idphoto">Pilih foto untuk ditebak</button>
+      <div class="aibox"><span><b>Identifikasi dari foto (AI di HP, seperti iNaturalist).</b> ${idReady() ? `Pilih foto satwa/tumbuhan; AI memberi saran jenis beserta persentase keyakinan${JN.tax ? ' (hanya ' + esc(taxOf(JN.tax).l.toLowerCase()) + ', sesuai saringan)' : ''}.` : 'Unduh dulu data identifikasi di tab Data (sekali, ±120 MB). Sementara itu AI hanya menebak kelompok satwa/tumbuhan.'} Penentuan akhir tetap oleh pengamat.</span>
+        <div class="row"><button type="button" class="btn sm" data-a="idphoto">Pilih foto</button><button type="button" class="btn sm ghost" data-a="idcam">Ambil foto</button></div>
         ${JN.guess ? `<span>${JN.guess.map(([k, p]) => `${esc(taxOf(k).l)} ${Math.round(p * 100)}%`).join(' · ')}</span>` : ''}</div>
     </section>
+    ${ID.res && !ID.res.target ? idPanelHTML('jenis') : ''}
     <section class="section"><h2 id="jnCount"></h2><div class="list" id="jnList"></div></section>
     <p class="note">${SP_META.loaded && SP_META.total > 400 ? `Sumber: ${esc(SP_META.sumber)}, disusun ${fmtDate(SP_META.dibuat)} (${Object.entries(SP_META.perTax).map(([k, n]) => `${taxOf(k).l} ${n.toLocaleString('id-ID')}`).join(', ')}). Diurutkan dari yang paling sering tercatat. Daftar memuat semua jenis yang punya catatan GBIF di Indonesia, termasuk jenis introduksi; kategori IUCN dari GBIF. Status dilindungi (P.106/2018) hanya untuk jenis di daftar acuan; cek ulang sebelum pelaporan.` : 'Daftar jenis lengkap Indonesia dimuat saat ada sinyal lalu tersimpan di HP.'} Jenis yang diketik bebas di survei ikut muncul di sini.</p>`;
   renderJenisList();
@@ -1380,7 +1397,7 @@ function renderJenisList() {
   const q = ($('spQ') && $('spQ').value) || ''; JN.q = q;
   const rec = recordedSpecies();
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const base = (words.length ? spFind(q, JN.tax) : SPECIES.slice().sort((a, b) => (b.c || 0) - (a.c || 0))).filter(x => !JN.tax || x.tax === JN.tax);
+  const base = (words.length ? spFind(q, JN.tax) : SPECIES.slice().sort((a, b) => spPop(b) - spPop(a))).filter(x => !JN.tax || x.tax === JN.tax);
   const custom = [...rec.values()].filter(x => x.custom && (!JN.tax || x.tax === JN.tax) && words.every(w => `${x.n} ${x.s} ${x.f}`.toLowerCase().includes(w)));
   const list = [...custom, ...base].map(x => rec.get(x.id) ? Object.assign({}, x, { rec: rec.get(x.id).rec, ind: rec.get(x.id).ind }) : x);
   list.sort((a, b) => (b.rec ? 1 : 0) - (a.rec ? 1 : 0));
@@ -1403,7 +1420,8 @@ function renderSp() {
       <span>Famili: <b>${esc(x.f || '-')}</b> · Kelompok: <b>${esc(taxOf(x.tax).l)}</b></span>
       <span>Status IUCN: <b>${esc(IUCN_LABEL[x.iucn] || x.iucn || 'belum diisi')}</b></span>
       <span>Perlindungan (P.106/2018): <b>${x.p ? 'Dilindungi' : 'tidak tercantum di daftar acuan'}</b></span>
-      ${x.en ? `<span>Nama Inggris: ${esc(x.en)}</span>` : ''}${x.c ? `<span>Catatan di GBIF untuk Indonesia: <b>${x.c.toLocaleString('id-ID')}</b></span>` : ''}</div>
+      ${x.en ? `<span>Nama Inggris: ${esc(x.en)}</span>` : ''}${x.c ? `<span>Catatan GBIF di Indonesia: <b>${x.c.toLocaleString('id-ID')}</b></span>` : ''}${x.ci ? `<span>Pengamatan iNaturalist di Indonesia: <b>${x.ci.toLocaleString('id-ID')}</b></span>` : ''}
+      ${x.ph ? `<img src="${esc(x.ph.replace('/square.', '/medium.'))}" alt="Foto contoh dari iNaturalist" style="width:100%;border-radius:10px;margin-top:6px" onerror="this.remove()"><span class="note">Foto contoh: iNaturalist (perlu sinyal)</span>` : ''}</div>
     ${act ? `<button type="button" class="btn block" data-a="recsp" data-id="${esc(x.id)}">Catat di survei berjalan (${esc(surveyName(act))})</button>` : '<p class="note">Mulai survei di tab Survei untuk mencatat jenis ini langsung dari sini.</p>'}
     <section class="section"><h2>Catatan di survei (${recs.length})</h2>
       ${recs.length ? `<div class="list">${recs.map(([s, o]) => `<button type="button" class="item" data-a="gorec" data-sid="${s.id}" data-id="${o.id}"><span class="main"><span class="t">${esc(surveyName(s))}</span><br><span class="s">${fmtDate(s.tanggal)} ${esc(o.waktu)} · ${esc(o.jumlah)} ind.${o.lat != null ? ' · ' + fmtCoord(o.lat, o.lon) : ''}</span></span><span class="chev">›</span></button>`).join('')}</div>` : '<div class="empty">Belum pernah tercatat.</div>'}
@@ -1448,7 +1466,7 @@ function ailLoad(onProg) {
     ailP = (async () => {
       let T;
       try { T = await import('./vendor/ai/transformers.min.js'); } catch (e) { throw new Error('lokal-pustaka'); }
-      T.env.allowLocalModels = false;
+      T.env.allowLocalModels = true; T.env.localModelPath = new URL('model/', location.href).href;   // model BioCLIP lokal; CLIP habitat tetap dari Hugging Face
       T.env.backends.onnx.wasm.wasmPaths = new URL('vendor/ai/', location.href).href;
       if (!self.crossOriginIsolated) T.env.backends.onnx.wasm.numThreads = 1;
       const files = {};
@@ -1736,6 +1754,7 @@ function renderData() {
       <label class="check"><input type="checkbox" id="aiAuto" ${aiAuto() ? 'checked' : ''}>Baca otomatis setiap foto baru</label>
       ${q ? `<p class="note">${q} titik menunggu dibaca AI.</p><button type="button" class="btn ghost" data-a="airun">Baca sekarang</button>` : ''}
     </section>
+    ${idSectionHTML()}
     <section class="section"><h2>Foto</h2><label class="check"><input type="checkbox" id="wmOn" ${withWatermark() ? 'checked' : ''}>Watermark lokasi, jenis, koordinat, dan tanggal-jam di kanan bawah foto</label></section>
     <section class="section"><h2>Aplikasi</h2>${installHTML()}
       <p class="note">Versi: ${esc(buildLabel())}</p><button type="button" class="btn ghost block" data-a="upd">Periksa pembaruan sekarang</button></section>
@@ -1760,7 +1779,10 @@ async function dataAction(a, b) {
       S.surveys = {}; S.active = null; stopTrack(); save(); render(); toast('Semua survei dihapus dari HP ini.'); break;
     case 'anacsv': { const r = anaCSV(); deliver(new Blob([r.idx + '\r\n' + r.jenis + (r.veg ? '\r\n' + r.veg : '')], { type: 'text/csv' }), `Analisis_${fileBase()}.csv`); break; }
     case 'print': window.print(); break;
-    case 'idphoto': $('idIn').click(); break;
+    case 'idphoto': $('idIn').removeAttribute('capture'); $('idIn').click(); break;
+    case 'idcam': $('idIn').setAttribute('capture', 'environment'); $('idIn').click(); break;
+    case 'idget': b.disabled = true; await idDownload(); break;
+    case 'idrm': if (!arm(b, 'idrm', 'Ketuk lagi untuk menghapus')) return; await idRemove(); break;
     case 'recsp': { const s = activeSurvey(), x = SP_BY_SCI[b.dataset.id] || recordedSpecies().get(b.dataset.id); if (!s || !x) return; const o = newObs(s, x.tax); pickSpecies(o, x); if (x.custom) o.sp = ''; autoGPS(s, o); go({ v: 'obs', sid: s.id, id: o.id }); break; }
     case 'gorec': go({ v: 'obs', sid: b.dataset.sid, id: b.dataset.id }); break;
   }
@@ -1770,7 +1792,7 @@ $('importIn').addEventListener('change', async ev => {
   try { const n = mergeBackup(JSON.parse(await f.text())); toast(`${n} survei/catatan ditambahkan.`); render(); } catch (e) { toast('File ini bukan cadangan Survei KEHATI.'); }
 });
 const idIn = document.createElement('input'); idIn.type = 'file'; idIn.accept = 'image/*'; idIn.id = 'idIn'; idIn.hidden = true; document.body.appendChild(idIn);
-idIn.addEventListener('change', () => { const f = idIn.files[0]; idIn.value = ''; if (f) guessFromPhoto(f); });
+idIn.addEventListener('change', () => { const f = idIn.files[0]; idIn.value = ''; if (!f) return; if (idReady()) runIdentify(f, idTaxFor(JN.tax), null); else guessFromPhoto(f); });
 
 /* ================= Pasang, tema, pembaruan ================= */
 let installEvt = null;
@@ -1809,6 +1831,152 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 $('updBtn').addEventListener('click', () => { save(); location.reload(); });
 
+
+/* ================= Identifikasi jenis dari foto (BioCLIP, seperti saran iNaturalist) =================
+   Model BioCLIP (CLIP ViT-B/16 yang dilatih pada 10 juta foto makhluk hidup, lisensi MIT) berjalan di HP.
+   Foto diubah menjadi vektor, lalu dibandingkan dengan vektor nama setiap jenis Indonesia
+   (data/emb-<taksa>.bin, dihitung sebelumnya dari taksonomi + nama umum). Hasilnya daftar saran jenis
+   dengan persentase keyakinan; bila jenis belum pasti tetapi genusnya jelas, genus itu disarankan.
+   Model (±90 MB) dan data (±30 MB) diunduh sekali dari situs aplikasi ini, lalu bekerja tanpa sinyal. */
+const ID_FLAG = AI_APP + '-bioclip-siap';
+const ID = { index: null, emb: {}, res: null, busy: false };
+function idReady() { try { return localStorage.getItem(ID_FLAG) === '1'; } catch (e) { return false; } }
+function idSetReady(v) { try { if (v) localStorage.setItem(ID_FLAG, '1'); else localStorage.removeItem(ID_FLAG); } catch (e) {} }
+async function idIndex() {
+  if (ID.index) return ID.index;
+  const r = await fetch('data/emb-index.json').catch(() => null);
+  if (!r || !r.ok) throw new Error(navigator.onLine ? 'id-belum' : 'id-hilang');
+  return (ID.index = await r.json());
+}
+let idModelP = null;
+function idModel(onProg) {
+  if (window.__idMock) return Promise.resolve(window.__idMock);
+  if (!idModelP) {
+    idModelP = (async () => {
+      let T;
+      try { T = await import('./vendor/ai/transformers.min.js'); } catch (e) { throw new Error('lokal-pustaka'); }
+      T.env.allowLocalModels = true; T.env.localModelPath = new URL('model/', location.href).href;
+      T.env.backends.onnx.wasm.wasmPaths = new URL('vendor/ai/', location.href).href;
+      if (!self.crossOriginIsolated) T.env.backends.onnx.wasm.numThreads = 1;
+      const files = {};
+      const opt = { dtype: 'q8', local_files_only: true, progress_callback: p => {
+        if (!onProg || !p || !p.file) return;
+        if (p.status === 'progress' || p.status === 'done') files[p.file] = [p.loaded || (files[p.file] || [0, 0])[1], p.total || (files[p.file] || [0, 0])[1]];
+        let a = 0, b = 0; Object.values(files).forEach(([l, t]) => { a += l; b += t; }); if (b) onProg(a, b);
+      } };
+      try {
+        const [proc, vis] = await Promise.all([T.AutoProcessor.from_pretrained('bioclip', opt), T.CLIPVisionModelWithProjection.from_pretrained('bioclip', opt)]);
+        return { async image(blob) { const { image_embeds: e } = await vis(await proc(await T.RawImage.fromBlob(blob))); return Array.from(e.data); } };
+      } catch (e) { console.warn(e); throw new Error(navigator.onLine ? 'id-unduh' : 'id-hilang'); }
+    })();
+    idModelP.catch(() => { idModelP = null; });
+  }
+  return idModelP;
+}
+async function idEmb(tax) {
+  if (ID.emb[tax]) return ID.emb[tax];
+  const r = await fetch(`data/emb-${tax}.bin`).catch(() => null);
+  if (!r || !r.ok) throw new Error(navigator.onLine ? 'id-unduh' : 'id-hilang');
+  const buf = await r.arrayBuffer(), dv = new DataView(buf);
+  if (String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3)) !== 'KEMB') throw new Error('id-unduh');
+  const N = dv.getUint32(4, true), D = dv.getUint32(8, true);
+  return (ID.emb[tax] = { N, D, scale: new Float32Array(buf, 12, N), q: new Int8Array(buf, 12 + 4 * N, N * D) });
+}
+function idErrMsg(e) {
+  const m = e && e.message;
+  return { 'id-belum': 'Data identifikasi belum tersedia di versi aplikasi ini. Tekan "Periksa pembaruan" di tab Data nanti.',
+    'id-unduh': 'Data identifikasi gagal diunduh. Coba lagi dengan Wi-Fi yang lebih stabil.',
+    'id-hilang': 'Data identifikasi belum lengkap di HP ini. Unduh di tab Data saat ada sinyal.',
+    'lokal-pustaka': 'Pustaka AI belum tersimpan di HP. Buka tab Data saat ada sinyal.' }[m] || 'Identifikasi gagal.';
+}
+/* Bandingkan foto dengan semua jenis pada taksa terpilih; peluang = softmax(kemiripan × skala logit BioCLIP). */
+async function identify(blob, taxList) {
+  await loadSpeciesData();
+  const idx = await idIndex(), m = await idModel(), v = ailNorm(await m.image(blob)), ls = idx.logit_scale || 100;
+  const cand = [];
+  for (const tax of taxList) {
+    if (!idx.taksa || !idx.taksa[tax]) continue;
+    const E = await idEmb(tax), rows = SP_ROWS[tax] || [];
+    if (rows.length !== E.N) { console.warn('jumlah jenis tidak cocok', tax, rows.length, E.N); continue; }
+    for (let i = 0; i < E.N; i++) { let d = 0; const o = i * E.D; for (let j = 0; j < E.D; j++) d += E.q[o + j] * v[j]; cand.push([d * E.scale[i] * ls, rows[i]]); }
+  }
+  if (!cand.length) throw new Error('id-belum');
+  cand.sort((a, b) => b[0] - a[0]);
+  const top = cand.slice(0, 300), mx = top[0][0]; let sum = 0;
+  top.forEach(t => { t[2] = Math.exp(t[0] - mx); sum += t[2]; });
+  const list = top.map(t => ({ x: t[1], p: t[2] / sum }));
+  const gen = {}; list.forEach(({ x, p }) => { const g = x.s.split(' ')[0]; gen[g] = (gen[g] || 0) + p; });
+  const [g, gp] = Object.entries(gen).sort((a, b) => b[1] - a[1])[0];
+  const genus = list[0].p < 0.5 && gp >= 0.6 && list.slice(0, 10).filter(r => r.x.s.split(' ')[0] === g).length > 1 ? { g, p: gp, f: list.find(r => r.x.s.startsWith(g + ' ')).x.f } : null;
+  return { list: list.slice(0, 10), genus };
+}
+async function runIdentify(blob, taxList, target) {
+  if (!idReady()) { toast('Unduh dulu data identifikasi di tab Data → Identifikasi jenis dari foto (sekali, pakai Wi-Fi).'); return; }
+  if (ID.busy) return; ID.busy = true;
+  toast('AI mengenali jenis di foto…');
+  try {
+    const r = await identify(blob, taxList);
+    if (ID.res && ID.res.url) URL.revokeObjectURL(ID.res.url);
+    ID.res = Object.assign(r, { target, url: URL.createObjectURL(blob), taxList });
+    render(); const el = $('idBox'); if (el) el.scrollIntoView({ block: 'start' });
+  } catch (e) { console.warn(e); toast(idErrMsg(e)); }
+  ID.busy = false;
+}
+function idPanelHTML(mode) {
+  const r = ID.res; if (!r) return '';
+  const rec = recordedSpecies(), pct = p => p >= 0.995 ? '>99' : p < 0.01 ? '<1' : Math.round(p * 100);
+  const sure = r.list[0].p >= 0.5 ? r.list[0] : null;
+  return `<section class="section" id="idBox"><h2>Saran identifikasi AI</h2>
+    <div class="idhead"><img src="${r.url}" alt="Foto yang diidentifikasi"><span>${sure ? `Kami cukup yakin ini <b>${esc(sure.x.n)}</b> <i>${esc(sure.x.s)}</i>.` : r.genus ? `Kami cukup yakin ini anggota genus <b><i>${esc(r.genus.g)}</i></b> (${esc(r.genus.f)}), ${pct(r.genus.p)}%. Jenisnya belum pasti; pilih dari saran di bawah atau periksa ciri pembedanya.` : 'Belum yakin. Berikut jenis yang paling mirip secara visual.'}</span></div>
+    <div class="list">${r.list.map(({ x, p }) => `<div class="item idsug">${x.ph ? `<img src="${esc(x.ph)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ph0'}))">` : '<span class="ph0"></span>'}
+      <span class="main"><span class="t">${esc(x.n)}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(x.f)} · ${esc(taxOf(x.tax).l)}</span>
+      <br><span class="s">${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span> ` : ''}${x.p ? '<span class="tag p">Dilindungi</span> ' : ''}${rec.get(x.id) ? '<span class="tag ai">Pernah Anda catat</span> ' : ''}${x.ci ? `${x.ci.toLocaleString('id-ID')} pengamatan iNat di Indonesia` : x.c ? `${x.c.toLocaleString('id-ID')} catatan GBIF` : ''}</span>
+      <span class="meter"><i style="width:${Math.max(2, p * 100).toFixed(0)}%"></i></span></span>
+      <span class="count">${pct(p)}%</span>
+      ${mode === 'obs' ? `<button type="button" class="btn sm" data-a="idpick" data-id="${esc(x.id)}">Pilih</button>` : `<button type="button" class="btn sm ghost" data-sel="${esc(x.id)}">Lihat</button>`}</div>`).join('')}</div>
+    <p class="note">Saran dari model BioCLIP di HP, dibandingkan dengan ${r.taxList.length === 1 ? 'semua jenis ' + esc(taxOf(r.taxList[0]).l.toLowerCase()) : 'semua kelompok taksa'} yang tercatat di Indonesia. Seperti iNaturalist, ini saran visual: pastikan dengan ciri pembeda dan buku panduan.${navigator.onLine ? '' : ' Foto contoh iNaturalist tampil saat ada sinyal.'}</p>
+    <button type="button" class="btn ghost sm" data-a="idclose">Tutup saran</button></section>`;
+}
+async function idDownload() {
+  if (!navigator.onLine) { toast('Unduh butuh sinyal (sebaiknya Wi-Fi).'); return; }
+  progress('Menyiapkan identifikasi…', 0, 'Memeriksa data…');
+  try {
+    ID.index = null; const idx = await idIndex();
+    const mb = x => (x / 1048576).toFixed(0);
+    await idModel((a, b) => progress('Mengunduh model identifikasi…', a / b, `${mb(a)} / ${mb(b)} MB · jangan tutup aplikasi`));
+    const taxa = Object.keys(idx.taksa || {}); let k = 0;
+    for (const t of taxa) { progress('Mengunduh data jenis…', k / taxa.length, `${taxOf(t).l} (${idx.taksa[t].mb} MB)`); await idEmb(t); k++; }
+    await loadSpeciesData();
+    idSetReady(true); toast('Identifikasi jenis dari foto siap dipakai, juga tanpa sinyal.');
+  } catch (e) { console.warn(e); toast(idErrMsg(e)); }
+  progressEnd(); if (view.v === 'data') render();
+}
+async function idRemove() {
+  idModelP = null; ID.emb = {}; ID.index = null; idSetReady(false);
+  try {
+    await caches.delete('kehati-model');
+    for (const name of ['transformers-cache', 'kehati-data']) {
+      const c = await caches.open(name);
+      for (const req of await c.keys()) if (/\/model\/bioclip\/|\/data\/emb-/.test(req.url)) await c.delete(req);
+    }
+  } catch (e) {}
+  toast('Data identifikasi dihapus dari HP ini.'); if (view.v === 'data') render();
+}
+function idSectionHTML() {
+  return `<section class="section"><h2>Identifikasi jenis dari foto (seperti iNaturalist)</h2>
+    <p class="note">Foto satwa atau tumbuhan dikenali oleh model AI <b>BioCLIP</b> di HP ini, lalu dibandingkan dengan semua jenis yang tercatat di Indonesia. Hasilnya daftar saran jenis dengan persentase keyakinan, seperti di iNaturalist. Gratis, foto tidak dikirim ke mana pun, dan bekerja tanpa sinyal setelah diunduh (±120 MB, sekali).</p>
+    ${idReady() ? '<p class="note"><b>Data identifikasi sudah tersimpan di HP ini.</b> Pakai tombol "Identifikasi jenis dari foto" di form catatan atau di tab Jenis.</p><button type="button" class="btn danger" data-a="idrm">Hapus data identifikasi</button>'
+      : '<button type="button" class="btn block" data-a="idget">Unduh data identifikasi (±120 MB, sekali saja, pakai Wi-Fi)</button>'}
+  </section>`;
+}
+function idTaxFor(tax) { return TAX[tax] && tax !== 'lain' ? [tax] : TAXA.filter(t => t.k !== 'lain').map(t => t.k); }
+async function idFromObs(s, o, ph) {
+  ph = ph || (o._photos || [])[o._photos.length - 1];
+  if (!ph) { toast('Ambil foto dulu.'); return; }
+  const b = await pdbGet('foto', ph.id).catch(() => null);
+  if (!b) { toast('File foto ini tidak ada di HP ini.'); return; }
+  runIdentify(b, idTaxFor(o.tax), { sid: s.id, oid: o.id });
+}
 /* ================= Mulai ================= */
 applyTheme(); updateNet();
 history.replaceState(view, '');

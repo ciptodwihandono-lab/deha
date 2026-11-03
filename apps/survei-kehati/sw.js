@@ -11,6 +11,8 @@ const INDEX = new URL('./index.html', SCOPE).href;
 const OWN = new Set(FILES.map((f) => new URL(f, SCOPE).href));
 const AI_DIR = new URL('./vendor/ai/', SCOPE).href;
 const DATA = 'kehati-data';
+const MODEL = 'kehati-model';
+const MODEL_DIR = new URL('./model/', SCOPE).href;
 const DATA_DIR = new URL('./data/', SCOPE).href;
 const TILE_HOSTS = ['server.arcgisonline.com', 'tile.openstreetmap.org'];
 
@@ -49,8 +51,8 @@ async function tile(req) {
   if (res.ok && res.type !== 'opaque') c.put(req.url, res.clone()).then(() => { if (Math.random() < 0.05) trimTiles(); });
   return res;
 }
-async function aiFile(req, key) {
-  const c = await caches.open(AI_CACHE);
+async function aiFile(req, key, name = AI_CACHE) {
+  const c = await caches.open(name);
   const hit = await c.match(key);
   if (hit) return hit;
   const res = await fetch(req);
@@ -74,6 +76,7 @@ self.addEventListener('fetch', (e) => {
   if (u.origin !== self.location.origin) return;
   const clean = u.origin + u.pathname;
   if (clean.startsWith(AI_DIR)) { e.respondWith(aiFile(req, clean)); return; }
+  if (clean.startsWith(MODEL_DIR)) { e.respondWith(aiFile(req, clean, MODEL)); return; }
   if (clean.startsWith(DATA_DIR)) { e.respondWith(dataFile(e, clean)); return; }
   const isApp = req.mode === 'navigate' ? (clean === SCOPE || clean === INDEX) : OWN.has(clean);
   if (!isApp) return;

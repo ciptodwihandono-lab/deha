@@ -1622,7 +1622,7 @@ async function addPhotos(files) {
     } catch (err) { toast('Foto gagal disimpan. Memori HP mungkin penuh.'); }
   }
   photoGeo = null;
-  if (n) { touch(e); save(); if (view.v === 'row' || view.v === 'entry') render(); const o = tgt.find(); toast(`${n} foto tersimpan${geo || (o && o.koordinat) ? ' dengan koordinat' : ' (tanpa GPS)'}${aiOn() ? (navigator.onLine ? ' · AI sedang membaca foto…' : ' · dibaca AI saat ada sinyal') : ''}`); aiRun(); }
+  if (n) { touch(e); save(); if (view.v === 'row' || view.v === 'entry') render(); const o = tgt.find(); toast(`${n} foto tersimpan${geo || (o && o.koordinat) ? ' dengan koordinat' : ' (tanpa GPS)'}${aiOn() ? (aiCanRun() ? ' · AI sedang membaca foto…' : ' · dibaca AI saat ada sinyal') : ''}`); aiRun(); }
 }
 let thumbURLs = [];
 async function loadThumbs() {
@@ -1646,7 +1646,7 @@ async function openViewer(id) {
   document.getElementById('viewerImg').src = viewerURL;
   const d = new Date(ph.t * 1000);
   document.getElementById('viewerCap').textContent = `${ph.name} · ${pad(d.getHours())}:${pad(d.getMinutes())}${ph.lat != null ? ` · ${ph.lat}, ${ph.lon} (±${ph.acc} m)` : ''}${ph.ai ? ` · AI: ${ph.ai.deskripsi}${ph.ai.catatan ? ' ' + ph.ai.catatan : ''}` : ''}`;
-  document.getElementById('viewerAI').hidden = !aiKey();
+  document.getElementById('viewerAI').hidden = !aiAvail();
   const del = document.getElementById('viewerDel'); del.classList.remove('armed'); del.textContent = 'Hapus foto';
   document.getElementById('viewer').hidden = false;
 }
@@ -1658,7 +1658,7 @@ document.getElementById('viewerClose').addEventListener('click', closeViewer);
 document.getElementById('viewerAI').addEventListener('click', () => {
   const tgt = photoTarget(); if (!tgt || !viewerPhoto) return;
   aiEnqueue({ ph: viewerPhoto.id, eid: tgt.e.id, t: tgt.isRow ? tgt.t : null, row: tgt.isRow ? tgt.obj._id : null });
-  toast(navigator.onLine ? 'AI sedang membaca foto ini…' : 'Foto masuk antrean; dibaca AI saat ada sinyal.');
+  toast(aiCanRun() ? 'AI sedang membaca foto ini…' : 'Foto masuk antrean; dibaca AI saat ada sinyal.');
 });
 document.getElementById('viewerDel').addEventListener('click', async ev => {
   const b = ev.currentTarget;
@@ -1865,7 +1865,7 @@ app.addEventListener('click', ev => {
   }
   else if (a === 'install') doInstall();
   else if (a === 'upd') manualUpdate(b);
-  else if (['aikey', 'aitest', 'aidel', 'airun'].includes(a)) aiAction(a, b);
+  else if (['aikey', 'aitest', 'aidel', 'airun', 'ailget', 'ailrm'].includes(a)) aiAction(a, b);
   else if (a === 'zip') exportZip(false);
   else if (a === 'share') exportZip(true);
   else if (a === 'json') download(backupBlob(), fileBase() + '.json');
@@ -2155,7 +2155,11 @@ Tulis dalam bahasa Indonesia yang ringkas dan faktual, hanya berdasarkan yang te
 Sebut nama jenis atau genus hanya bila cirinya jelas terlihat; bila ragu, tulis kelompoknya saja (mis. "burung pantai kecil"). Abaikan teks watermark (koordinat, tanggal) pada foto.`;
 function aiKey() { try { return localStorage.getItem(AI_KEY) || ''; } catch (e) { return ''; } }
 function aiAuto() { try { return localStorage.getItem(AI_APP + '-ai-auto') !== '0'; } catch (e) { return true; } }
-function aiOn() { return !!aiKey() && aiAuto(); }
+/* Mesin pembaca: Claude bila ada kunci API dan sinyal; selain itu model di HP bila sudah diunduh. */
+function aiUseClaude() { return !!aiKey() && navigator.onLine; }
+function aiCanRun() { return aiUseClaude() || ailReady(); }
+function aiAvail() { return !!aiKey() || ailReady(); }
+function aiOn() { return aiAvail() && aiAuto(); }
 function aiQueue() { try { return JSON.parse(localStorage.getItem(AI_APP + '-ai-queue') || '[]'); } catch (e) { return []; } }
 function aiSetQueue(q) { try { localStorage.setItem(AI_APP + '-ai-queue', JSON.stringify(q)); } catch (e) {} }
 let aiSdkP = null;
@@ -2209,6 +2213,10 @@ async function aiDescribe(blob, context) {
 function aiErrKind(e) {
   const A = window.AnthropicSDK && window.AnthropicSDK.default;
   if (e && e.message === 'refusal') return ['drop', 'AI tidak mau membaca foto ini.'];
+  if (e && e.message === 'lokal-pustaka') return ['retry', 'Pustaka AI di HP belum tersimpan. Buka tab Data → AI di HP saat ada sinyal.'];
+  if (e && e.message === 'lokal-unduh') return ['retry', 'Model AI gagal diunduh dari Hugging Face. Coba lagi dengan Wi-Fi yang lebih stabil.'];
+  if (e && e.message === 'lokal-hilang') return ['retry', 'Model AI di HP tidak lengkap (mungkin terhapus browser). Unduh ulang di tab Data saat ada sinyal.'];
+  if (e && e.message === 'lokal-foto') return ['drop', 'Foto ini tidak bisa dibaca AI di HP.'];
   if (e && e.message === 'pustaka') return ['retry', 'Pustaka AI belum tersimpan di HP. Buka aplikasi sekali saat ada sinyal.'];
   if (A) {
     if (e instanceof A.AuthenticationError) return ['stop', 'Kunci API Claude ditolak. Periksa kunci di tab Data.'];
@@ -2233,18 +2241,18 @@ function aiEnqueue(job) {
 }
 let aiBusy = false;
 async function aiRun() {
-  if (aiBusy || !aiKey() || !navigator.onLine || !aiQueue().length) return;
+  if (aiBusy || !aiCanRun() || !aiQueue().length) return;
   aiBusy = true;
   let done = 0;
   try {
     for (;;) {
-      const q = aiQueue(); if (!q.length || !navigator.onLine || !aiKey()) break;
+      const q = aiQueue(); if (!q.length || !aiCanRun()) break;
       const job = q[0], loc = aiLocate(job);
       const drop = () => aiSetQueue(aiQueue().filter(j => j.ph !== job.ph));
       const blob = loc && await pdbGet('foto', job.ph).catch(() => null);
       if (!loc || !blob) { drop(); continue; }
       try {
-        const r = await aiDescribe(blob, loc.context);
+        const r = aiUseClaude() ? await aiDescribe(blob, loc.context) : await ailDescribe([blob]);
         const cur = aiLocate(job);
         if (cur) {
           cur.ph.ai = { deskripsi: r.deskripsi, catatan: r.catatan, model: r.model, t: Date.now() };
@@ -2270,15 +2278,20 @@ async function aiRun() {
   }
 }
 function aiSectionHTML(attr) {
-  const k = aiKey(), n = aiQueue().length;
-  return `<section class="section" id="aiSec"><h2>Baca foto dengan AI (Claude)</h2>
-      <p class="note">Foto baru dibaca Claude AI untuk mengisi <b>Deskripsi</b> dan <b>Catatan</b> secara otomatis. Butuh sinyal; tanpa sinyal foto diantrekan dan dibaca begitu ada sinyal. Foto dikirim (diperkecil) ke Anthropic. Biaya kira-kira Rp250–400 per foto, ditagih ke akun API Anthropic Anda.</p>
+  const k = aiKey(), n = aiQueue().length, lok = ailReady();
+  return `<section class="section" id="aiLokSec"><h2>AI di HP (gratis, tanpa sinyal)</h2>
+      <p class="note">Foto baru dibaca oleh model AI yang tersimpan di HP ini untuk mengisi <b>Deskripsi</b> dan <b>Catatan</b> (tipe habitat, substrat, vegetasi umum, genangan, sampah). Gratis, foto tidak dikirim ke mana pun, dan bekerja tanpa sinyal. Isian yang sudah Anda ketik tidak ditimpa. Hasilnya perkiraan kasar, jadi tetap periksa dan lengkapi. Model yang sama dipakai Peta Survei di HP ini, jadi cukup diunduh sekali.</p>
+      ${lok ? `<p class="note"><b>Model AI sudah tersimpan di HP ini.</b></p><button type="button" class="btn danger" ${attr}="ailrm">Hapus model AI (±170 MB)</button>`
+        : `<button type="button" class="btn block" id="ailGet" ${attr}="ailget">Unduh model AI (±170 MB, sekali saja, pakai Wi-Fi)</button>`}
+      <label class="check"><input type="checkbox" id="aiAuto" ${aiAuto() ? 'checked' : ''}>Baca otomatis setiap foto baru</label>
+      <p class="note" id="aiQueueInfo">${n ? `${n} foto menunggu dibaca AI.` : 'Tidak ada foto yang menunggu.'}</p>
+      ${n && aiAvail() ? `<button type="button" class="btn ghost block" ${attr}="airun">Baca foto yang menunggu sekarang</button>` : ''}
+    </section>
+    <section class="section" id="aiSec"><h2>Claude AI (opsional, berbayar)</h2>
+      <p class="note">Tidak wajib. Bila diisi kunci API, foto dibaca Claude yang menulis deskripsi lebih rinci (jenis tumbuhan, satwa, ancaman) saat ada sinyal; tanpa sinyal tetap memakai AI di HP. Foto dikirim (diperkecil) ke Anthropic. Biaya kira-kira Rp250–400 per foto, ditagih ke akun API Anthropic Anda.</p>
       ${k ? `<p class="note">Kunci tersimpan: <b>${esc(k.slice(0, 7))}…${esc(k.slice(-4))}</b> (juga dipakai aplikasi pasangannya di HP ini).</p>` : ''}
       <div class="fields"><div class="field w"><label for="aiKeyIn">${k ? 'Ganti kunci API Anthropic' : 'Kunci API Anthropic'}</label><input type="password" id="aiKeyIn" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"></div></div>
       <div class="row"><button type="button" class="btn ghost" ${attr}="aikey">Simpan kunci</button>${k ? `<button type="button" class="btn ghost" ${attr}="aitest">Uji kunci</button><button type="button" class="btn danger" ${attr}="aidel">Hapus kunci</button>` : ''}</div>
-      <label class="check"><input type="checkbox" id="aiAuto" ${aiAuto() ? 'checked' : ''}>Baca otomatis setiap foto baru</label>
-      <p class="note" id="aiQueueInfo">${n ? `${n} foto menunggu dibaca AI.` : 'Tidak ada foto yang menunggu.'}</p>
-      ${n && k ? `<button type="button" class="btn ghost block" ${attr}="airun">Baca foto yang menunggu sekarang</button>` : ''}
       <details class="guide legend"><summary>Cara mendapatkan kunci API</summary><ol style="padding-left:20px;margin:8px 0">
         <li>Buka <b>console.anthropic.com</b> di browser (lebih mudah dari laptop), lalu daftar atau masuk.</li>
         <li>Isi saldo di menu <b>Billing</b>, dan atur batas belanja bulanan di <b>Limits</b> agar biaya terkendali.</li>
@@ -2305,8 +2318,12 @@ async function aiAction(a, btn) {
     try { const client = await aiClient(); await client.models.retrieve(AI_MODEL); toast('Kunci berfungsi. Foto baru akan dibaca AI.'); }
     catch (e) { toast(aiErrKind(e)[1]); }
     btn.disabled = false; btn.textContent = 'Uji kunci';
+  } else if (a === 'ailget') { btn.disabled = true; await ailDownload();
+  } else if (a === 'ailrm') {
+    if (!btn.classList.contains('armed')) { btn.classList.add('armed'); btn.textContent = 'Ketuk lagi untuk menghapus'; return; }
+    await ailRemove();
   } else if (a === 'airun') {
-    if (!navigator.onLine) { toast('Tidak ada sinyal. Foto dibaca otomatis saat ada sinyal.'); return; }
+    if (!aiCanRun()) { toast('Tidak ada sinyal. Foto dibaca otomatis saat ada sinyal.'); return; }
     toast('AI membaca foto yang menunggu…'); aiRun();
   }
 }
@@ -2335,6 +2352,145 @@ function aiLocate(job) {
   };
 }
 function aiRedraw() { if (view.v === 'data') render(); }
+/* ================= AI di HP (gratis, tanpa sinyal) =================
+   Model CLIP (Xenova/clip-vit-base-patch32, terkuantisasi ±150 MB) diunduh sekali dari Hugging Face lalu
+   disimpan browser (Cache API "transformers-cache"); pustaka transformers.js + ONNX Runtime ada di vendor/ai.
+   CLIP tidak menulis kalimat bebas: ia menilai seberapa cocok tiap foto dengan daftar keterangan
+   (habitat, substrat, vegetasi, genangan, sampah). Nilai dari foto-foto titik dirata-rata, lalu
+   dirangkai menjadi kalimat. Hasilnya ditambahkan ke Deskripsi/Catatan; isian surveyor tidak ditimpa. */
+const AIL_MODEL = 'Xenova/clip-vit-base-patch32';
+const AIL_FLAG = 'ai-lokal-siap';   // kunci bersama; versi awal Peta Survei memakai awalan nama aplikasi
+const AIL_TPL = ['a photo of {}.', 'a landscape photo of {}.', 'a field survey photo showing {}.'];
+const AIL_GROUPS = {
+  hab: [['MG', 'a mangrove forest'], ['MF', 'a muddy tidal mudflat'], ['PP', 'a sandy beach'],
+    ['VP', 'coastal vegetation with casuarina trees and pandanus'], ['TB', 'an aquaculture fish pond'], ['SW', 'a rice paddy field'],
+    ['KB', 'a farm field or garden'], ['KS', 'a coconut or oil palm plantation'], ['PM', 'houses in a village'],
+    ['SG', 'a river or canal'], ['RW', 'a swamp or flooded wetland'], ['SM', 'shrubs and bushes'], ['HT', 'a forest'], ['LT', 'bare open land']],
+  sub: [['lumpur', 'muddy ground'], ['lumpur berpasir', 'muddy sand'], ['pasir', 'sand'], ['tanah berumput', 'grassy ground'], ['air', 'water']],
+  veg: [['Mangrove (Avicennia/Rhizophora)', 'mangrove trees with aerial roots'], ['Nipah', 'nipa palms'], ['Cemara laut', 'casuarina pine trees'],
+    ['Pandan', 'pandanus plants'], ['Ipomoea pes-caprae', 'creeping beach morning glory vines'], ['Kelapa', 'coconut palm trees'],
+    ['Rumput', 'grass'], ['Semak', 'shrubs'], ['', 'bare ground without plants']],
+  air: [[1, 'standing water and tidal pools'], [0, 'dry ground']],
+  sampah: [[1, 'plastic trash and litter'], [0, 'clean natural surroundings']],
+};
+/* Penanda "model sudah diunduh" dipakai bersama Peta Survei dan Survei Cemara (satu domain, satu cache model). */
+function ailReady() { try { return localStorage.getItem(AIL_FLAG) === '1' || localStorage.getItem(AI_APP + '-' + AIL_FLAG) === '1'; } catch (e) { return false; } }
+function ailSetReady(v) { try { if (v) localStorage.setItem(AIL_FLAG, '1'); else { localStorage.removeItem(AIL_FLAG); localStorage.removeItem(AI_APP + '-' + AIL_FLAG); } } catch (e) {} }
+/* Bila model sudah diunduh (mungkin lewat aplikasi pasangannya), pastikan pustaka AI aplikasi ini juga
+   tersimpan selagi ada sinyal, agar AI tetap jalan saat nanti tanpa sinyal. */
+const AIL_FILES = ['transformers.min.js', 'ort-wasm-simd-threaded.jsep.mjs', 'ort-wasm-simd-threaded.jsep.wasm'];
+function ailWarm() {
+  if (!ailReady() || !navigator.onLine || !self.caches) return;
+  AIL_FILES.forEach(f => { const u = new URL('vendor/ai/' + f, location.href).href; caches.match(u).then(hit => { if (!hit) fetch(u).catch(() => {}); }).catch(() => {}); });
+}
+setTimeout(ailWarm, 5000);
+const ailNorm = v => { let s = 0; for (const x of v) s += x * x; s = Math.sqrt(s) || 1; return Float32Array.from(v, x => x / s); };
+/* Mesin CLIP: { text(prompts) → vektor[], image(blob) → vektor }. Tes otomatis bisa menyuntik window.__ailMock. */
+let ailP = null;
+function ailLoad(onProg) {
+  if (window.__ailMock) return Promise.resolve(window.__ailMock);
+  if (!ailP) {
+    ailP = (async () => {
+      let T;
+      try { T = await import('./vendor/ai/transformers.min.js'); } catch (e) { throw new Error('lokal-pustaka'); }
+      T.env.allowLocalModels = false;
+      T.env.backends.onnx.wasm.wasmPaths = new URL('vendor/ai/', location.href).href;
+      if (!self.crossOriginIsolated) T.env.backends.onnx.wasm.numThreads = 1;
+      const files = {};
+      const opt = { dtype: 'q8', progress_callback: p => {
+        if (!onProg || !p || !p.file) return;
+        if (p.status === 'progress' || p.status === 'done') files[p.file] = [p.loaded || (files[p.file] || [0, 0])[1], p.total || (files[p.file] || [0, 0])[1]];
+        let a = 0, b = 0; Object.values(files).forEach(([l, t]) => { a += l; b += t; }); if (b) onProg(a, b);
+      } };
+      try {
+        const [tok, proc, txt, vis] = await Promise.all([
+          T.AutoTokenizer.from_pretrained(AIL_MODEL, opt), T.AutoProcessor.from_pretrained(AIL_MODEL, opt),
+          T.CLIPTextModelWithProjection.from_pretrained(AIL_MODEL, opt), T.CLIPVisionModelWithProjection.from_pretrained(AIL_MODEL, opt)]);
+        return {
+          async text(prompts) { const { text_embeds: e } = await txt(tok(prompts, { padding: true, truncation: true })); const d = e.dims[1]; return prompts.map((_, i) => Array.from(e.data.slice(i * d, (i + 1) * d))); },
+          async image(blob) { const { image_embeds: e } = await vis(await proc(await T.RawImage.fromBlob(blob))); return Array.from(e.data); },
+        };
+      } catch (e) { console.warn(e); throw new Error(navigator.onLine ? 'lokal-unduh' : 'lokal-hilang'); }
+    })();
+    ailP.catch(() => { ailP = null; });
+  }
+  return ailP;
+}
+let ailTextP = null;
+function ailTextEmb(m) {
+  if (!ailTextP) {
+    ailTextP = (async () => {
+      // Beberapa kalimat per keterangan dirata-rata ("prompt ensemble") agar tebakan lebih stabil.
+      const keys = [], prompts = [];
+      for (const [g, items] of Object.entries(AIL_GROUPS)) items.forEach(([, p]) => { keys.push(g); AIL_TPL.forEach(t => prompts.push(t.replace('{}', p))); });
+      const vecs = await m.text(prompts), out = {}, n = AIL_TPL.length;
+      keys.forEach((g, i) => {
+        const avg = new Float32Array(vecs[0].length);
+        for (let j = 0; j < n; j++) ailNorm(vecs[i * n + j]).forEach((x, d) => { avg[d] += x; });
+        (out[g] = out[g] || []).push(ailNorm(avg));
+      });
+      return out;
+    })();
+    ailTextP.catch(() => { ailTextP = null; });
+  }
+  return ailTextP;
+}
+/* Peluang tiap keterangan per kelompok (softmax dari kemiripan kosinus × 100, seperti CLIP), dirata-rata antar foto. */
+function ailScore(imgVecs, E) {
+  const P = {};
+  for (const [g, rows] of Object.entries(E)) {
+    const acc = new Array(rows.length).fill(0);
+    for (const v of imgVecs) {
+      const s = rows.map(r => { let d = 0; for (let i = 0; i < r.length; i++) d += r[i] * v[i]; return d * 100; });
+      const mx = Math.max(...s), ex = s.map(x => Math.exp(x - mx)), sum = ex.reduce((a, b) => a + b, 0);
+      ex.forEach((x, i) => { acc[i] += x / sum / imgVecs.length; });
+    }
+    P[g] = acc;
+  }
+  return P;
+}
+const ailTop = (g, p) => { const i = p.indexOf(Math.max(...p)); return [AIL_GROUPS[g][i][0], p[i]]; };
+const AIL_HAB = { MG: 'mangrove', MF: 'mudflat / hamparan lumpur', PP: 'pantai pasir', VP: 'vegetasi pantai (cemara, pandan)', TB: 'tambak', SW: 'sawah', KB: 'kebun / ladang', KS: 'kebun kelapa / sawit', PM: 'permukiman', SG: 'sungai / parit / kuala', RW: 'rawa / genangan', SM: 'semak belukar', HT: 'hutan', LT: 'lahan terbuka' };
+function ailCompose(P) {
+  const [hk, hp] = ailTop('hab', P.hab);
+  const hab = AIL_HAB[hk] + (hp < 0.4 ? ' (kemungkinan)' : '');
+  const [sub] = ailTop('sub', P.sub);
+  const vegs = AIL_GROUPS.veg.map(([l], i) => [l, P.veg[i]]).filter(([l, p]) => l && p >= 0.2).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => x[0]);
+  const bare = ailTop('veg', P.veg)[0] === '';
+  const air = P.air[0] > 0.6, sampah = P.sampah[0] > 0.6;
+  let d = `Tampak ${hab}` + (sub === 'air' ? ' yang didominasi air' : ` dengan substrat ${sub}`) + (air && sub !== 'air' ? ', ada genangan air' : '') + '. ';
+  d += vegs.length ? `Vegetasi yang terlihat: ${vegs.join(', ')}.` : bare ? 'Tidak tampak vegetasi.' : '';
+  return {
+    deskripsi: d.trim() + ' (perkiraan AI di HP)',
+    catatan: sampah ? 'Tampak sampah di sekitar lokasi (perkiraan AI di HP, mohon dicek).' : '',
+    model: 'CLIP di HP',
+  };
+}
+async function ailDescribe(blobs) {
+  const m = await ailLoad(), E = await ailTextEmb(m), vecs = [];
+  for (const b of blobs) { try { vecs.push(ailNorm(await m.image(b))); } catch (e) { console.warn(e); } }
+  if (!vecs.length) throw new Error('lokal-foto');
+  return ailCompose(ailScore(vecs, E));
+}
+/* Kemajuan unduhan ditampilkan di tombol Unduh itu sendiri. */
+function ailProg(t) { const el = document.getElementById('ailGet'); if (el) el.textContent = t; }
+async function ailDownload() {
+  if (!navigator.onLine) { toast('Unduh model butuh sinyal (sebaiknya Wi-Fi).'); return; }
+  ailProg('Menyiapkan…');
+  try {
+    const mb = x => (x / 1048576).toFixed(0);
+    const m = await ailLoad((a, b) => ailProg(`Mengunduh ${Math.round(a / b * 100)}% · ${mb(a)} / ${mb(b)} MB · jangan tutup aplikasi`));
+    ailProg('Menyiapkan model AI…');
+    await ailTextEmb(m);
+    ailSetReady(true); toast('Model AI tersimpan di HP. Foto kini bisa dibaca tanpa sinyal dan gratis.');
+  } catch (e) { toast(aiErrKind(e)[1]); }
+  aiRedraw(); aiRun();
+}
+async function ailRemove() {
+  ailP = null; ailTextP = null; ailSetReady(false);
+  try { await caches.delete('transformers-cache'); await caches.delete('cemara-ai-3.8.1'); await caches.delete('peta-ai-3.8.1'); } catch (e) {}
+  toast('Model AI dihapus dari HP ini (juga untuk aplikasi pasangannya).'); aiRedraw();
+}
 
 /* ================= Pasang sebagai aplikasi =================
    Chrome/Edge/Samsung Internet mengirim beforeinstallprompt bila syarat instalasi terpenuhi;

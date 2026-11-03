@@ -1,0 +1,44 @@
+# Menyusun daftar jenis Indonesia (GBIF + iNaturalist) dan data identifikasi foto BioCLIP untuk Survei KEHATI,
+# lalu menyimpannya ke cabang yang menjalankan workflow ini.
+name: Perbarui daftar jenis & identifikasi KEHATI
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/relaxed-bardeen-277ku4]
+    paths: ['tools/build_jenis.py', 'tools/bioclip_build.py', '.github/workflows/jenis-kehati.yml']
+permissions:
+  contents: write
+concurrency:
+  group: jenis-kehati
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Daftar jenis dari iNaturalist dan GBIF
+        run: python tools/build_jenis.py
+      - name: Pasang PyTorch dan BioCLIP
+        run: |
+          pip install --quiet torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet "open_clip_torch>=2.24,<3" "onnx>=1.16,<1.18" "onnxruntime>=1.18,<1.21" pillow "numpy<2.2"
+      - name: Model dan embedding BioCLIP, uji ketepatan
+        run: python tools/bioclip_build.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-kehati
+          path: build/*.json
+      - name: Simpan hasil
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/survei-kehati/data apps/survei-kehati/model
+          git diff --cached --quiet && exit 0
+          git commit -m "Daftar jenis Indonesia & data identifikasi BioCLIP ($(date +%F))"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"

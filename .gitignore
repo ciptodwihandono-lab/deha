@@ -38,3 +38,4 @@ data/raw/iwc_indonesia_2020_2025/iwc-export_2020-2025.csv
 # Foto lapangan bird banding -- simpan di Google Drive, cukup rujuk nama file di CSV
 data/raw/bird_banding/photos/*
 !data/raw/bird_banding/photos/.gitkeep
+build/

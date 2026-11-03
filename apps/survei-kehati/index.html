@@ -584,8 +584,8 @@ function loadSpeciesData() {
       const rowsObj = SP_ROWS[d.tax] = [];
       for (const [sci, ind, eng, fam, iucn, cnt, ninat, ph] of d.rows) {
         const id = d.tax + ':' + sci, cur = SP_BY_SCI[id];
-        if (cur) { if (iucn) cur.iucn = iucn; cur.en = cur.en || eng; cur.c = cnt || 0; cur.ci = ninat || 0; cur.ph = ph || ''; if (!cur.f) cur.f = fam; rowsObj.push(cur); continue; }
-        const x = { id, tax: d.tax, n: ind || eng || sci, s: sci, f: fam || '', iucn: iucn || '', p: false, en: ind ? eng : '', c: cnt || 0, ci: ninat || 0, ph: ph || '', g: 1 };
+        if (cur) { if (iucn) cur.iucn = iucn; cur.en = cur.en || (eng && eng.toLowerCase() !== cur.n.toLowerCase() ? eng : ''); cur.c = cnt || 0; cur.ci = ninat || 0; cur.ph = ph || ''; if (!cur.f) cur.f = fam; rowsObj.push(cur); continue; }
+        const x = { id, tax: d.tax, n: ind || eng || sci, s: sci, f: fam || '', iucn: iucn || '', p: false, en: ind && eng && eng.toLowerCase() !== ind.toLowerCase() ? eng : '', c: cnt || 0, ci: ninat || 0, ph: ph || '', g: 1 };
         SPECIES.push(x); SP_BY_SCI[id] = x; rowsObj.push(x); added++;
       }
     }
@@ -1399,6 +1399,7 @@ function renderJenis() {
   renderJenisList();
 }
 function renderJenisList() {
+  if (!$('jnList')) return;   // hasil pencarian iNaturalist bisa datang setelah pindah halaman
   const q = ($('spQ') && $('spQ').value) || ''; JN.q = q;
   const rec = recordedSpecies();
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);

@@ -9,7 +9,7 @@ Model: BioCLIP (imageomics/bioclip, lisensi MIT), CLIP ViT-B/16 yang dilatih pad
   3. Uji ketepatan: foto contoh iNaturalist dari sebagian jenis diidentifikasi dengan model ONNX 8-bit dan embedding 8-bit
      (sama seperti di HP); hasil top-1/top-5 dicetak di log.
 """
-import io, json, os, random, struct, sys, time, urllib.request
+import io, json, os, random, struct, sys, time, urllib.request, urllib.error
 import numpy as np
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')

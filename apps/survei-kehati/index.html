@@ -845,8 +845,11 @@ function spSearch(q, tax) { return q.trim().length < 2 ? [] : spFind(q, tax, 15)
 function renderSug() {
   const box = $('spSug'); if (!box) return;
   const s = S.surveys[view.sid], o = s.obs[view.id];
-  const res = o.tax === 'foto' ? [] : spSearch($('spIn').value, o.tax);
-  box.innerHTML = res.length ? `<div class="suggest">${res.map(x => `<button type="button" data-pick="${esc(x.id)}">${esc(x.n)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''} <i>· ${esc(x.f)}</i>${x.tax !== o.tax ? ` <span class="tag ai">${esc(taxOf(x.tax).l)}</span>` : ''}</button>`).join('')}</div>` : '';
+  const q = $('spIn').value, res = o.tax === 'foto' ? [] : spSearch(q, o.tax);
+  if (o.tax !== 'foto' && res.length < 8) inatSearch(q, renderSug); else INAT.res = [];
+  const local = res.map(x => `<button type="button" data-pick="${esc(x.id)}">${esc(x.n)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''}${x.f ? ` <i>· ${esc(x.f)}</i>` : ''}${x.tax !== o.tax ? ` <span class="tag ai">${esc(taxOf(x.tax).l)}</span>` : ''}</button>`).join('');
+  const remote = o.tax === 'foto' ? '' : inatSugHTML(new Set(res.map(x => x.id)), 'sug');
+  box.innerHTML = local || remote ? `<div class="suggest">${local}${remote}</div>` : (q.trim().length >= 3 && o.tax !== 'foto' ? `<p class="note">Tidak ada di daftar HP${navigator.onLine ? '' : ' (pencarian iNaturalist butuh sinyal)'}. Nama boleh diketik bebas; isi nama ilmiah dan famili bila tahu.</p>` : '');
 }
 function pickSpecies(o, x) { Object.assign(o, { sp: x.id, nama: x.n, ilmiah: x.s, famili: x.f, tax: x.tax }); }
 
@@ -888,10 +891,10 @@ $('app').addEventListener('click', async ev => {
     if (b.dataset.hab != null) { toggle(o, 'hab', b.dataset.v); touch(s); return; }
     if (b.dataset.ting != null) { o.tingkat = o.tingkat === b.dataset.v ? '' : b.dataset.v; touch(s); render(); return; }
     if (b.dataset.tax != null) { o.tax = b.dataset.tax; if (o.tax !== 'foto' && o.jumlah === '') o.jumlah = 1; touch(s); render(); return; }
-    if (b.dataset.pick) { const x = SP_BY_SCI[b.dataset.pick]; if (x) { pickSpecies(o, x); touch(s); render(); } return; }
+    if (b.dataset.pick) { const x = SP_BY_SCI[b.dataset.pick] || (INAT.cache[b.dataset.pick] && inatAdopt(INAT.cache[b.dataset.pick])); if (x) { pickSpecies(o, x); touch(s); render(); } return; }
     if (b.dataset.ph) { openViewer(b.dataset.ph); return; }
   }
-  if (b.dataset.sel) { go({ v: 'sp', id: b.dataset.sel }); return; }
+  if (b.dataset.sel) { if (!SP_BY_SCI[b.dataset.sel] && INAT.cache[b.dataset.sel]) inatAdopt(INAT.cache[b.dataset.sel]); go({ v: 'sp', id: b.dataset.sel }); return; }
   switch (a) {
     case 'newsurvey': { const ns = newSurvey(); go({ v: 'survey', id: ns.id }); break; }
     case 'opensurvey': go({ v: 'survey', id: b.dataset.id }); break;
@@ -1403,7 +1406,9 @@ function renderJenisList() {
   list.sort((a, b) => (b.rec ? 1 : 0) - (a.rec ? 1 : 0));
   const nrec = list.filter(x => x.rec).length;
   $('jnCount').textContent = `${list.length.toLocaleString('id-ID')} jenis${nrec ? ` · ${nrec} sudah tercatat` : ''}${list.length > 200 ? ' · tampil 200 teratas, persempit pencarian' : ''}`;
-  $('jnList').innerHTML = list.slice(0, 200).map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${esc(x.n)} ${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span>` : ''} ${x.p ? '<span class="tag p">Dilindungi</span>' : ''}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s || '')}</i> · ` : ''}${esc(x.f || '')}${x.en ? ' · ' + esc(x.en) : ''}</span></span>${x.rec ? `<span class="count">${x.ind}</span>` : ''}<span class="chev">›</span></button>`).join('') || '<div class="empty">Tidak ada yang cocok.</div>';
+  if (words.length && list.length < 8) inatSearch(q, renderJenisList); else INAT.res = [];
+  const remote = words.length ? inatSugHTML(new Set(list.map(x => x.id)), 'list') : '';
+  $('jnList').innerHTML = (list.slice(0, 200).map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${esc(x.n)} ${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span>` : ''} ${x.p ? '<span class="tag p">Dilindungi</span>' : ''}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s || '')}</i> · ` : ''}${esc(x.f || '')}${x.en ? ' · ' + esc(x.en) : ''}</span></span>${x.rec ? `<span class="count">${x.ind}</span>` : ''}<span class="chev">›</span></button>`).join('') ) + remote || `<div class="empty">Tidak ada di daftar HP.${navigator.onLine ? '' : ' Pencarian iNaturalist butuh sinyal.'}</div>`;
 }
 $('app').addEventListener('click', ev => { const b = ev.target.closest('[data-jtax]'); if (b) { JN.tax = b.dataset.jtax; renderJenis(); } });
 function renderSp() {
@@ -1977,8 +1982,74 @@ async function idFromObs(s, o, ph) {
   if (!b) { toast('File foto ini tidak ada di HP ini.'); return; }
   runIdentify(b, idTaxFor(o.tax), { sid: s.id, oid: o.id });
 }
+
+/* ================= Cari jenis langsung di iNaturalist (saat ada sinyal) =================
+   Bila nama yang diketik tidak ada (atau sedikit) di daftar di HP, aplikasi mencari di iNaturalist
+   (nama Indonesia diutamakan). Jenis yang dipilih disimpan di HP sehingga berikutnya bisa dicari tanpa sinyal. */
+const INAT_PLACE = 6966;   // Indonesia di iNaturalist
+const INAT_SAVED = AI_APP + '-jenis-inat';
+const INAT = { cache: {}, q: '', res: [], busy: false, timer: null, ctl: null };
+const INAT_ICONIC = { Aves: 'burung', Mammalia: 'mamalia', Reptilia: 'reptil', Amphibia: 'amfibi', Actinopterygii: 'ikan', Mollusca: 'bentos', Plantae: 'tumbuhan', Insecta: 'serangga' };
+function inatTax(t) {
+  const a = t.ancestor_ids || [];
+  if (a.includes(47792)) return 'capung';     // Odonata
+  if (a.includes(47224)) return 'kupu';       // Papilionoidea (kupu-kupu)
+  return INAT_ICONIC[t.iconic_taxon_name] || 'lain';
+}
+function inatEntry(t) {
+  const sci = t.rank === 'species' ? t.name : t.name.split(' ').slice(0, 2).join(' ');
+  const tax = inatTax(t);
+  return { id: tax + ':' + sci, tax, n: (t.preferred_common_name || '').trim() || sci, s: sci, f: '', iucn: '', p: false, en: t.english_common_name || '', ph: (t.default_photo || {}).square_url || '', inat: t.id, ci: t.observations_count || 0, remote: true };
+}
+function inatLoadSaved() {
+  let list = []; try { list = JSON.parse(localStorage.getItem(INAT_SAVED) || '[]'); } catch (e) {}
+  for (const x of list) if (!SP_BY_SCI[x.id]) { x.remote = false; x.g = 1; SPECIES.push(x); SP_BY_SCI[x.id] = x; }
+}
+function inatAdopt(x) {
+  if (SP_BY_SCI[x.id]) return SP_BY_SCI[x.id];
+  const y = Object.assign({}, x, { remote: false, g: 1 }); delete y._q;
+  SPECIES.push(y); SP_BY_SCI[y.id] = y;
+  try { const list = JSON.parse(localStorage.getItem(INAT_SAVED) || '[]'); list.push(y); localStorage.setItem(INAT_SAVED, JSON.stringify(list.slice(-3000))); } catch (e) {}
+  // Famili dilengkapi di latar belakang dari silsilah takson iNaturalist.
+  if (navigator.onLine && y.inat) fetch(`https://api.inaturalist.org/v1/taxa/${y.inat}?locale=id&preferred_place_id=${INAT_PLACE}`).then(r => r.json()).then(d => {
+    const t = (d.results || [])[0]; const fam = t && (t.ancestors || []).find(a => a.rank === 'family');
+    if (!fam) return; y.f = fam.name; y._q = '';
+    try { const list = JSON.parse(localStorage.getItem(INAT_SAVED) || '[]').map(z => z.id === y.id ? Object.assign(z, { f: fam.name }) : z); localStorage.setItem(INAT_SAVED, JSON.stringify(list)); } catch (e) {}
+    for (const s of Object.values(S.surveys)) for (const o of Object.values(s.obs)) if (o.sp === y.id && !o.famili) { o.famili = fam.name; touch(s); }
+    if (view.v === 'obs') { const el = document.querySelector('[data-o="famili"]'); if (el && !el.value) el.value = fam.name; }
+  }).catch(() => {});
+  return y;
+}
+/* Pencarian tertunda 400 ms setelah berhenti mengetik; hasilnya memanggil onDone untuk menggambar ulang. */
+function inatSearch(q, onDone) {
+  clearTimeout(INAT.timer);
+  q = q.trim();
+  if (!navigator.onLine || q.length < 3) { INAT.q = q; INAT.res = []; return; }
+  if (INAT.q === q && !INAT.busy) return;
+  INAT.timer = setTimeout(async () => {
+    if (INAT.ctl) INAT.ctl.abort(); INAT.ctl = new AbortController(); INAT.busy = true; INAT.q = q;
+    try {
+      const r = await fetch(`https://api.inaturalist.org/v1/taxa/autocomplete?q=${encodeURIComponent(q)}&locale=id&preferred_place_id=${INAT_PLACE}&per_page=15`, { signal: INAT.ctl.signal });
+      const d = await r.json();
+      const seen = new Set();
+      INAT.res = (d.results || []).filter(t => ['species', 'subspecies', 'variety'].includes(t.rank) && t.is_active !== false).map(inatEntry)
+        .filter(x => !seen.has(x.id) && seen.add(x.id));
+      INAT.res.forEach(x => { INAT.cache[x.id] = x; });
+    } catch (e) { if (e.name !== 'AbortError') INAT.res = []; }
+    INAT.busy = false; onDone();
+  }, 400);
+}
+function inatSugHTML(localIds, mode) {
+  if (!navigator.onLine || INAT.q.length < 3) return '';
+  const extra = INAT.res.filter(x => !localIds.has(x.id) && !SP_BY_SCI[x.id]);
+  if (INAT.busy) return '<div class="note" style="padding:6px 2px">Mencari juga di iNaturalist…</div>';
+  if (!extra.length) return '';
+  return mode === 'sug'
+    ? extra.map(x => `<button type="button" data-pick="${esc(x.id)}">${esc(x.n)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''} <span class="tag ai">iNaturalist · ${esc(taxOf(x.tax).l)}</span></button>`).join('')
+    : extra.map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${esc(x.n)} <span class="tag ai">iNaturalist</span></span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(taxOf(x.tax).l)}${x.ci ? ` · ${x.ci.toLocaleString('id-ID')} pengamatan di dunia` : ''}</span></span><span class="chev">›</span></button>`).join('');
+}
 /* ================= Mulai ================= */
-applyTheme(); updateNet();
+applyTheme(); updateNet(); inatLoadSaved();
 history.replaceState(view, '');
 render();
 if (activeSurvey() && activeSurvey().trackOn) startTrack(activeSurvey());

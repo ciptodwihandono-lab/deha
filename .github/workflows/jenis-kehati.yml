@@ -21,12 +21,15 @@ jobs:
         with:
           python-version: '3.11'
       - name: Daftar jenis dari iNaturalist dan GBIF
+        timeout-minutes: 180
+        continue-on-error: true   # kelompok yang sudah selesai tetap disimpan
         run: python tools/build_jenis.py
       - name: Pasang PyTorch dan BioCLIP
         run: |
           pip install --quiet torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install --quiet "open_clip_torch>=2.24,<3" "onnx>=1.16,<1.18" "onnxruntime>=1.18,<1.21" pillow "numpy<2.2"
       - name: Model dan embedding BioCLIP, uji ketepatan
+        timeout-minutes: 120
         run: python tools/bioclip_build.py
       - uses: actions/upload-artifact@v4
         if: always()
@@ -34,6 +37,7 @@ jobs:
           name: build-kehati
           path: build/*.json
       - name: Simpan hasil
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

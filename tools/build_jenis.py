@@ -10,7 +10,7 @@ Hasil:
   build/taxo-<taksa>.json                       (taksonomi lengkap, untuk embedding BioCLIP; tidak diterbitkan)
 Hanya memakai pustaka bawaan Python.
 """
-import json, os, sys, time, datetime, urllib.request, urllib.parse
+import json, os, sys, time, datetime, urllib.request, urllib.parse, urllib.error
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -41,10 +41,15 @@ def get(base, path, params=None, tries=6, pause=0):
             if pause: time.sleep(pause)
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=90) as r:
                 return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code != 429 and e.code < 500: return None   # mis. 404 = jenis belum dinilai IUCN: bukan galat, jangan diulang
+            if i == tries - 1:
+                print('GAGAL', url, e, file=sys.stderr); return None
+            time.sleep(min(30, 2 ** (i + 1)))
         except Exception as e:
             if i == tries - 1:
                 print('GAGAL', url, e, file=sys.stderr); return None
-            time.sleep(min(60, 2 ** (i + 1)))
+            time.sleep(min(30, 2 ** (i + 1)))
 
 # ---------- iNaturalist ----------
 def inat_place():
@@ -134,7 +139,11 @@ def main():
         keys = [k for k, _ in sorted(counts.items(), key=lambda kv: -kv[1]) if k not in seen]
         if cap: keys = keys[:cap]
         print(f'  GBIF {len(keys)} jenis, iNat {len(inat_en)} jenis; mengambil rincian…', flush=True)
-        with ThreadPoolExecutor(24) as ex: det = list(ex.map(gbif_detail, keys))
+        with ThreadPoolExecutor(24) as ex:
+            det = []
+            for i, d in enumerate(ex.map(gbif_detail, keys)):
+                det.append(d)
+                if i and i % 2000 == 0: print(f'    {i}/{len(keys)} jenis, {time.time() - t0:.0f} dtk', flush=True)
         by_sci = {}
         for k, d in zip(keys, det):
             if d and d['sci']: d['gbif'] = counts[k]; d['key'] = k; by_sci[d['sci']] = d

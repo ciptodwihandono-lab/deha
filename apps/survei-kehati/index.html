@@ -231,7 +231,7 @@ const TAXA = [
   { k: 'ikan', l: 'Ikan', c: '#1f8fbf', det: ['Jaring', 'Pancing', 'Bubu', 'Lihat', 'Tangkapan nelayan'], akt: ['Berenang', 'Makan', 'Di lumpur'] },
   { k: 'bentos', l: 'Krustasea & moluska', c: '#b5651d', det: ['Kuadrat', 'Lihat', 'Tangkapan warga'], akt: ['Di permukaan', 'Di lubang', 'Menempel di akar/batang', 'Makan'] },
   { k: 'tumbuhan', l: 'Tumbuhan', c: '#2f8f3a', det: ['Plot', 'Jelajah'], akt: ['Berbunga', 'Berbuah', 'Semai alami'] },
-  { k: 'lain', l: 'Lainnya', c: '#6e6e6e', det: ['Lihat', 'Foto'], akt: [] },
+  { k: 'lain', l: 'Lainnya (laba-laba, jamur, karang, dll.)', c: '#6e6e6e', det: ['Lihat', 'Foto'], akt: [] },
 ];
 const TAX = Object.fromEntries(TAXA.map(t => [t.k, t]));
 const FOTO_TAX = { k: 'foto', l: 'Belum dikelompokkan', c: '#ffffff' };   // catatan baru / foto yang jenisnya belum dipilih
@@ -576,7 +576,7 @@ const SP_META = { loaded: false, total: 0, perTax: {}, dibuat: '', sumber: '' };
 let spLoadP = null;
 function loadSpeciesData() {
   if (!spLoadP) spLoadP = (async () => {
-    const res = await Promise.all(TAXA.filter(t => t.k !== 'lain').map(t => fetch(`data/jenis-${t.k}.json`).then(r => r.ok ? r.json() : null).catch(() => null)));
+    const res = await Promise.all(TAXA.map(t => fetch(`data/jenis-${t.k}.json`).then(r => r.ok ? r.json() : null).catch(() => null)));
     let added = 0;
     for (const d of res) {
       if (!d || !Array.isArray(d.rows)) continue;
@@ -1388,7 +1388,7 @@ function renderJenis() {
   $('app').innerHTML = `
     <section class="section">
       <input type="search" id="spQ" placeholder="Cari nama lokal, Indonesia, ilmiah, atau famili" value="${esc(JN.q)}" autocomplete="off">
-      <div class="chips"><button type="button" class="chip" data-jtax="" aria-pressed="${!JN.tax}">Semua</button>${TAXA.filter(t => t.k !== 'lain').map(t => `<button type="button" class="chip" data-jtax="${t.k}" aria-pressed="${JN.tax === t.k}"><span class="sw" style="background:${t.c}"></span>${t.l}</button>`).join('')}</div>
+      <div class="chips"><button type="button" class="chip" data-jtax="" aria-pressed="${!JN.tax}">Semua</button>${TAXA.map(t => `<button type="button" class="chip" data-jtax="${t.k}" aria-pressed="${JN.tax === t.k}"><span class="sw" style="background:${t.c}"></span>${t.l}</button>`).join('')}</div>
       <div class="aibox"><span><b>Identifikasi dari foto (AI di HP, seperti iNaturalist).</b> ${idReady() ? `Pilih foto satwa/tumbuhan; AI memberi saran jenis beserta persentase keyakinan${JN.tax ? ' (hanya ' + esc(taxOf(JN.tax).l.toLowerCase()) + ', sesuai saringan)' : ''}.` : 'Unduh dulu data identifikasi di tab Data (sekali, ±120 MB). Sementara itu AI hanya menebak kelompok satwa/tumbuhan.'} Penentuan akhir tetap oleh pengamat.</span>
         <div class="row"><button type="button" class="btn sm" data-a="idphoto">Pilih foto</button><button type="button" class="btn sm ghost" data-a="idcam">Ambil foto</button></div>
         ${JN.guess ? `<span>${JN.guess.map(([k, p]) => `${esc(taxOf(k).l)} ${Math.round(p * 100)}%`).join(' · ')}</span>` : ''}</div>
@@ -1978,7 +1978,7 @@ function idSectionHTML() {
       : '<button type="button" class="btn block" data-a="idget">Unduh data identifikasi (±120 MB, sekali saja, pakai Wi-Fi)</button>'}
   </section>`;
 }
-function idTaxFor(tax) { return TAX[tax] && tax !== 'lain' ? [tax] : TAXA.filter(t => t.k !== 'lain').map(t => t.k); }
+function idTaxFor(tax) { return TAX[tax] ? [tax] : TAXA.map(t => t.k); }
 async function idFromObs(s, o, ph) {
   ph = ph || (o._photos || [])[o._photos.length - 1];
   if (!ph) { toast('Ambil foto dulu.'); return; }

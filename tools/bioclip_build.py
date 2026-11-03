@@ -118,7 +118,7 @@ def main():
     random.seed(7)
     betas = [0.0, 0.5, 1.0, 1.5, 2.0]
     report, tot = {}, {b: [0, 0, 0] for b in betas}
-    for tax in ['burung', 'mamalia', 'reptil', 'amfibi', 'kupu', 'capung', 'ikan', 'bentos', 'tumbuhan', 'serangga']:
+    for tax in ['burung', 'mamalia', 'reptil', 'amfibi', 'kupu', 'capung', 'ikan', 'bentos', 'tumbuhan', 'serangga', 'lain']:
         if tax not in deq: continue
         E, rows = deq[tax]
         prior = np.log1p(np.array([r[5] + 3 * r[6] for r in rows], dtype=np.float32))

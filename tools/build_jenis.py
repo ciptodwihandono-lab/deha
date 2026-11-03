@@ -32,7 +32,9 @@ GROUPS = [
     ('ikan', [('Actinopterygii', 'CLASS'), ('Elasmobranchii', 'CLASS')], [('Actinopterygii', 'class'), ('Elasmobranchii', 'subclass')], 9000),
     ('bentos', [('Decapoda', 'ORDER'), ('Gastropoda', 'CLASS'), ('Bivalvia', 'CLASS')], [('Decapoda', 'order'), ('Gastropoda', 'class'), ('Bivalvia', 'class')], 8000),
     ('tumbuhan', [('Tracheophyta', 'PHYLUM')], [('Tracheophyta', 'phylum')], 15000),
-    ('serangga', [('Insecta', 'CLASS')], [('Insecta', 'class')], 6000),   # terakhir: jenis yang sudah masuk kupu/capung dilewati
+    ('serangga', [('Insecta', 'CLASS')], [('Insecta', 'class')], 6000),   # setelah kupu/capung: jenis yang sudah masuk dilewati
+    ('lain', [('Arachnida', 'CLASS'), ('Fungi', 'KINGDOM'), ('Cnidaria', 'PHYLUM'), ('Echinodermata', 'PHYLUM'), ('Cephalopoda', 'CLASS')],
+             [('Arachnida', 'class'), ('Fungi', 'kingdom'), ('Cnidaria', 'phylum'), ('Echinodermata', 'phylum'), ('Cephalopoda', 'class')], 6000),
 ]
 
 def get(base, path, params=None, tries=6, pause=0):
@@ -68,10 +70,12 @@ def inat_taxon(name, rank):
     return None
 
 def inat_species(place, taxon_id, locale):
+    # Nama Indonesia: locale=id dengan preferred_place Indonesia. Nama Inggris: locale=en TANPA preferred_place,
+    # karena dengan preferred_place iNaturalist memberi nama lokal Indonesia walau locale=en.
     out, page = {}, 1
     while True:
         r = get(INAT, '/observations/species_counts', {'place_id': place, 'taxon_id': taxon_id, 'verifiable': 'true', 'rank': 'species',
-                                                      'locale': locale, 'preferred_place_id': place, 'per_page': 500, 'page': page}, pause=1.1) or {}
+                                                      'locale': locale, **({'preferred_place_id': place} if locale == 'id' else {}), 'per_page': 500, 'page': page}, pause=1.1) or {}
         res = r.get('results', [])
         for x in res:
             t = x.get('taxon') or {}
@@ -98,7 +102,7 @@ def gbif_counts(taxon_key):
         off += 1000
 
 TAXO = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus']
-LIGHT = {'tumbuhan', 'serangga'}   # kelompok besar: cukup satu permintaan per jenis (tanpa nama daerah GBIF dan IUCN)
+LIGHT = {'tumbuhan', 'serangga', 'lain'}   # kelompok besar: cukup satu permintaan per jenis (tanpa nama daerah GBIF dan IUCN)
 CUR = {'light': False}
 def gbif_detail(key):
     sp = get(GBIF, f'/species/{key}') or {}
@@ -121,6 +125,22 @@ def gbif_match(sci):
     key = r.get('acceptedUsageKey') or r.get('usageKey')
     return key
 
+def refresh_names(place, tax, itaxa, d, out_file):
+    """Perbarui nama Indonesia/Inggris dari iNaturalist tanpa mengubah urutan baris (embedding tetap cocok)."""
+    ids, ens = {}, {}
+    for name, rank in itaxa:
+        tid = inat_taxon(name, rank)
+        if tid: ids.update(inat_species(place, tid, 'id')); ens.update(inat_species(place, tid, 'en'))
+    n = 0
+    for r in d['rows']:
+        ia, ie = ids.get(r[0], {}), ens.get(r[0], {})
+        nid, nen = (ia.get('name') or '').strip(), (ie.get('name') or '').strip()
+        if nen: r[2] = nen[:70]
+        if nid and nid.lower() != (nen or r[2]).lower(): r[1] = nid[:70]; n += 1
+        elif r[1] and r[2] and r[1].lower() == r[2].lower() and nen and nen.lower() != r[1].lower(): pass
+    with open(out_file, 'w', encoding='utf-8') as f: json.dump(d, f, ensure_ascii=False, separators=(',', ':'))
+    print(f'  {tax}: nama Indonesia {sum(1 for r in d["rows"] if r[1])} dari {len(d["rows"])} jenis', flush=True)
+
 def main():
     os.makedirs(OUT, exist_ok=True); os.makedirs(BUILD, exist_ok=True); os.makedirs(TAXO_DIR, exist_ok=True)
     only = set(sys.argv[1:])
@@ -131,8 +151,11 @@ def main():
         out_file = os.path.join(OUT, f'jenis-{tax}.json')
         if (only and tax not in only) or (not force and os.path.exists(out_file) and os.path.exists(os.path.join(TAXO_DIR, f'taxo-{tax}.json'))):
             if os.path.exists(out_file):   # kelompok yang sudah ada dilewati; namanya dicatat agar tidak terulang (mis. kupu di serangga)
-                seen_sci.update(r[0] for r in json.load(open(out_file, encoding='utf-8'))['rows'])
-            print(f'== {tax}: sudah ada, dilewati', flush=True); continue
+                d = json.load(open(out_file, encoding='utf-8'))
+                seen_sci.update(r[0] for r in d['rows'])
+                if os.environ.get('JENIS_NAMA', '1') == '1' and not (only and tax not in only):
+                    refresh_names(place, tax, itaxa, d, out_file)
+            print(f'== {tax}: sudah ada, dilewati (nama diperbarui)', flush=True); continue
         CUR['light'] = tax in LIGHT
         t0 = time.time(); print(f'== {tax}', flush=True)
         # iNaturalist (nama Indonesia + Inggris + foto)

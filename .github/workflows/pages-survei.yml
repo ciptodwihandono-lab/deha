@@ -1,13 +1,14 @@
 # Menerbitkan aplikasi lapangan ke GitHub Pages:
 #   /deha/       -> apps/survei-pantai-cemara (formulir survei)
 #   /deha/peta/  -> apps/peta-survei (pemetaan habitat)
+#   /deha/kehati/ -> apps/survei-kehati (survei keanekaragaman hayati multi-taksa)
 # Aktifkan sekali di Settings → Pages → Source: "GitHub Actions".
 name: Terbitkan aplikasi survei
 
 on:
   push:
     branches: [claude/claude-rc-9bhjno]
-    paths: ['apps/survei-pantai-cemara/**', 'apps/peta-survei/**', '.github/workflows/pages-survei.yml']
+    paths: ['apps/survei-pantai-cemara/**', 'apps/peta-survei/**', 'apps/survei-kehati/**', '.github/workflows/pages-survei.yml']
   workflow_dispatch:
 
 permissions:
@@ -30,12 +31,13 @@ jobs:
       - uses: actions/configure-pages@v5
       - name: Susun situs
         run: |
-          mkdir -p _site/peta
+          mkdir -p _site/peta _site/kehati
           cp -r apps/survei-pantai-cemara/. _site/
           cp -r apps/peta-survei/. _site/peta/
-          rm -f _site/README.md _site/peta/README.md
+          cp -r apps/survei-kehati/. _site/kehati/
+          rm -f _site/README.md _site/peta/README.md _site/kehati/README.md
           BUILD="$(TZ=Asia/Jakarta date '+%d-%m-%Y %H:%M') WIB · ${GITHUB_SHA::7}"
-          sed -i "s|__BUILD__|$BUILD|" _site/index.html
+          sed -i "s|__BUILD__|$BUILD|" _site/index.html _site/kehati/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

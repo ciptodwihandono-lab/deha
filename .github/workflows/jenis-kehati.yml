@@ -8,6 +8,7 @@ on:
     paths: ['tools/build_jenis.py', 'tools/bioclip_build.py', '.github/workflows/jenis-kehati.yml']
 permissions:
   contents: write
+  actions: read
 concurrency:
   group: jenis-kehati
   cancel-in-progress: true
@@ -20,6 +21,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Ambil taksonomi dari run pertama (sekali saja)
+        if: hashFiles('tools/taxo/taxo-burung.json') == ''
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-kehati
+          run-id: 41678653128
+          github-token: ${{ github.token }}
+          path: build-lama
+      - name: Pindahkan taksonomi lama
+        run: |
+          mkdir -p tools/taxo
+          if [ -d build-lama ]; then for f in build-lama/taxo-*.json; do [ -e "tools/taxo/$(basename $f)" ] || cp "$f" tools/taxo/; done; fi
+          ls -la tools/taxo
       - name: Daftar jenis dari iNaturalist dan GBIF
         timeout-minutes: 180
         continue-on-error: true   # kelompok yang sudah selesai tetap disimpan
@@ -41,7 +56,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/survei-kehati/data apps/survei-kehati/model
+          git add apps/survei-kehati/data apps/survei-kehati/model tools/taxo
           git diff --cached --quiet && exit 0
           git commit -m "Daftar jenis Indonesia & data identifikasi BioCLIP ($(date +%F))"
           git pull --rebase origin "$GITHUB_REF_NAME"

@@ -17,6 +17,7 @@ APP = os.path.join(ROOT, 'apps', 'survei-kehati')
 DATA = os.path.join(APP, 'data')
 MODEL = os.path.join(APP, 'model', 'bioclip')
 BUILD = os.path.join(ROOT, 'build')
+TAXO_DIR = os.path.join(ROOT, 'tools', 'taxo')   # taksonomi lengkap per jenis (untuk teks BioCLIP), disimpan di repo
 MEAN = np.array([0.48145466, 0.4578275, 0.40821073], dtype=np.float32)
 STD = np.array([0.26862954, 0.26130258, 0.27577711], dtype=np.float32)
 
@@ -100,36 +101,49 @@ def main():
         if not (fn.startswith('jenis-') and fn.endswith('.json')): continue
         tax = fn[6:-5]
         rows = json.load(open(os.path.join(DATA, fn), encoding='utf-8'))['rows']
-        tp = os.path.join(BUILD, f'taxo-{tax}.json')
+        tp = os.path.join(TAXO_DIR, f'taxo-{tax}.json')
         taxo = json.load(open(tp, encoding='utf-8')) if os.path.exists(tp) else [[r[0], r[2], '', '', '', '', r[3], ''] for r in rows]
         assert [t[0] for t in taxo] == [r[0] for r in rows], f'urutan taxo-{tax} tidak sama dengan jenis-{tax}'
         t0 = time.time(); E = text_embeddings(model, tok, torch, taxo)
         deq[tax] = (write_emb(os.path.join(DATA, f'emb-{tax}.bin'), E), rows)
         index[tax] = {'n': len(rows), 'dim': int(E.shape[1]), 'mb': round(os.path.getsize(os.path.join(DATA, f'emb-{tax}.bin')) / 1048576, 1)}
         print(f'embedding {tax}: {len(rows)} jenis, {time.time() - t0:.0f} dtk', flush=True)
-    json.dump({'model': 'bioclip', 'logit_scale': float(model.logit_scale.exp().item()), 'taksa': index}, open(os.path.join(DATA, 'emb-index.json'), 'w'), indent=1)
-    # Uji ketepatan dengan model 8-bit (seperti di HP) memakai foto contoh iNaturalist
+    logit = float(model.logit_scale.exp().item())
+    # Uji ketepatan dengan model 8-bit (seperti di HP) memakai foto contoh iNaturalist, diambil acak dari semua jenis
+    # bertanda foto. Diuji juga bobot "jenis umum di Indonesia" (seperti 'teramati di sekitar' iNaturalist):
+    # skor = kemiripan x skala logit + beta x ln(1 + catatan GBIF + 3 x pengamatan iNat).
     import onnxruntime as ort
     from PIL import Image
     sess = ort.InferenceSession(qpath, providers=['CPUExecutionProvider'])
-    random.seed(1)
-    report = {}
-    for tax in ['burung', 'mamalia', 'reptil', 'amfibi', 'kupu', 'capung', 'ikan', 'tumbuhan']:
+    random.seed(7)
+    betas = [0.0, 0.5, 1.0, 1.5, 2.0]
+    report, tot = {}, {b: [0, 0, 0] for b in betas}
+    for tax in ['burung', 'mamalia', 'reptil', 'amfibi', 'kupu', 'capung', 'ikan', 'bentos', 'tumbuhan', 'serangga']:
         if tax not in deq: continue
         E, rows = deq[tax]
-        cand = [i for i, r in enumerate(rows[:600]) if r[7]]
-        sample = random.sample(cand, min(25, len(cand)))
-        top1 = top5 = n = 0
+        prior = np.log1p(np.array([r[5] + 3 * r[6] for r in rows], dtype=np.float32))
+        cand = [i for i, r in enumerate(rows) if r[7]]
+        sample = random.sample(cand, min(40, len(cand)))
+        res = {b: [0, 0, 0] for b in betas}
         for i in sample:
-            b = fetch(rows[i][7].replace('/square.', '/medium.'))
-            if not b: continue
-            try: x = preprocess_like_web(Image.open(io.BytesIO(b)))
+            img = fetch(rows[i][7].replace('/square.', '/medium.'))
+            if not img: continue
+            try: x = preprocess_like_web(Image.open(io.BytesIO(img)))
             except Exception: continue
-            v = sess.run(None, {'pixel_values': x})[0][0]
-            order = np.argsort(-(E @ v))[:5]
-            n += 1; top1 += order[0] == i; top5 += i in order
-        if n: report[tax] = f'top-1 {top1}/{n}, top-5 {top5}/{n}'; print(f'uji {tax}: {report[tax]}', flush=True)
-    json.dump(report, open(os.path.join(BUILD, 'uji-bioclip.json'), 'w'), indent=1)
+            sim = (E @ sess.run(None, {'pixel_values': x})[0][0]) * logit
+            for b in betas:
+                order = np.argsort(-(sim + b * prior))[:5]
+                r = res[b]; r[0] += 1; r[1] += int(order[0] == i); r[2] += int(i in order)
+        for b in betas:
+            for k in range(3): tot[b][k] += res[b][k]
+        report[tax] = {str(b): f'top-1 {res[b][1]}/{res[b][0]}, top-5 {res[b][2]}/{res[b][0]}' for b in betas}
+        print(f'uji {tax}: ' + ' | '.join(f'beta {b}: {v}' for b, v in report[tax].items()), flush=True)
+    best = max(betas, key=lambda b: (tot[b][1] + 0.5 * tot[b][2], -b)) if any(t[0] for t in tot.values()) else 0.0
+    report['total'] = {str(b): f'top-1 {tot[b][1]}/{tot[b][0]}, top-5 {tot[b][2]}/{tot[b][0]}' for b in betas}
+    report['beta_terpilih'] = best
+    print('total:', report['total'], '-> beta', best, flush=True)
+    json.dump({'model': 'bioclip', 'logit_scale': logit, 'prior_beta': best, 'taksa': index}, open(os.path.join(DATA, 'emb-index.json'), 'w'), indent=1)
+    json.dump(report, open(os.path.join(DATA, 'uji-identifikasi.json'), 'w'), indent=1, ensure_ascii=False)
 
 if __name__ == '__main__':
     main()

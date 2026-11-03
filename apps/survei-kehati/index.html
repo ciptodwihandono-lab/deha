@@ -1901,12 +1901,13 @@ function idErrMsg(e) {
 async function identify(blob, taxList) {
   await loadSpeciesData();
   const idx = await idIndex(), m = await idModel(), v = ailNorm(await m.image(blob)), ls = idx.logit_scale || 100;
+  const beta = idx.prior_beta || 0;   // bobot 'jenis umum di Indonesia' (dipilih dari uji ketepatan), seperti 'teramati di sekitar' iNaturalist
   const cand = [];
   for (const tax of taxList) {
     if (!idx.taksa || !idx.taksa[tax]) continue;
     const E = await idEmb(tax), rows = SP_ROWS[tax] || [];
     if (rows.length !== E.N) { console.warn('jumlah jenis tidak cocok', tax, rows.length, E.N); continue; }
-    for (let i = 0; i < E.N; i++) { let d = 0; const o = i * E.D; for (let j = 0; j < E.D; j++) d += E.q[o + j] * v[j]; cand.push([d * E.scale[i] * ls, rows[i]]); }
+    for (let i = 0; i < E.N; i++) { let d = 0; const o = i * E.D; for (let j = 0; j < E.D; j++) d += E.q[o + j] * v[j]; const x = rows[i]; cand.push([d * E.scale[i] * ls + (beta ? beta * Math.log1p((x.c || 0) + 3 * (x.ci || 0)) : 0), x]); }
   }
   if (!cand.length) throw new Error('id-belum');
   cand.sort((a, b) => b[0] - a[0]);

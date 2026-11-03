@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 OUT = os.path.join(ROOT, 'apps', 'survei-kehati', 'data')
 BUILD = os.path.join(ROOT, 'build')
+TAXO_DIR = os.path.join(ROOT, 'tools', 'taxo')   # taksonomi lengkap per jenis (untuk teks BioCLIP), disimpan di repo
 GBIF = 'https://api.gbif.org/v1'
 INAT = 'https://api.inaturalist.org/v1'
 UA = {'User-Agent': 'survei-kehati-checklist/1.1 (https://github.com/ciptodwihandono-lab/deha)'}
@@ -30,8 +31,8 @@ GROUPS = [
     ('capung', [('Odonata', 'ORDER')], [('Odonata', 'order')], None),
     ('ikan', [('Actinopterygii', 'CLASS'), ('Elasmobranchii', 'CLASS')], [('Actinopterygii', 'class'), ('Elasmobranchii', 'subclass')], 9000),
     ('bentos', [('Decapoda', 'ORDER'), ('Gastropoda', 'CLASS'), ('Bivalvia', 'CLASS')], [('Decapoda', 'order'), ('Gastropoda', 'class'), ('Bivalvia', 'class')], 8000),
-    ('tumbuhan', [('Tracheophyta', 'PHYLUM')], [('Tracheophyta', 'phylum')], 30000),
-    ('serangga', [('Insecta', 'CLASS')], [('Insecta', 'class')], 8000),   # terakhir: jenis yang sudah masuk kupu/capung dilewati
+    ('tumbuhan', [('Tracheophyta', 'PHYLUM')], [('Tracheophyta', 'phylum')], 15000),
+    ('serangga', [('Insecta', 'CLASS')], [('Insecta', 'class')], 6000),   # terakhir: jenis yang sudah masuk kupu/capung dilewati
 ]
 
 def get(base, path, params=None, tries=6, pause=0):
@@ -97,9 +98,13 @@ def gbif_counts(taxon_key):
         off += 1000
 
 TAXO = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus']
+LIGHT = {'tumbuhan', 'serangga'}   # kelompok besar: cukup satu permintaan per jenis (tanpa nama daerah GBIF dan IUCN)
+CUR = {'light': False}
 def gbif_detail(key):
     sp = get(GBIF, f'/species/{key}') or {}
     if sp.get('rank') != 'SPECIES': return None
+    if CUR['light']:
+        return {'sci': sp.get('canonicalName') or sp.get('species') or '', 'ind': '', 'eng': '', 'iucn': '', **{k: sp.get(k) or '' for k in TAXO}}
     ind = eng = ''
     v = get(GBIF, f'/species/{key}/vernacularNames', {'limit': 200}) or {}
     for x in v.get('results', []):
@@ -117,12 +122,18 @@ def gbif_match(sci):
     return key
 
 def main():
-    os.makedirs(OUT, exist_ok=True); os.makedirs(BUILD, exist_ok=True)
+    os.makedirs(OUT, exist_ok=True); os.makedirs(BUILD, exist_ok=True); os.makedirs(TAXO_DIR, exist_ok=True)
     only = set(sys.argv[1:])
     place = inat_place(); print('iNaturalist place Indonesia =', place, flush=True)
-    seen, summary = set(), {}
+    seen, summary, seen_sci = set(), {}, set()
+    force = os.environ.get('JENIS_ULANG') == '1'
     for tax, gtaxa, itaxa, cap in GROUPS:
-        if only and tax not in only: continue
+        out_file = os.path.join(OUT, f'jenis-{tax}.json')
+        if (only and tax not in only) or (not force and os.path.exists(out_file) and os.path.exists(os.path.join(TAXO_DIR, f'taxo-{tax}.json'))):
+            if os.path.exists(out_file):   # kelompok yang sudah ada dilewati; namanya dicatat agar tidak terulang (mis. kupu di serangga)
+                seen_sci.update(r[0] for r in json.load(open(out_file, encoding='utf-8'))['rows'])
+            print(f'== {tax}: sudah ada, dilewati', flush=True); continue
+        CUR['light'] = tax in LIGHT
         t0 = time.time(); print(f'== {tax}', flush=True)
         # iNaturalist (nama Indonesia + Inggris + foto)
         inat_id, inat_en = {}, {}
@@ -160,7 +171,7 @@ def main():
             if k and k in key_sci and key_sci[k] != sn: alias.setdefault(key_sci[k], sn)
         rows, taxo = [], []
         for sci, d in by_sci.items():
-            if d['key'] in seen: continue
+            if d['key'] in seen or sci in seen_sci: continue
             isci = sci if sci in inat_en else alias.get(sci, sci)
             ia, ie = inat_id.get(isci, {}), inat_en.get(isci, {})
             en = ie.get('name') or d['eng']
@@ -174,7 +185,7 @@ def main():
             json.dump({'tax': tax, 'sumber': 'GBIF.org (catatan di Indonesia) dan iNaturalist (pengamatan di Indonesia)', 'dibuat': datetime.date.today().isoformat(),
                        'kolom': ['nama_ilmiah', 'nama_indonesia', 'nama_inggris', 'famili', 'iucn', 'catatan_gbif', 'pengamatan_inat', 'foto_inat'], 'rows': rows},
                       f, ensure_ascii=False, separators=(',', ':'))
-        with open(os.path.join(BUILD, f'taxo-{tax}.json'), 'w', encoding='utf-8') as f:
+        with open(os.path.join(TAXO_DIR, f'taxo-{tax}.json'), 'w', encoding='utf-8') as f:
             json.dump(taxo, f, ensure_ascii=False, separators=(',', ':'))
         summary[tax] = len(rows)
         print(f'  selesai {len(rows)} jenis dalam {time.time() - t0:.0f} dtk; nama Indonesia {sum(1 for r in rows if r[1])}; IUCN {sum(1 for r in rows if r[4])}; foto {sum(1 for r in rows if r[7])}', flush=True)

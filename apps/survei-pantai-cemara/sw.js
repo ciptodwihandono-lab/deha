@@ -5,6 +5,11 @@
 const CACHE = 'survei-cemara';
 const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './vendor/anthropic-sdk.js'];
 const INDEX = new URL('./index.html', self.registration.scope).href;
+// Pustaka AI di HP (±22 MB) tidak ikut diunduh saat pasang; baru disimpan saat pertama dipakai.
+// Namanya sengaja tidak berawalan "survei-cemara" agar tidak terhapus saat aplikasi diperbarui;
+// saat pustaka diganti, cukup ubah versinya di sini.
+const AI_CACHE = 'cemara-ai-3.8.1';
+const AI_DIR = new URL('./vendor/ai/', self.registration.scope).href;
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -57,9 +62,20 @@ async function checkAll() {
   return changed;
 }
 
+async function aiFile(req, key) {
+  const c = await caches.open(AI_CACHE);
+  const hit = await c.match(key);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res.ok) await c.put(key, res.clone());
+  return res;
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const u = new URL(req.url), clean = u.origin + u.pathname;
+  if (clean.startsWith(AI_DIR)) { e.respondWith(aiFile(req, clean)); return; }
   const key = keyFor(req);
   if (!key) return;
   e.respondWith(

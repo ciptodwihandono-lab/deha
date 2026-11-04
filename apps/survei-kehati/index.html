@@ -199,6 +199,7 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
     <button type="button" id="mLocate">Posisi saya</button>
     <button type="button" id="mFit">Semua titik</button>
     <button type="button" id="mDraw" aria-pressed="false">Gambar luasan</button>
+    <button type="button" id="mCompass">Kompas</button>
   </div>
   <div class="mapinfo" id="mapInfo"></div>
 </div>
@@ -220,6 +221,7 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 <input type="file" id="galIn" accept="image/*" multiple hidden>
 <input type="file" id="importIn" accept=".json,application/json" hidden>
 <script src="vendor/leaflet.js"></script>
+<script src="vendor/navtools.js"></script>
 <script>
 'use strict';
 const APP_BUILD = '__BUILD__';   // diisi tanggal dan kode versi oleh workflow GitHub Pages
@@ -648,7 +650,8 @@ const fmtNum = (x, d = 2) => isFinite(x) ? x.toFixed(d).replace('.', ',') : '-';
 function fmtLen(m) { return m >= 1000 ? `${fmtNum(m / 1000)} km` : `${Math.round(m)} m`; }
 function fmtArea(m2) { return m2 >= 10000 ? `${fmtNum(m2 / 10000)} ha` : `${Math.round(m2).toLocaleString('id-ID')} m²`; }
 function fmtDur(sec) { if (!(sec > 0)) return '-'; const h = Math.floor(sec / 3600), m = Math.round(sec % 3600 / 60); return h ? `${h} jam ${m} menit` : `${m} menit`; }
-const fmtCoord = (lat, lon) => `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+/* Format koordinat tampilan mengikuti pilihan pengguna (DD, DMS, UTM, MGRS; vendor/navtools.js). Ekspor dan watermark tetap desimal. */
+const fmtCoord = (lat, lon) => window.NavTools ? NavTools.fmt(lat, lon) : `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
 function tzLabel(d) { return { '-420': 'WIB', '-480': 'WITA', '-540': 'WIT' }[String(d.getTimezoneOffset())] || ''; }
 let toastTimer;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3000); }
@@ -1333,6 +1336,15 @@ $('mLocate').addEventListener('click', async () => {
   MAP.m.setView(ll, Math.max(MAP.m.getZoom(), 17));
 });
 $('mFit').addEventListener('click', fitAll);
+/* Kompas & navigasi: kompas + inklinometer, deklinasi WMM, matahari/bulan, format koordinat. */
+let NAV_POS = null;
+function openCompass() {
+  if (!NAV_POS && LAST_POS) NAV_POS = { lat: LAST_POS.latitude, lon: LAST_POS.longitude, acc: LAST_POS.accuracy, alt: LAST_POS.altitude };
+  if (!window.NavTools) { toast('Pustaka kompas belum termuat. Buka aplikasi sekali saat ada sinyal.'); return; }
+  const w = navigator.geolocation ? navigator.geolocation.watchPosition(p => { NAV_POS = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy, alt: p.coords.altitude }; NavTools.refresh(); }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 }) : null;
+  NavTools.open({ getPos: () => NAV_POS, toast, onFormat: () => render(), onClose: () => { if (w != null) navigator.geolocation.clearWatch(w); } });
+}
+$('mCompass').addEventListener('click', openCompass);
 function fitAll() {
   if (!MAP.m) return;
   const pts = [];
@@ -1772,6 +1784,31 @@ function geojson() {
   }
   return JSON.stringify({ type: 'FeatureCollection', features: F }, null, 1);
 }
+function gpx() {
+  const wpts = [], trks = [];
+  for (const s of surveysSorted()) {
+    for (const o of obsList(s).reverse()) if (o.lat != null) wpts.push({ lat: o.lat, lon: o.lon, time: (o.t || 0) * 1000 || null, name: o.nama || (o.tax === 'foto' ? 'Foto' : taxOf(o.tax).l),
+      desc: [surveyName(s), o.tax !== 'foto' ? taxOf(o.tax).l : '', o.ilmiah, o.tax !== 'foto' && o.jumlah !== '' ? o.jumlah + ' ind.' : '', o.deskripsi].filter(Boolean).join(' · ') });
+    if (s.track.length > 1) trks.push({ name: `Jalur ${surveyName(s)} ${s.tanggal}`, segs: [s.track.map(p => ({ lat: p[0], lon: p[1], time: p[2] ? p[2] * 1000 : null }))] });
+    const ring = s.area.mode === '' ? s.area.coords : [];
+    if (ring.length >= 3) trks.push({ name: `Luasan ${surveyName(s)} ${fmtArea(areaOf(s).m2)}`, segs: [[...ring, ring[0]].map(p => ({ lat: p[0], lon: p[1] }))] });
+  }
+  return NavTools.toGPX({ name: 'Survei KEHATI', wpts, trks }, 'Survei KEHATI');
+}
+/* GPX → survei baru: waypoint menjadi catatan (jenis belum diisi), track menjadi jalur GPS, rute (≥3 titik) menjadi batas luasan. */
+function importGPX(text, fname) {
+  const g = NavTools.parseGPX(text);
+  if (!g.wpts.length && !g.trks.length && !g.rtes.length) throw new Error('kosong');
+  const s = newSurvey();
+  const times = [...g.wpts, ...g.trks.flatMap(t => t.segs.flat())].map(p => p.time && Date.parse(p.time)).filter(Boolean).sort((a, b) => a - b);
+  if (times.length) { s.tanggal = isoDate(times[0] / 1000); s.jamMulai = hm(times[0] / 1000); s.jamSelesai = hm(times[times.length - 1] / 1000); }
+  s.nama = `Impor GPX ${fname.replace(/\.gpx$/i, '')}`;
+  g.wpts.forEach(p => { const t = p.time ? Math.round(Date.parse(p.time) / 1000) : nowS(); newObs(s, 'foto', { nama: p.name || '', catatan: [p.desc, `Impor GPX ${fname}`].filter(Boolean).join('\n'), lat: +p.lat.toFixed(7), lon: +p.lon.toFixed(7), acc: null, t, waktu: hm(t), jumlah: '' }); });
+  s.track = g.trks.flatMap(t => t.segs.flat()).map(p => [+p.lat.toFixed(7), +p.lon.toFixed(7), p.time ? Math.round(Date.parse(p.time) / 1000) : 0]);
+  const r = g.rtes.find(x => x.pts.length >= 3); if (r) s.area.coords = r.pts.map(p => [+p.lat.toFixed(7), +p.lon.toFixed(7)]);
+  touch(s); save();
+  return { s, n: g.wpts.length, t: g.trks.length, r: g.rtes.length };
+}
 function kml() {
   const x = s => esc(s);
   let out = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Survei KEHATI</name>';
@@ -1820,7 +1857,7 @@ async function zipAll(withPhotos) {
   const ana = anaCSVAll();
   files.push([`${base}/survei.csv`, surveyCSV()], [`${base}/pengamatan.csv`, obsCSV()], [`${base}/analisis_indeks.csv`, ana.idx], [`${base}/analisis_jenis.csv`, ana.jenis]);
   if (ana.veg) files.push([`${base}/analisis_vegetasi_INP.csv`, ana.veg]);
-  files.push([`${base}/peta_survei.geojson`, geojson()], [`${base}/peta_survei.kml`, kml()], [`${base}/cadangan.json`, new Uint8Array(await backupBlob().arrayBuffer())]);
+  files.push([`${base}/peta_survei.geojson`, geojson()], [`${base}/peta_survei.kml`, kml()], [`${base}/peta_survei.gpx`, gpx()], [`${base}/cadangan.json`, new Uint8Array(await backupBlob().arrayBuffer())]);
   if (withPhotos) {
     const all = []; for (const s of Object.values(S.surveys)) for (const o of Object.values(s.obs)) for (const p of o._photos || []) all.push([s, p]);
     let i = 0;
@@ -1854,7 +1891,7 @@ function renderData() {
     <section class="section"><h2>Ekspor data</h2>
       <p class="note">${Object.keys(S.surveys).length} survei · ${n} catatan. Paket berisi CSV (buka di Excel/Google Sheets): survei, pengamatan, analisis indeks, analisis jenis, INP vegetasi; peta GeoJSON & KML (QGIS, Google Earth); cadangan .json; dan semua foto.</p>
       <div class="row"><button type="button" class="btn" data-a="zipshare">Bagikan paket lengkap</button><button type="button" class="btn ghost" data-a="zip">Simpan paket lengkap</button></div>
-      <div class="row"><button type="button" class="btn ghost" data-a="ziplite">Paket tanpa foto</button><button type="button" class="btn ghost" data-a="kml">KML Google Earth</button><button type="button" class="btn ghost" data-a="json">Cadangan .json</button></div>
+      <div class="row"><button type="button" class="btn ghost" data-a="ziplite">Paket tanpa foto</button><button type="button" class="btn ghost" data-a="kml">KML Google Earth</button><button type="button" class="btn ghost" data-a="json">Cadangan .json</button><button type="button" class="btn ghost" data-a="gpx">GPX</button></div>
     </section>
     <section class="section"><h2>Gabungkan data dari HP lain</h2><p class="note">Pilih file cadangan .json dari anggota tim; survei dan catatan baru ditambahkan tanpa menghapus yang sudah ada. Foto tidak ikut (ada di paket ZIP).</p><button type="button" class="btn ghost block" data-a="import">Pilih file cadangan</button></section>
     <section class="section"><h2>AI di HP (gratis, tanpa sinyal)</h2>
@@ -1864,6 +1901,11 @@ function renderData() {
       ${q ? `<p class="note">${q} titik menunggu dibaca AI.</p><button type="button" class="btn ghost" data-a="airun">Baca sekarang</button>` : ''}
     </section>
     ${idSectionHTML()}
+    <section class="section"><h2>Impor GPX</h2><p class="note">Titik (waypoint), jalur (track), dan rute dari GPS genggam atau aplikasi lain menjadi satu survei baru: titik menjadi catatan, jalur menjadi jalur GPS, rute menjadi batas luasan.</p><button type="button" class="btn ghost block" data-a="gpximp">Pilih file .gpx</button></section>
+    <section class="section"><h2>Koordinat & kompas</h2>
+      <div class="field"><span class="lbl">Format koordinat yang ditampilkan</span><div class="chips">${window.NavTools ? Object.entries(NavTools.FORMATS).map(([k, l]) => `<button type="button" class="chip" data-cfmt="${k}" aria-pressed="${NavTools.format() === k}">${esc(l)}</button>`).join('') : ''}</div></div>
+      <p class="note">Ekspor dan watermark foto tetap memakai derajat desimal (WGS 84). Kompas, inklinometer, matahari/bulan, dan deklinasi magnetik ada di tab Peta → tombol <b>Kompas</b>.</p>
+      <button type="button" class="btn ghost" data-a="compass">Buka kompas</button></section>
     <section class="section"><h2>Foto</h2><label class="check"><input type="checkbox" id="wmOn" ${withWatermark() ? 'checked' : ''}>Watermark lokasi, jenis, koordinat, dan tanggal-jam di kanan bawah foto</label></section>
     <section class="section"><h2>Aplikasi</h2>${installHTML()}
       <p class="note">Versi: ${esc(buildLabel())}</p><button type="button" class="btn ghost block" data-a="upd">Periksa pembaruan sekarang</button></section>
@@ -1873,6 +1915,8 @@ function buildLabel() { return APP_BUILD.startsWith('__') ? 'versi pengembangan'
 async function dataAction(a, b) {
   switch (a) {
     case 'zip': case 'zipshare': case 'ziplite': { b.disabled = true; try { const [z, name] = await zipAll(a !== 'ziplite'); await deliver(z, name, a === 'zipshare'); } catch (e) { progressEnd(); toast('Gagal menyusun paket: ' + (e.message || e)); } b.disabled = false; break; }
+    case 'gpx': deliver(new Blob([gpx()], { type: 'application/gpx+xml' }), fileBase() + '.gpx'); break;
+    case 'gpximp': $('gpxIn').click(); break;
     case 'kml': deliver(new Blob([kml()], { type: 'application/vnd.google-earth.kml+xml' }), fileBase() + '.kml'); break;
     case 'json': deliver(backupBlob(), fileBase() + '.json'); break;
     case 'import': $('importIn').click(); break;
@@ -1881,6 +1925,7 @@ async function dataAction(a, b) {
     case 'airun': aiRun(); break;
     case 'upd': manualUpdate(b); break;
     case 'install': doInstall(); break;
+    case 'compass': openCompass(); break;
     case 'wipe':
       if (!arm(b, 'wipe', 'Ketuk lagi: semua data di HP ini hilang')) return;
       for (const s of Object.values(S.surveys)) for (const o of Object.values(s.obs)) await deletePhotos(o._photos);
@@ -1898,6 +1943,13 @@ async function dataAction(a, b) {
     case 'gorec': go({ v: 'obs', sid: b.dataset.sid, id: b.dataset.id }); break;
   }
 }
+const gpxIn = document.createElement('input'); gpxIn.type = 'file'; gpxIn.accept = '.gpx,application/gpx+xml,application/xml,text/xml'; gpxIn.id = 'gpxIn'; gpxIn.hidden = true; document.body.appendChild(gpxIn);
+gpxIn.addEventListener('change', async () => {
+  const f = gpxIn.files[0]; gpxIn.value = ''; if (!f) return;
+  try { const r = importGPX(await f.text(), f.name); toast(`Survei baru dari GPX: ${r.n} titik, ${r.t} jalur, ${r.r} rute.`); go({ v: 'survey', id: r.s.id }); }
+  catch (e) { toast('File GPX tidak bisa dibaca.'); }
+});
+$('app').addEventListener('click', ev => { const b = ev.target.closest('[data-cfmt]'); if (b && window.NavTools) { NavTools.setFormat(b.dataset.cfmt); render(); toast('Format koordinat: ' + NavTools.FORMATS[b.dataset.cfmt]); } });
 $('importIn').addEventListener('change', async ev => {
   const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
   try { const n = mergeBackup(JSON.parse(await f.text())); toast(`${n} survei/catatan ditambahkan.`); render(); } catch (e) { toast('File ini bukan cadangan Survei KEHATI.'); }

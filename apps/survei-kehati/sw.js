@@ -5,7 +5,7 @@ const CACHE = 'kehati-app';
 const TILES = 'kehati-tiles';
 const AI_CACHE = 'kehati-ai-3.8.1';
 const TILE_MAX = 6000;
-const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './vendor/leaflet.js', './vendor/leaflet.css'];
+const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './vendor/leaflet.js', './vendor/leaflet.css', './vendor/navtools.js'];
 const SCOPE = self.registration.scope;
 const INDEX = new URL('./index.html', SCOPE).href;
 const OWN = new Set(FILES.map((f) => new URL(f, SCOPE).href));

@@ -132,6 +132,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 .aibox { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-size: 14px; display: flex; flex-direction: column; gap: 8px; }
 .fab { position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); z-index: 1001; width: 64px; height: 64px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-fg); box-shadow: 0 4px 14px rgba(0,0,0,.3); display: grid; place-items: center; cursor: pointer; }
 .fab svg { width: 30px; height: 30px; }
+.pmth { width: 64px; height: 64px; flex: none; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; padding: 0; background: var(--surface-2); cursor: pointer; align-self: flex-start; }
+.pmth img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .idhead { display: flex; gap: 12px; align-items: center; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px; padding: 10px; font-size: 15px; }
 .idhead img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; flex: none; }
 .idsug { cursor: default; align-items: flex-start; }
@@ -200,6 +202,7 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
     <button type="button" id="mFit">Semua titik</button>
     <button type="button" id="mDraw" aria-pressed="false">Gambar luasan</button>
     <button type="button" id="mCompass">Kompas</button>
+    <button type="button" id="mPetaku">Peta Saya</button>
   </div>
   <div class="mapinfo" id="mapInfo"></div>
 </div>
@@ -719,7 +722,7 @@ function areaOf(s) {
 
 /* ================= Navigasi ================= */
 let view = { v: 'list' };
-const TAB_OF = { koleksi: 'survei', list: 'survei', survey: 'survei', obs: 'survei', peta: 'peta', analisis: 'analisis', jenis: 'jenis', sp: 'jenis', data: 'data' };
+const TAB_OF = { petasaya: 'peta', koleksi: 'survei', list: 'survei', survey: 'survei', obs: 'survei', peta: 'peta', analisis: 'analisis', jenis: 'jenis', sp: 'jenis', data: 'data' };
 function go(v, replace) { if (replace) history.replaceState(v, ''); else history.pushState(v, ''); view = v; render(); window.scrollTo(0, 0); }
 window.addEventListener('popstate', ev => { closeViewer(); view = ev.state || { v: 'list' }; render(); });
 $('backBtn').addEventListener('click', () => history.back());
@@ -733,15 +736,16 @@ function render() {
   const app = $('app');
   const tab = TAB_OF[view.v] || 'survei';
   document.querySelectorAll('nav.tabs [data-tab]').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
-  $('backBtn').hidden = !['survey', 'obs', 'sp', 'koleksi'].includes(view.v);
+  $('backBtn').hidden = !['survey', 'obs', 'sp', 'koleksi', 'petasaya'].includes(view.v);
   if (view.v === 'survey' && view.id === 'koleksi') view = { v: 'koleksi' };
   document.body.classList.toggle('v-obs', view.v === 'obs');
   $('fab').hidden = view.v !== 'peta';   // di halaman survei/catatan sudah ada tombol Foto sendiri
   const isMap = view.v === 'peta';
+  if (typeof mapWatchSet === 'function') mapWatchSet(isMap);
   $('mapWrap').hidden = !isMap; app.hidden = isMap;
   if (view.v === 'survey' && !S.surveys[view.id]) view = { v: 'list' };
   if (view.v === 'obs' && !(S.surveys[view.sid] && S.surveys[view.sid].obs[view.id])) view = S.surveys[view.sid] ? { v: 'survey', id: view.sid } : { v: 'list' };
-  ({ koleksi: renderKoleksi, list: renderList, survey: renderSurvey, obs: renderObs, peta: renderMap, analisis: renderAnalisis, jenis: renderJenis, sp: renderSp, data: renderData })[view.v]();
+  ({ petasaya: renderPetaSaya, koleksi: renderKoleksi, list: renderList, survey: renderSurvey, obs: renderObs, peta: renderMap, analisis: renderAnalisis, jenis: renderJenis, sp: renderSp, data: renderData })[view.v]();
   refreshLive();
 }
 
@@ -1038,8 +1042,9 @@ const PHOTO_Q = 0.98, THUMB_MAX = 320, THUMB_Q = 0.85;
 let photoDB = null;
 function pdb() {
   if (!photoDB) photoDB = new Promise((ok, fail) => {
-    const r = indexedDB.open('survei-kehati-foto', 1);
-    r.onupgradeneeded = () => { r.result.createObjectStore('foto'); r.result.createObjectStore('thumb'); };
+    // Versi 2 menambah penyimpanan Peta Saya (maps, tiles); foto lama tetap utuh.
+    const r = indexedDB.open('survei-kehati-foto', 2);
+    r.onupgradeneeded = () => { for (const n of ['foto', 'thumb', 'maps', 'tiles']) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n); };
     r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error);
   });
   return photoDB;
@@ -1270,6 +1275,7 @@ function renderMap() {
     MAP.layers = L.layerGroup().addTo(MAP.m);
     MAP.m.on('click', ev => { if (MAP.draw) { const s = S.surveys[MAP.draw]; s.area.coords.push([+ev.latlng.lat.toFixed(7), +ev.latlng.lng.toFixed(7)]); s.area.mode = ''; touch(s); drawSurveyLayers(); } });
     setTimeout(() => { MAP.m.invalidateSize(); fitAll(); }, 30);
+    drawOffline();
   } else setTimeout(() => MAP.m.invalidateSize(), 30);
   drawSurveyLayers();
   if (MAP.focus) setTimeout(fitAll, 60);
@@ -1303,9 +1309,10 @@ function updateMapInfo() {
     return;
   }
   const list = mapSurveys(), n = list.reduce((a, s) => a + Object.values(s.obs).filter(o => o.lat != null).length, 0);
-  const f = MAP.focus && S.surveys[MAP.focus];
-  el.innerHTML = f ? `<b>${esc(surveyName(f))}</b> · ${n} titik${areaOf(f).m2 ? ` · luas ${fmtArea(areaOf(f).m2)}` : ''}${f.track.length > 1 ? ` · jalur ${fmtLen(pathLen(f.track))}` : ''} <button type="button" class="btn sm ghost" data-m="all" style="margin-left:6px">Semua survei</button>`
-    : `${list.length} survei · ${n} titik. Tombol kamera membuat titik foto di posisi Anda.`;
+  const f = MAP.focus && S.surveys[MAP.focus], om = typeof activeOffline === 'function' ? activeOffline() : null;
+  const omTxt = om ? `<div style="margin-bottom:4px">🗺 Peta offline: <b>${esc(om.name)}</b> <button type="button" class="btn sm ghost" data-m="pmoff">Lepas</button></div>` : '';
+  el.innerHTML = omTxt + (f ? `<b>${esc(surveyName(f))}</b> · ${n} titik${areaOf(f).m2 ? ` · luas ${fmtArea(areaOf(f).m2)}` : ''}${f.track.length > 1 ? ` · jalur ${fmtLen(pathLen(f.track))}` : ''} <button type="button" class="btn sm ghost" data-m="all" style="margin-left:6px">Semua survei</button>`
+    : `${list.length} survei · ${n} titik. Tombol kamera membuat titik foto di posisi Anda.`);
 }
 $('mapWrap').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
@@ -1314,6 +1321,7 @@ $('mapWrap').addEventListener('click', ev => {
   if (m === 'undo' && s) { s.area.coords.pop(); touch(s); drawSurveyLayers(); }
   if (m === 'mehere' && s) { getPos().then(c => { if (c) { s.area.coords.push([+c.latitude.toFixed(7), +c.longitude.toFixed(7)]); s.area.mode = ''; touch(s); drawSurveyLayers(); } else toast('GPS belum dapat sinyal.'); }); }
   if (m === 'done') { stopDraw(); }
+  if (m === 'pmoff') { useOfflineMap(null); updateMapInfo(); toast('Peta offline dilepas.'); }
   if (m === 'all') { MAP.focus = null; renderMap(); fitAll(); }
 });
 function startDraw(s) { MAP.draw = s.id; MAP.focus = s.id; $('mDraw').setAttribute('aria-pressed', 'true'); drawSurveyLayers(); toast('Ketuk peta di setiap sudut batas area survei.'); }
@@ -1329,13 +1337,23 @@ $('mBase').addEventListener('click', () => {
   MAP.tile.setUrl(b[0]); MAP.tile.options.attribution = b[1]; $('mBase').textContent = MAP.base === 'sat' ? 'Satelit' : 'Peta jalan';
 });
 $('mLocate').addEventListener('click', async () => {
-  toast('Mencari posisi…'); const c = await getPos();
+  toast('Mencari posisi…'); const c = LAST_POS && MAP.me ? LAST_POS : await getPos();
   if (!c) { toast('GPS belum dapat sinyal.'); return; }
-  const ll = [c.latitude, c.longitude];
-  if (!MAP.me) MAP.me = L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [16, 16] }), zIndexOffset: 1000 }).addTo(MAP.m); else MAP.me.setLatLng(ll);
-  MAP.m.setView(ll, Math.max(MAP.m.getZoom(), 17));
+  showMe(c); MAP.m.setView([c.latitude, c.longitude], Math.max(MAP.m.getZoom(), 17));
 });
 $('mFit').addEventListener('click', fitAll);
+/* Titik biru posisi saya selalu tampil selama tab Peta terbuka (seperti Avenza), dengan lingkaran akurasi. */
+let mapWatch = null;
+function showMe(c) {
+  if (!MAP.m) return;
+  const ll = [c.latitude, c.longitude];
+  if (!MAP.me) MAP.me = L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [16, 16] }), zIndexOffset: 1000, interactive: false }).addTo(MAP.m); else MAP.me.setLatLng(ll);
+  if (!MAP.acc) MAP.acc = L.circle(ll, { radius: c.accuracy, color: '#2a7fff', weight: 1, fillOpacity: .12, interactive: false }).addTo(MAP.m); else MAP.acc.setLatLng(ll).setRadius(c.accuracy);
+}
+function mapWatchSet(on) {
+  if (on && mapWatch == null && navigator.geolocation) mapWatch = navigator.geolocation.watchPosition(p => { LAST_POS = p.coords; showMe(p.coords); }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  if (!on && mapWatch != null) { navigator.geolocation.clearWatch(mapWatch); mapWatch = null; }
+}
 /* Kompas & navigasi: kompas + inklinometer, deklinasi WMM, matahari/bulan, format koordinat. */
 let NAV_POS = null;
 function openCompass() {
@@ -1345,6 +1363,7 @@ function openCompass() {
   NavTools.open({ getPos: () => NAV_POS, toast, onFormat: () => render(), onClose: () => { if (w != null) navigator.geolocation.clearWatch(w); } });
 }
 $('mCompass').addEventListener('click', openCompass);
+$('mPetaku').addEventListener('click', () => go({ v: 'petasaya' }));
 function fitAll() {
   if (!MAP.m) return;
   const pts = [];
@@ -2231,8 +2250,528 @@ function inatSugHTML(localIds, mode) {
     ? extra.map(x => `<button type="button" data-pick="${esc(x.id)}">${spName(x.n, x.s)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''} <span class="tag ai">iNaturalist · ${esc(taxOf(x.tax).l)}</span></button>`).join('')
     : extra.map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${spName(x.n, x.s)} <span class="tag ai">iNaturalist</span></span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(taxOf(x.tax).l)}${x.ci ? ` · ${x.ci.toLocaleString('id-ID')} pengamatan di dunia` : ''}</span></span><span class="chev">›</span></button>`).join('');
 }
+
+/* ================= Peta Saya: impor peta PDF/GeoTIFF/KMZ/MBTiles (seperti Avenza Maps) =================
+   Mesin impor sama dengan Peta Survei: peta dipotong menjadi tile dan disimpan di IndexedDB, sehingga tampil
+   tanpa sinyal bersama posisi GPS, titik, jalur, dan batas luasan. Pustaka (PDF.js, geotiff.js, proj4js, sql.js)
+   ada di folder vendor. */
+const D2R = Math.PI / 180;
+function fmtMB(b) { return `${(b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace('.', ',')} MB`; }
+function closeFloating() {}
+const pdbAll = store => pdbDo(store, 'readonly', st => st.getAll());
+let MAPS = [];
+const base = { kind: 'sat' };   // dipakai deleteMap(): 'off:<id>' = peta offline sedang dipakai
+function setBase(kind) { useOfflineMap(kind && kind.startsWith('off:') ? kind.slice(4) : null); }
+function openMap(m) { useOfflineMap(m.id); MAP.focus = null; go({ v: 'peta' }); setTimeout(() => { if (MAP.m) MAP.m.fitBounds([[m.bounds[1], m.bounds[0]], [m.bounds[3], m.bounds[2]]]); }, 120); }
+/* Tile peta offline dibaca dari IndexedDB. */
+const OfflineLayer = L.GridLayer.extend({
+  createTile(c, done) {
+    const img = document.createElement('img'); img.alt = ''; img.setAttribute('role', 'presentation');
+    pdbGet('tiles', `${this.options.mapId}/${c.z}/${c.x}/${c.y}`).then(b => {
+      if (!b) { done(null, img); return; }
+      const u = URL.createObjectURL(b); img.onload = img.onerror = () => { URL.revokeObjectURL(u); done(null, img); }; img.src = u;
+    }).catch(e => done(e, img));
+    return img;
+  },
+});
+function offlineId() { try { return localStorage.getItem(AI_APP + '-petaku') || ''; } catch (e) { return ''; } }
+function useOfflineMap(id) {
+  try { if (id) localStorage.setItem(AI_APP + '-petaku', id); else localStorage.removeItem(AI_APP + '-petaku'); } catch (e) {}
+  base.kind = id ? 'off:' + id : 'sat';
+  drawOffline();
+}
+function drawOffline() {
+  if (!MAP.m) return;
+  if (MAP.off) { MAP.m.removeLayer(MAP.off); MAP.off = null; }
+  const m = MAPS.find(x => x.id === offlineId()); if (!m) { base.kind = 'sat'; return; }
+  base.kind = 'off:' + m.id;
+  const b = m.bounds;
+  MAP.off = new OfflineLayer({ mapId: m.id, minNativeZoom: m.minzoom, maxNativeZoom: m.maxzoom, maxZoom: 21, bounds: L.latLngBounds([b[1], b[0]], [b[3], b[2]]), attribution: esc(m.name) + ' (offline)', zIndex: 5 }).addTo(MAP.m);
+}
+const activeOffline = () => MAPS.find(x => x.id === offlineId()) || null;
+async function loadMaps() { MAPS = await pdbAll('maps').catch(() => []); if (MAP.m) drawOffline(); }
+
+/* ================= Peta Saya: impor peta (seperti Avenza Maps) =================
+   GeoPDF, GeoTIFF, dan KMZ (GroundOverlay) dipotong menjadi tile di HP; MBTiles dan ZIP tile disalin langsung.
+   Semua tile disimpan di IndexedDB sehingga peta tampil tanpa sinyal. */
+const KIND_LABEL = { pdf: 'GeoPDF', tif: 'GeoTIFF', kmz: 'KMZ', mbtiles: 'MBTiles', zip: 'ZIP tile' };
+function tile2lon(x, z) { return x / 2 ** z * 360 - 180; }
+function tile2lat(y, z) { const n = Math.PI - 2 * Math.PI * y / 2 ** z; return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))); }
+function lon2x(lon, z) { return (lon + 180) / 360 * 2 ** z; }
+function lat2y(lat, z) { const r = Math.max(-85.05, Math.min(85.05, lat)) * D2R; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z; }
+function tileRange(b, z) { const n = 2 ** z; return [Math.max(0, Math.floor(lon2x(b[0], z))), Math.max(0, Math.floor(lat2y(b[3], z))), Math.min(n - 1, Math.floor(lon2x(b[2], z) - 1e-9)), Math.min(n - 1, Math.floor(lat2y(b[1], z) - 1e-9))]; }
+function mimeOf(u8, fmt) { if (u8[0] === 0x89 && u8[1] === 0x50) return 'image/png'; if (u8[0] === 0xff && u8[1] === 0xd8) return 'image/jpeg'; if (u8[8] === 0x57 && u8[9] === 0x45) return 'image/webp'; return fmt === 'png' ? 'image/png' : fmt === 'webp' ? 'image/webp' : 'image/jpeg'; }
+const yieldUI = () => new Promise(r => setTimeout(r, 0));
+async function putTiles(batch) { await pdbDo('tiles', 'readwrite', st => { let r; batch.forEach(([k, v]) => { r = st.put(v, k); }); return r; }); }
+function newRange() { return { minz: 99, maxz: -1, byz: {} }; }
+function trackRange(rg, z, x, y) { rg.minz = Math.min(rg.minz, z); rg.maxz = Math.max(rg.maxz, z); const b = rg.byz[z] = rg.byz[z] || [Infinity, Infinity, -Infinity, -Infinity]; b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); }
+function boundsFrom(rg) { const z = rg.maxz, b = rg.byz[z]; return [tile2lon(b[0], z), tile2lat(b[3] + 1, z), tile2lon(b[2] + 1, z), tile2lat(b[1], z)]; }
+const scripts = {};
+function loadScript(src) { return scripts[src] = scripts[src] || new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => { delete scripts[src]; fail(new Error('pustaka')); }; document.head.appendChild(s); }); }
+let sqlP = null;
+function loadSQL() { if (!sqlP) sqlP = loadScript('vendor/sql-wasm.js').then(() => window.initSqlJs({ locateFile: f => 'vendor/' + f })); return sqlP; }
+
+async function importMBTiles(file, id) {
+  if (file.size > 400 * 1048576) toast('File besar: impor bisa lama dan butuh memori HP yang cukup.');
+  progress('Membaca MBTiles…', 0, file.name);
+  const SQL = await loadSQL();
+  const db = new SQL.Database(new Uint8Array(await file.arrayBuffer()));
+  try {
+    const meta = {}; try { const r = db.exec('SELECT name, value FROM metadata'); if (r[0]) r[0].values.forEach(([k, v]) => { meta[k] = v; }); } catch (e) {}
+    const total = db.exec('SELECT COUNT(*) FROM tiles')[0].values[0][0];
+    const st = db.prepare('SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles');
+    const rg = newRange(); let n = 0, bytes = 0, batch = [];
+    while (st.step()) {
+      const [z, x, tr, data] = st.get(); const y = (1 << z) - 1 - tr;   // MBTiles memakai skema TMS
+      const u8 = data instanceof Uint8Array ? data : new Uint8Array(data);
+      batch.push([`${id}/${z}/${x}/${y}`, new Blob([u8], { type: mimeOf(u8, meta.format) })]); bytes += u8.length; n++; trackRange(rg, z, x, y);
+      if (batch.length >= 250) { await putTiles(batch); batch = []; progress('Mengimpor peta offline…', n / total, `${n.toLocaleString('id-ID')} / ${total.toLocaleString('id-ID')} tile`); await yieldUI(); }
+    }
+    st.free(); if (batch.length) await putTiles(batch);
+    if (!n) throw new Error('kosong');
+    let bounds = meta.bounds ? String(meta.bounds).split(',').map(Number) : null;
+    if (!bounds || bounds.length !== 4 || bounds.some(v => !isFinite(v))) bounds = boundsFrom(rg);
+    return { kind: 'mbtiles', name: meta.name || file.name.replace(/\.mbtiles$/i, ''), minzoom: rg.minz, maxzoom: rg.maxz, bounds, count: n, bytes };
+  } finally { db.close(); }
+}
+
+/* ZIP: baca daftar isi lalu ambil entri satu per satu (tanpa memuat seluruh file ke memori). */
+async function zipEntries(file) {
+  const tail = new DataView(await file.slice(Math.max(0, file.size - 65557)).arrayBuffer());
+  let eocd = -1; for (let i = tail.byteLength - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('bukan zip');
+  const cdSize = tail.getUint32(eocd + 12, true), cdOff = tail.getUint32(eocd + 16, true);
+  if (cdOff === 0xffffffff) throw new Error('zip64');
+  const cd = new DataView(await file.slice(cdOff, cdOff + cdSize).arrayBuffer()), dec = new TextDecoder();
+  const out = []; let p = 0;
+  while (p + 46 <= cd.byteLength && cd.getUint32(p, true) === 0x02014b50) {
+    const nlen = cd.getUint16(p + 28, true), xlen = cd.getUint16(p + 30, true), clen = cd.getUint16(p + 32, true);
+    out.push({ name: dec.decode(new Uint8Array(cd.buffer, p + 46, nlen)), method: cd.getUint16(p + 10, true), csize: cd.getUint32(p + 20, true), loff: cd.getUint32(p + 42, true) });
+    p += 46 + nlen + xlen + clen;
+  }
+  return out;
+}
+async function zipBlob(file, e, type) {
+  if (e.method !== 0 && e.method !== 8) throw new Error('zipmetode');
+  const lh = new DataView(await file.slice(e.loff, e.loff + 30).arrayBuffer());
+  const start = e.loff + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
+  let blob = file.slice(start, start + e.csize);
+  if (e.method === 8) blob = await new Response(blob.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+  return new Blob([blob], { type: type || '' });
+}
+async function importTileZip(file, id, all) {
+  progress('Membaca ZIP…', 0, file.name);
+  const entries = [];
+  all.forEach(e => { const m = e.name.match(/(?:^|\/)(\d{1,2})\/(\d+)\/(\d+)\.(png|jpe?g|webp)$/i); if (m && (e.method === 0 || e.method === 8)) entries.push({ ...e, z: +m[1], x: +m[2], y: +m[3], ext: m[4].toLowerCase() }); });
+  if (!entries.length) throw new Error('kosong');
+  const rg = newRange(); let n = 0, bytes = 0, batch = [];
+  for (const e of entries) {
+    const blob = await zipBlob(file, e, e.ext === 'png' ? 'image/png' : e.ext === 'webp' ? 'image/webp' : 'image/jpeg');
+    batch.push([`${id}/${e.z}/${e.x}/${e.y}`, blob]); bytes += blob.size; n++; trackRange(rg, e.z, e.x, e.y);
+    if (batch.length >= 250) { await putTiles(batch); batch = []; progress('Mengimpor peta offline…', n / entries.length, `${n.toLocaleString('id-ID')} / ${entries.length.toLocaleString('id-ID')} tile`); await yieldUI(); }
+  }
+  if (batch.length) await putTiles(batch);
+  return { kind: 'zip', name: file.name.replace(/\.zip$/i, ''), minzoom: rg.minz, maxzoom: rg.maxz, bounds: boundsFrom(rg), count: n, bytes };
+}
+
+/* ---------- Pemotong raster: gambar bergeoreferensi → tile Web Mercator ----------
+   Setiap sumber: { img: kanvas, toPx(lon, lat) → [x, y] piksel, bbox [B, S, T, U], clip: poligon piksel (garis tepi peta) }.
+   Tiap tile digambar dengan transformasi afin dari tiga sudutnya; tingkat zoom rendah memakai versi gambar yang diperkecil. */
+const TILE_CAP = 15000;
+const PX_CAP = (navigator.deviceMemory && navigator.deviceMemory <= 2) ? 8e6 : 16e6;
+function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; }
+function halve(c) { const h = makeCanvas(c.width / 2, c.height / 2), x = h.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(c, 0, 0, h.width, h.height); return h; }
+function srcMPP(s) {
+  const lon = (s.bbox[0] + s.bbox[2]) / 2, lat = (s.bbox[1] + s.bbox[3]) / 2, d = (s.bbox[2] - s.bbox[0]) / 20 || 1e-4;
+  const a = s.toPx(lon, lat), b = s.toPx(lon + d, lat);
+  return hav([lat, lon], [lat, lon + d]) / Math.hypot(b[0] - a[0], b[1] - a[1]);
+}
+function canvasBlob(c, opaque) {
+  return new Promise(ok => c.toBlob(b => {
+    if (opaque || (b && b.type === 'image/webp')) ok(b); else c.toBlob(ok, 'image/png');
+  }, opaque ? 'image/jpeg' : 'image/webp', 0.85));
+}
+async function rasterToTiles(srcs, id, title) {
+  const bb = [Math.min(...srcs.map(s => s.bbox[0])), Math.min(...srcs.map(s => s.bbox[1])), Math.max(...srcs.map(s => s.bbox[2])), Math.max(...srcs.map(s => s.bbox[3]))];
+  if (!bb.every(isFinite) || bb[0] >= bb[2] || bb[1] >= bb[3] || bb[1] < -85 || bb[3] > 85) throw new Error('georef');
+  const lat = (bb[1] + bb[3]) / 2, k0 = 156543.034 * Math.cos(lat * D2R);
+  srcs.forEach(s => { s.mpp = srcMPP(s); });
+  const mpp = Math.min(...srcs.map(s => s.mpp));
+  if (!(mpp > 0) || !isFinite(mpp)) throw new Error('georef');
+  let maxz = Math.max(2, Math.min(21, Math.round(Math.log2(k0 / mpp))));
+  const cnt = z => { const r = tileRange(bb, z); return (r[2] - r[0] + 1) * (r[3] - r[1] + 1); };
+  let minz = maxz; while (minz > 1 && maxz - minz < 8 && cnt(minz) > 2) minz--;   // turun sampai seluruh peta muat dalam satu-dua tile
+  const total = () => { let t = 0; for (let z = minz; z <= maxz; z++) t += cnt(z); return t; };
+  while (total() > TILE_CAP && maxz > minz) maxz--;
+  if (total() > TILE_CAP) throw new Error('besar');
+  srcs.forEach(s => { s.levels = [s.img]; while (Math.max(s.levels[s.levels.length - 1].width, s.levels[s.levels.length - 1].height) > 256) s.levels.push(halve(s.levels[s.levels.length - 1])); });
+  const tc = makeCanvas(256, 256), ctx = tc.getContext('2d', { willReadFrequently: true });
+  const tot = total(); let done = 0, n = 0, bytes = 0, batch = [];
+  for (let z = maxz; z >= minz; z--) {
+    const r = tileRange(bb, z), tileM = k0 / 2 ** z;
+    for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) {
+      done++;
+      const tb = [tile2lon(x, z), tile2lat(y + 1, z), tile2lon(x + 1, z), tile2lat(y, z)];
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 256, 256);
+      let drew = false;
+      for (const s of srcs) {
+        if (s.bbox[0] > tb[2] || s.bbox[2] < tb[0] || s.bbox[1] > tb[3] || s.bbox[3] < tb[1]) continue;
+        const lv = Math.max(0, Math.min(s.levels.length - 1, Math.floor(Math.log2(tileM / s.mpp) + 0.01)));
+        const Lc = s.levels[lv], sx = Lc.width / s.img.width, sy = Lc.height / s.img.height;
+        const p = (lo, la) => { const q = s.toPx(lo, la); return [q[0] * sx, q[1] * sy]; };
+        const P0 = p(tb[0], tb[3]), P1 = p(tb[2], tb[3]), P2 = p(tb[0], tb[1]);
+        const Ux = P1[0] - P0[0], Uy = P1[1] - P0[1], Vx = P2[0] - P0[0], Vy = P2[1] - P0[1], det = Ux * Vy - Vx * Uy;
+        if (!det || !isFinite(det)) continue;
+        const a = 256 * Vy / det, c = -256 * Vx / det, b = -256 * Uy / det, d = 256 * Ux / det;
+        ctx.save(); ctx.setTransform(a, b, c, d, -(a * P0[0] + c * P0[1]), -(b * P0[0] + d * P0[1]));
+        if (s.clip) { ctx.beginPath(); s.clip.forEach((q, i) => ctx[i ? 'lineTo' : 'moveTo'](q[0] * sx, q[1] * sy)); ctx.closePath(); ctx.clip(); }
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(Lc, 0, 0); ctx.restore(); drew = true;
+      }
+      if (drew) {
+        const px = ctx.getImageData(0, 0, 256, 256).data; let any = false, opaque = true;
+        for (let i = 3; i < px.length; i += 4) { if (px[i]) any = true; if (px[i] < 250) opaque = false; if (any && !opaque) break; }
+        if (any) { const blob = await canvasBlob(tc, opaque); batch.push([`${id}/${z}/${x}/${y}`, blob]); bytes += blob.size; n++; }
+      }
+      if (batch.length >= 100) { await putTiles(batch); batch = []; }
+      if (done % 16 === 0) { progress(title, done / tot, `${done.toLocaleString('id-ID')} / ${tot.toLocaleString('id-ID')} tile · zoom ${z}`); await yieldUI(); }
+    }
+  }
+  if (batch.length) await putTiles(batch);
+  srcs.forEach(s => s.levels.forEach(c => { if (c.width) { c.width = 0; c.height = 0; } }));
+  if (!n) throw new Error('kosong');
+  return { minzoom: minz, maxzoom: maxz, count: n, bytes, bounds: bb };
+}
+
+/* ---------- Transformasi proyektif (homografi) dari titik kontrol ---------- */
+function solveLin(A, b) {
+  const n = b.length, M = A.map((r, i) => [...r, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-12) return null;
+    [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+  }
+  return M.map((r, i) => r[n] / r[i]);
+}
+const mul3 = (A, B) => [0, 1, 2].flatMap(i => [0, 1, 2].map(j => A[i * 3] * B[j] + A[i * 3 + 1] * B[3 + j] + A[i * 3 + 2] * B[6 + j]));
+function inv3(m) {
+  const [a, b, c, d, e, f, g, h, i] = m, A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g, det = a * A + b * B + c * C;
+  return [A, -(b * i - c * h), b * f - c * e, B, a * i - c * g, -(a * f - c * d), C, -(a * h - b * g), a * e - b * d].map(v => v / det);
+}
+function applyH(H, x, y) { const w = H[6] * x + H[7] * y + H[8]; return [(H[0] * x + H[1] * y + H[2]) / w, (H[3] * x + H[4] * y + H[5]) / w]; }
+function normT(pts) { const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n; const s = pts.reduce((a, p) => a + Math.hypot(p[0] - mx, p[1] - my), 0) / n || 1; return [1 / s, 0, -mx / s, 0, 1 / s, -my / s, 0, 0, 1]; }
+function fitH(src, dst) {
+  const Ts = normT(src), Td = normT(dst), S2 = src.map(p => applyH(Ts, p[0], p[1])), D2 = dst.map(p => applyH(Td, p[0], p[1]));
+  let h;
+  if (src.length >= 4) {
+    const AtA = Array.from({ length: 8 }, () => Array(8).fill(0)), Atb = Array(8).fill(0);
+    S2.forEach(([x, y], k) => { const [u, v] = D2[k]; [[[x, y, 1, 0, 0, 0, -x * u, -y * u], u], [[0, 0, 0, x, y, 1, -x * v, -y * v], v]].forEach(([r, t]) => { for (let i = 0; i < 8; i++) { Atb[i] += r[i] * t; for (let j = 0; j < 8; j++) AtA[i][j] += r[i] * r[j]; } }); });
+    const x = solveLin(AtA, Atb); if (!x) return null; h = [...x, 1];
+  } else if (src.length === 3) {
+    const x = solveLin(S2.flatMap(([x, y]) => [[x, y, 1, 0, 0, 0], [0, 0, 0, x, y, 1]]), D2.flatMap(p => p)); if (!x) return null; h = [...x, 0, 0, 1];
+  } else return null;
+  return mul3(inv3(Td), mul3(h, Ts));
+}
+
+/* ---------- GeoPDF (ISO 32000: /VP → /Measure /GEO dengan /GPTS, /LPTS, /Bounds) ---------- */
+function pdfReader(s) {
+  let i = 0;
+  const ws = c => c === 32 || c === 10 || c === 13 || c === 9 || c === 12 || c === 0;
+  function skip() { for (;;) { while (i < s.length && ws(s.charCodeAt(i))) i++; if (s[i] === '%') { while (i < s.length && s[i] !== '\n' && s[i] !== '\r') i++; } else break; } }
+  function val(depth) {
+    skip(); const ch = s[i];
+    if (depth > 60 || i >= s.length) return null;
+    if (ch === '<' && s[i + 1] === '<') { i += 2; const d = {}; for (;;) { skip(); if (i >= s.length) return d; if (s[i] === '>' && s[i + 1] === '>') { i += 2; return d; } const k = val(depth + 1), v = val(depth + 1); if (k && k.n != null) d[k.n] = v; } }
+    if (ch === '[') { i++; const a = []; for (;;) { skip(); if (i >= s.length) return a; if (s[i] === ']') { i++; return a; } a.push(val(depth + 1)); } }
+    if (ch === '(') { let dp = 0; const st = i; for (; i < s.length; i++) { const c = s[i]; if (c === '\\') { i++; continue; } if (c === '(') dp++; else if (c === ')' && --dp === 0) { i++; break; } } return { s: s.slice(st + 1, i - 1) }; }
+    if (ch === '<') { const e = s.indexOf('>', i); i = e < 0 ? s.length : e + 1; return { hex: true }; }
+    if (ch === '/') { const m = /^\/[^\s\/\[\]<>(){}%]*/.exec(s.slice(i, i + 128)); i += m[0].length; return { n: m[0].slice(1) }; }
+    const m = /^[+-]?(\d+\.?\d*|\.\d+)/.exec(s.slice(i, i + 40));
+    if (m) { i += m[0].length; if (/^\d+$/.test(m[0])) { const r = /^\s+(\d+)\s+R(?![A-Za-z])/.exec(s.slice(i, i + 30)); if (r) { i += r[0].length; return { ref: +m[0] }; } } return +m[0]; }
+    const w = /^[A-Za-z]+/.exec(s.slice(i, i + 16)); if (w) { i += w[0].length; return w[0] === 'true' ? true : w[0] === 'false' ? false : null; }
+    i++; return null;
+  }
+  return { at(p) { i = p; return val(0); }, get pos() { return i; } };
+}
+async function inflate(u8) { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()); }
+async function pdfGeoref(buf) {
+  const latin = u8 => { let o = ''; for (let k = 0; k < u8.length; k += 32768) o += String.fromCharCode.apply(null, u8.subarray(k, k + 32768)); return o; };
+  const s = latin(buf), R = pdfReader(s), plain = new Map(), packed = new Map();
+  const re = /(\d+)\s+(\d+)\s+obj\b/g; let m;
+  while ((m = re.exec(s))) plain.set(+m[1], m.index + m[0].length);
+  const get = n => { if (plain.has(n)) return R.at(plain.get(n)); const p = packed.get(n); return p ? pdfReader(p.text).at(p.at) : null; };
+  const res = v => { for (let k = 0; k < 8 && v && v.ref != null; k++) v = get(v.ref); return v; };
+  for (const [, at] of plain) {
+    if (!/\/Type\s*\/ObjStm/.test(s.slice(at, at + 600))) continue;
+    try {
+      const d = R.at(at); let p = R.pos; const sm = /^\s*stream\r?\n/.exec(s.slice(p, p + 20)); if (!sm) continue; p += sm[0].length;
+      let len = res(d.Length); if (typeof len !== 'number') { len = s.indexOf('endstream', p) - p; while (len > 0 && /[\r\n]/.test(s[p + len - 1])) len--; }
+      let data = buf.subarray(p, p + len); const flt = res(d.Filter), fl = Array.isArray(flt) ? flt.map(x => x && x.n) : [flt && flt.n];
+      if (fl.includes('FlateDecode')) data = await inflate(data); else if (fl[0]) continue;
+      const text = latin(data), first = d.First, hdr = text.slice(0, first).trim().split(/\s+/).map(Number);
+      for (let k = 0; k + 1 < hdr.length && k / 2 < d.N; k += 2) if (!plain.has(hdr[k])) packed.set(hdr[k], { text, at: first + hdr[k + 1] });
+    } catch (e) {}
+  }
+  // Halaman pertama: Catalog → Pages → Kids[0] …
+  let page = null;
+  const isType = (n, t) => { const o = res({ ref: n }); return o && o.Type && o.Type.n === t ? o : null; };
+  for (const n of [...plain.keys(), ...packed.keys()]) { const cat = isType(n, 'Catalog'); if (!cat) continue; let node = res(cat.Pages); for (let k = 0; k < 30 && node && node.Type && node.Type.n === 'Pages'; k++) node = res((res(node.Kids) || [])[0]); if (node && node.Type && node.Type.n === 'Page') { page = node; break; } }
+  if (!page) for (const n of [...plain.keys(), ...packed.keys()]) { const o = isType(n, 'Page'); if (o && o.VP) { page = o; break; } }
+  if (!page) return { err: 'nogeo' };
+  const vps = (res(page.VP) || []).map(res).filter(v => v && res(v.Measure));
+  if (!vps.length) return { err: page.LGIDict ? 'lgi' : 'nogeo' };
+  const nums = a => (res(a) || []).map(res).map(Number);
+  let best = null;
+  for (const vp of vps) {
+    const me2 = res(vp.Measure); if (!me2 || (me2.Subtype && me2.Subtype.n !== 'GEO')) continue;
+    const bbox = nums(vp.BBox), g = nums(me2.GPTS), l = nums(me2.LPTS), bnd = me2.Bounds ? nums(me2.Bounds) : [0, 0, 0, 1, 1, 1, 1, 0];
+    if (bbox.length !== 4 || g.length < 6 || l.length !== g.length) continue;
+    const area = Math.abs((bbox[2] - bbox[0]) * (bbox[3] - bbox[1]));
+    if (!best || area > best.area) best = { bbox, g, l, bnd, area };
+  }
+  if (!best) return { err: 'nogeo' };
+  const [x0, y0, x1, y1] = best.bbox, unit = (u, v) => [x0 + u * (x1 - x0), y0 + v * (y1 - y0)];
+  const ll = [], pg = [];
+  for (let k = 0; k < best.g.length; k += 2) { ll.push([best.g[k + 1], best.g[k]]); pg.push(unit(best.l[k], best.l[k + 1])); }   // GPTS: lintang, bujur
+  if (ll.some(([lo, la]) => !isFinite(lo) || !isFinite(la) || Math.abs(la) > 90 || Math.abs(lo) > 180)) return { err: 'nogeo' };
+  const H = fitH(ll, pg); if (!H) return { err: 'nogeo' };
+  const neat = []; for (let k = 0; k + 1 < best.bnd.length; k += 2) neat.push(unit(best.bnd[k], best.bnd[k + 1]));
+  return { H, Hi: inv3(H), neat };
+}
+async function importGeoPDF(file, id) {
+  progress('Membaca GeoPDF…', 0.02, file.name);
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const geo = await pdfGeoref(buf);
+  if (geo.err) throw new Error(geo.err === 'lgi' ? 'pdflgi' : 'pdfnogeo');
+  await loadScript('vendor/pdf.min.js');
+  const lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+  const doc = await lib.getDocument({ data: buf, isEvalSupported: false, useSystemFonts: true }).promise;
+  try {
+    const page = await doc.getPage(1), v1 = page.getViewport({ scale: 1 });
+    const neat1 = geo.neat.map(([x, y]) => v1.convertToViewportPoint(x, y));
+    const bx0 = Math.min(...neat1.map(p => p[0])), bx1 = Math.max(...neat1.map(p => p[0])), by0 = Math.min(...neat1.map(p => p[1])), by1 = Math.max(...neat1.map(p => p[1]));
+    const bw = bx1 - bx0, bh = by1 - by0;
+    const scale = Math.min(6, Math.sqrt(PX_CAP / (bw * bh)), 8192 / Math.max(bw, bh));
+    const vp = page.getViewport({ scale, offsetX: -bx0 * scale, offsetY: -by0 * scale });
+    const cv = makeCanvas(bw * scale, bh * scale);
+    progress('Menggambar halaman peta…', 0.05, `${cv.width} × ${cv.height} piksel`);
+    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    const T = vp.transform, toVP = (x, y) => [T[0] * x + T[2] * y + T[4], T[1] * x + T[3] * y + T[5]];
+    const footprint = geo.neat.map(([x, y]) => applyH(geo.Hi, x, y));
+    const bbox = [Math.min(...footprint.map(p => p[0])), Math.min(...footprint.map(p => p[1])), Math.max(...footprint.map(p => p[0])), Math.max(...footprint.map(p => p[1]))];
+    const src = { img: cv, bbox, clip: geo.neat.map(([x, y]) => toVP(x, y)), toPx: (lon, lat) => { const q = applyH(geo.H, lon, lat); return toVP(q[0], q[1]); } };
+    const info = await rasterToTiles([src], id, 'Memotong GeoPDF menjadi tile…');
+    return { kind: 'pdf', name: file.name.replace(/\.pdf$/i, ''), ...info, bounds: bbox, footprint };
+  } finally { doc.destroy(); }
+}
+
+/* ---------- GeoTIFF (drone, citra satelit, peta hasil QGIS) ---------- */
+function crsDef(code) {
+  if (code === 4326 || code === 4269 || code === 4258 || code === 4755) return 'EPSG:4326';   // WGS 84 / DGN95 (selisih < 1 m)
+  if (code === 3857 || code === 900913 || code === 3785 || code === 102100) return 'EPSG:3857';
+  if (code >= 32601 && code <= 32660) return `+proj=utm +zone=${code - 32600} +datum=WGS84 +units=m +no_defs`;
+  if (code >= 32701 && code <= 32760) return `+proj=utm +zone=${code - 32700} +south +datum=WGS84 +units=m +no_defs`;
+  if (code >= 23866 && code <= 23872) return `+proj=utm +zone=${code - 23820} +ellps=WGS84 +units=m +no_defs`;   // DGN95 / UTM 46N–52N
+  if (code >= 23877 && code <= 23884) return `+proj=utm +zone=${code - 23830} +south +ellps=WGS84 +units=m +no_defs`;   // DGN95 / UTM 47S–54S
+  if (code >= 23830 && code <= 23845) return `+proj=tmerc +lat_0=0 +lon_0=${94.5 + 3 * (code - 23830)} +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +units=m +no_defs`;   // DGN95 / TM-3
+  return null;
+}
+async function importGeoTIFF(file, id) {
+  progress('Membaca GeoTIFF…', 0.02, file.name);
+  await loadScript('vendor/geotiff.js'); await loadScript('vendor/proj4.js');
+  const tiff = await window.GeoTIFF.fromBlob(file), img = await tiff.getImage();
+  const W = img.getWidth(), Hh = img.getHeight(), gk = img.getGeoKeys() || {}, fd = img.fileDirectory;
+  if (!fd.ModelTiepoint && !fd.ModelTransformation) throw new Error('tifnogeo');
+  const code = gk.ProjectedCSTypeGeoKey && gk.ProjectedCSTypeGeoKey !== 32767 ? gk.ProjectedCSTypeGeoKey : gk.GTModelTypeGeoKey === 2 || !gk.ProjectedCSTypeGeoKey ? (gk.GeographicTypeGeoKey && gk.GeographicTypeGeoKey !== 32767 ? gk.GeographicTypeGeoKey : 4326) : null;
+  const def = crsDef(code); if (!def) throw new Error('tifcrs:' + code);
+  if (fd.ModelTransformation && (fd.ModelTransformation[1] || fd.ModelTransformation[4])) throw new Error('tifrot');
+  const [ox, oy] = img.getOrigin(), [rx, ry] = img.getResolution();
+  const k = Math.min(1, Math.sqrt(PX_CAP / (W * Hh)), 8192 / Math.max(W, Hh)), w = Math.max(1, Math.round(W * k)), h = Math.max(1, Math.round(Hh * k));
+  progress('Membaca piksel GeoTIFF…', 0.05, `${W} × ${Hh} → ${w} × ${h} piksel`);
+  const bands = await tiff.readRasters({ width: w, height: h, resampleMethod: 'bilinear' });
+  const nb = bands.length, nd = img.getGDALNoData(), pm = fd.PhotometricInterpretation, cmap = fd.ColorMap, bits = (fd.BitsPerSample || [8])[0];
+  const rgba = new Uint8ClampedArray(w * h * 4);
+  const stretch = arr => { if (bits === 8 && !(arr instanceof Float32Array) && !(arr instanceof Float64Array)) return v => v; const smp = []; for (let i = 0; i < arr.length; i += Math.max(1, Math.floor(arr.length / 20000))) { const v = arr[i]; if (isFinite(v) && v !== nd) smp.push(v); } smp.sort((a, b) => a - b); const lo = smp[Math.floor(smp.length * 0.02)] || 0, hi = smp[Math.floor(smp.length * 0.98)] || 1; return v => (v - lo) / ((hi - lo) || 1) * 255; };
+  const alphaBand = (nb === 4 || nb === 2) && (fd.ExtraSamples != null || bits === 8) ? bands[nb - 1] : null;
+  if (pm === 3 && cmap) {
+    const b = bands[0], n3 = cmap.length / 3;
+    for (let i = 0; i < w * h; i++) { const v = b[i]; rgba[i * 4] = cmap[v] >> 8; rgba[i * 4 + 1] = cmap[n3 + v] >> 8; rgba[i * 4 + 2] = cmap[2 * n3 + v] >> 8; rgba[i * 4 + 3] = v === nd ? 0 : 255; }
+  } else {
+    const rgb = nb >= 3 ? [bands[0], bands[1], bands[2]] : [bands[0], bands[0], bands[0]], f = rgb.map(stretch);
+    for (let i = 0; i < w * h; i++) {
+      const r = rgb[0][i], g = rgb[1][i], b = rgb[2][i];
+      rgba[i * 4] = f[0](r); rgba[i * 4 + 1] = f[1](g); rgba[i * 4 + 2] = f[2](b);
+      rgba[i * 4 + 3] = (nd != null && r === nd && g === nd && b === nd) || !isFinite(r) ? 0 : alphaBand ? (bits === 8 ? alphaBand[i] : alphaBand[i] ? 255 : 0) : 255;
+    }
+  }
+  const cv = makeCanvas(w, h); cv.getContext('2d').putImageData(new ImageData(rgba, w, h), 0, 0);
+  const P = window.proj4, fwd = def === 'EPSG:4326' ? null : P('EPSG:4326', def);
+  const toCRS = (lon, lat) => fwd ? fwd.forward([lon, lat]) : [lon, lat], toLL = (x, y) => fwd ? fwd.inverse([x, y]) : [x, y];
+  const edge = []; for (let t = 0; t < 8; t++) edge.push([t / 8, 0]); for (let t = 0; t < 8; t++) edge.push([1, t / 8]); for (let t = 0; t < 8; t++) edge.push([1 - t / 8, 1]); for (let t = 0; t < 8; t++) edge.push([0, 1 - t / 8]);
+  const footprint = edge.map(([u, v]) => toLL(ox + u * W * rx, oy + v * Hh * ry));
+  if (footprint.some(p => !isFinite(p[0]) || !isFinite(p[1]))) throw new Error('georef');
+  const bbox = [Math.min(...footprint.map(p => p[0])), Math.min(...footprint.map(p => p[1])), Math.max(...footprint.map(p => p[0])), Math.max(...footprint.map(p => p[1]))];
+  const src = { img: cv, bbox, clip: null, toPx: (lon, lat) => { const [X, Y] = toCRS(lon, lat); return [(X - ox) / rx * (w / W), (Y - oy) / ry * (h / Hh)]; } };
+  const info = await rasterToTiles([src], id, 'Memotong GeoTIFF menjadi tile…');
+  return { kind: 'tif', name: file.name.replace(/\.tiff?$/i, ''), ...info, bounds: bbox, footprint };
+}
+
+/* ---------- KMZ: GroundOverlay (Google Earth, Garmin Custom Maps, ekspor QGIS/Avenza) ---------- */
+async function importKMZ(file, id, entries) {
+  progress('Membaca KMZ…', 0.02, file.name);
+  const kmlE = entries.find(e => /(^|\/)doc\.kml$/i.test(e.name)) || entries.find(e => /\.kml$/i.test(e.name));
+  const doc = new DOMParser().parseFromString(await (await zipBlob(file, kmlE)).text(), 'application/xml');
+  const tag = (el, n) => [...el.getElementsByTagNameNS('*', n)], txt = (el, n) => { const x = tag(el, n)[0]; return x ? x.textContent.trim() : ''; };
+  const ovs = tag(doc, 'GroundOverlay');
+  if (!ovs.length) throw new Error(tag(doc, 'Placemark').length ? 'kmzobj' : 'kosong');
+  const dir = kmlE.name.includes('/') ? kmlE.name.replace(/[^/]+$/, '') : '';
+  const srcs = [];
+  for (const [k, ov] of ovs.entries()) {
+    progress('Membaca gambar KMZ…', 0.02 + 0.08 * k / ovs.length, `${k + 1} / ${ovs.length}`);
+    const href = txt(tag(ov, 'Icon')[0] || ov, 'href'); if (!href) continue;
+    const want = decodeURIComponent(href).replace(/^\.\//, ''), ent = entries.find(e => e.name === dir + want) || entries.find(e => e.name === want) || entries.find(e => e.name.endsWith('/' + want.split('/').pop()) || e.name === want.split('/').pop());
+    if (!ent) continue;
+    const bmp = await createImageBitmap(await zipBlob(file, ent));
+    const sc = Math.min(1, 8192 / Math.max(bmp.width, bmp.height), Math.sqrt(PX_CAP / ovs.length / (bmp.width * bmp.height)));
+    const cv = makeCanvas(bmp.width * sc, bmp.height * sc); cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close && bmp.close();
+    const W = cv.width, H = cv.height, quad = tag(ov, 'LatLonQuad')[0];
+    let toPx, foot;
+    if (quad) {
+      foot = txt(quad, 'coordinates').split(/\s+/).map(c => c.split(',').map(Number)).filter(a => a.length >= 2).map(a => [a[0], a[1]]);
+      if (foot.length !== 4) continue;
+      const Hm = fitH(foot, [[0, H], [W, H], [W, 0], [0, 0]]); if (!Hm) continue;
+      toPx = (lon, lat) => applyH(Hm, lon, lat);
+    } else {
+      const box = tag(ov, 'LatLonBox')[0]; if (!box) continue;
+      const n = +txt(box, 'north'), s = +txt(box, 'south'), e = +txt(box, 'east'), w = +txt(box, 'west'), rot = (+txt(box, 'rotation') || 0) * D2R;
+      if (![n, s, e, w].every(isFinite) || n <= s || e === w) continue;
+      const cx = (e + w) / 2, cy = (n + s) / 2, cr = Math.cos(rot), sr = Math.sin(rot);
+      toPx = (lon, lat) => { const dx = lon - cx, dy = lat - cy, ux = dx * cr + dy * sr, uy = -dx * sr + dy * cr; return [(cx + ux - w) / (e - w) * W, (n - (cy + uy)) / (n - s) * H]; };
+      foot = [[w, s], [e, s], [e, n], [w, n]].map(([x, y]) => { const dx = x - cx, dy = y - cy; return [cx + dx * cr - dy * sr, cy + dx * sr + dy * cr]; });
+    }
+    srcs.push({ img: cv, toPx, foot, order: +txt(ov, 'drawOrder') || 0, bbox: [Math.min(...foot.map(p => p[0])), Math.min(...foot.map(p => p[1])), Math.max(...foot.map(p => p[0])), Math.max(...foot.map(p => p[1]))] });
+  }
+  if (!srcs.length) throw new Error('kosong');
+  srcs.sort((a, b) => a.order - b.order);
+  const name = txt(doc.getElementsByTagNameNS('*', 'Document')[0] || doc, 'name') || file.name.replace(/\.kmz$/i, '');
+  const info = await rasterToTiles(srcs, id, 'Memotong KMZ menjadi tile…');
+  return { kind: 'kmz', name: srcs.length === 1 || name.length > 80 ? file.name.replace(/\.kmz$/i, '') : name, ...info, footprint: srcs.length === 1 ? srcs[0].foot : null };
+}
+
+/* Gambar mini peta untuk daftar Peta Saya, disusun dari tile zoom terendah. */
+async function makeThumb(m) {
+  const z = m.minzoom, r = tileRange(m.bounds, z), nx = Math.min(4, r[2] - r[0] + 1), ny = Math.min(4, r[3] - r[1] + 1);
+  const x0 = Math.max(r[0], Math.floor((r[0] + r[2]) / 2 - nx / 2 + 1)), y0 = Math.max(r[1], Math.floor((r[1] + r[3]) / 2 - ny / 2 + 1));
+  const cv = makeCanvas(nx * 256, ny * 256), ctx = cv.getContext('2d'); ctx.fillStyle = '#eef2f3'; ctx.fillRect(0, 0, cv.width, cv.height);
+  let any = false;
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) { const b = await pdbGet('tiles', `${m.id}/${z}/${x0 + x}/${y0 + y}`).catch(() => null); if (!b) continue; try { const im = await createImageBitmap(b); ctx.drawImage(im, x * 256, y * 256); any = true; } catch (e) {} }
+  if (!any) return null;
+  const px = (lon, lat) => [(lon2x(lon, z) - x0) * 256, (lat2y(lat, z) - y0) * 256];
+  const a = px(m.bounds[0], m.bounds[3]), b = px(m.bounds[2], m.bounds[1]);
+  const cx0 = Math.max(0, a[0]), cy0 = Math.max(0, a[1]), cw = Math.min(cv.width, b[0]) - cx0, ch = Math.min(cv.height, b[1]) - cy0;
+  const side = Math.max(1, Math.min(cw, ch)), out = makeCanvas(160, 160), o = out.getContext('2d');
+  o.fillStyle = '#eef2f3'; o.fillRect(0, 0, 160, 160);
+  o.drawImage(cv, cx0 + (cw - side) / 2, cy0 + (ch - side) / 2, side, side, 0, 0, 160, 160);
+  return new Promise(ok => out.toBlob(ok, 'image/jpeg', 0.8));
+}
+
+const IMPORT_ERR = {
+  format: 'Format tidak dikenali. Pilih GeoPDF (.pdf), GeoTIFF (.tif), KMZ, MBTiles, atau ZIP tile.',
+  'bukan zip': 'File ZIP rusak atau tidak lengkap.', zip64: 'ZIP terlalu besar (ZIP64). Pakai MBTiles atau pecah per tingkat zoom.', zipmetode: 'ZIP memakai kompresi yang tidak didukung.',
+  kosong: 'Tidak ada gambar peta di file ini.', georef: 'Georeferensi peta tidak valid.',
+  besar: 'Peta terlalu luas untuk resolusinya. Potong area peta lebih kecil lalu coba lagi.',
+  pdfnogeo: 'PDF ini tidak memiliki georeferensi. Ekspor ulang sebagai GeoPDF (QGIS: Export Map to PDF → centang "Create Geospatial PDF").',
+  pdflgi: 'GeoPDF format lama (OGC LGIDict) belum didukung. Ekspor ulang dari QGIS/ArcGIS dengan georeferensi ISO 32000.',
+  tifnogeo: 'TIFF ini tidak memiliki georeferensi (bukan GeoTIFF).', tifrot: 'GeoTIFF dengan rotasi belum didukung. Warp ulang di QGIS (Raster → Projections → Warp).',
+  kmzobj: 'KMZ ini berisi objek (titik/garis), bukan gambar peta. Untuk titik/jalur, ubah ke GPX lalu impor di tab Data → Impor GPX.',
+  pustaka: 'Pustaka pembaca peta belum tersimpan di HP. Buka aplikasi sekali saat ada sinyal, lalu coba lagi.',
+};
+async function importMapFile(file) {
+  const id = rid(); closeFloating();
+  try {
+    const head = new Uint8Array(await file.slice(0, 1024).arrayBuffer()), h8 = String.fromCharCode(...head.slice(0, 16));
+    const isPdf = String.fromCharCode(...head).includes('%PDF'), isTiff = h8.startsWith('II*\0') || h8.startsWith('MM\0*') || h8.startsWith('II+\0') || h8.startsWith('MM\0+');
+    const isSqlite = h8.startsWith('SQLite format 3'), isZip = head[0] === 0x50 && head[1] === 0x4b;
+    if (!isPdf && !isTiff && !isSqlite && !isZip) throw new Error('format');
+    let info;
+    if (isPdf) info = await importGeoPDF(file, id);
+    else if (isTiff) info = await importGeoTIFF(file, id);
+    else if (isSqlite) info = await importMBTiles(file, id);
+    else { const ents = await zipEntries(file); info = ents.some(e => /\.kml$/i.test(e.name)) && !ents.some(e => /(?:^|\/)\d{1,2}\/\d+\/\d+\.(png|jpe?g|webp)$/i.test(e.name)) ? await importKMZ(file, id, ents) : await importTileZip(file, id, ents); }
+    const m = { id, ...info, src: file.name, size: file.size, created: Date.now() };
+    progress('Menyimpan…', 1, '');
+    m.thumb = await makeThumb(m).catch(() => null);
+    await pdbPut('maps', id, m); MAPS = await pdbAll('maps');
+    progressEnd(); openMap(m);
+    toast(`Peta siap dipakai tanpa sinyal: ${m.name} (zoom ${m.minzoom}–${m.maxzoom}, ${fmtMB(m.bytes)})`);
+  } catch (e) {
+    progressEnd(); await deleteMap(id, true);
+    const msg = String(e && e.message || e), k = msg.split(':')[0];
+    toast(k === 'tifcrs' ? `Sistem koordinat GeoTIFF (EPSG:${msg.split(':')[1]}) belum didukung. Warp ulang ke WGS 84 / UTM di QGIS.` : IMPORT_ERR[k] || 'Gagal mengimpor peta: ' + msg);
+  }
+}
+async function deleteMap(id, silent) {
+  await pdbDo('tiles', 'readwrite', st => st.delete(IDBKeyRange.bound(id + '/', id + '/￿'))).catch(() => {});
+  await pdbDel('maps', id).catch(() => {});
+  MAPS = await pdbAll('maps').catch(() => []);
+  if (!silent && base.kind === 'off:' + id) setBase('sat');
+}
+
+/* ================= Baca foto dengan AI (Claude) =================
+   Per objek: foto-foto titik itu (maks. 4 terbaru, diperkecil ke 1280 px) dikirim bersama ke Claude
+   (Anthropic) beserta habitat dan vegetasi yang sudah diisi surveyor, lalu hasilnya mengisi Deskripsi
+   habitat, Vegetasi (bila kosong), dan Catatan. Teks yang diketik surveyor tidak ditimpa; teks AI lama
+
+/* ---------- Tampilan Peta Saya ---------- */
+let mapThumbURLs = [];
+async function renderPetaSaya() {
+  setTitle('Peta Saya', `${MAPS.length} peta tersimpan`);
+  mapThumbURLs.forEach(u => URL.revokeObjectURL(u)); mapThumbURLs = [];
+  const act = activeOffline();
+  const list = MAPS.slice().sort((a, b) => (b.created || 0) - (a.created || 0));
+  $('app').innerHTML = `
+    <section class="section">
+      <button type="button" class="btn block" data-pm="import">+ Impor peta (PDF / GeoTIFF / KMZ / MBTiles)</button>
+      <p class="note">Seperti Avenza Maps: impor <b>GeoPDF</b> (PDF bergeoreferensi dari QGIS, ArcGIS, peta RBI/BIG, atau peta Avenza), GeoTIFF (ortofoto drone, citra satelit), KMZ (Google Earth), MBTiles, atau ZIP tile. Peta disimpan di HP dan bisa dipakai tanpa sinyal: posisi GPS, titik temuan, jalur, dan batas luasan tampil di atasnya.</p>
+    </section>
+    <section class="section"><h2>Peta tersimpan (${MAPS.length})</h2>
+      ${list.length ? `<div class="list">${list.map(m => `<div class="item" style="cursor:default">
+        <button type="button" class="pmth" data-pm="open" data-id="${m.id}" data-thumb="${m.id}" aria-label="Buka ${esc(m.name)}"></button>
+        <span class="main"><span class="t">${esc(m.name)}${act && act.id === m.id ? ' <span class="tag ai">dipakai</span>' : ''}</span><br>
+          <span class="s">${esc(KIND_LABEL[m.kind] || 'Peta offline')} · zoom ${m.minzoom}–${m.maxzoom} · ${fmtMB(m.bytes || 0)}${m.created ? ' · ' + fmtDate(isoDate(m.created / 1000)) : ''}</span>
+          <span class="row" style="margin-top:6px"><button type="button" class="btn sm" data-pm="open" data-id="${m.id}">Buka di peta</button>${act && act.id === m.id ? `<button type="button" class="btn sm ghost" data-pm="off">Lepas</button>` : ''}<button type="button" class="btn sm ghost" data-pm="ren" data-id="${m.id}">Ganti nama</button><button type="button" class="btn sm danger" data-pm="del" data-id="${m.id}">Hapus</button></span></span></div>`).join('')}</div>`
+        : '<div class="empty">Belum ada peta. Tekan "Impor peta" lalu pilih file GeoPDF, GeoTIFF, KMZ, atau MBTiles dari HP.</div>'}
+    </section>
+    <details class="legend"><summary>Cara menyiapkan peta PDF (GeoPDF)</summary><ol style="padding-left:20px;margin:8px 0">
+      <li><b>QGIS</b>: susun peta di Layout → Export as PDF → centang <b>Create Geospatial PDF (GeoPDF)</b>. Untuk citra/drone: klik kanan layer → Export → Save As… format GeoTIFF.</li>
+      <li><b>ArcGIS Pro</b>: Share → Export Layout → PDF, centang <b>Export georeference information</b>.</li>
+      <li>Peta RBI dan peta tematik GeoPDF dari instansi, serta peta yang biasa dipakai di Avenza, bisa langsung diimpor.</li>
+      <li>PDF biasa tanpa georeferensi (hasil scan/print biasa) tidak bisa diletakkan di posisi yang benar; ekspor ulang sebagai GeoPDF.</li>
+      <li>Kirim file ke HP (kabel USB, Google Drive, atau WhatsApp sebagai <i>dokumen</i>), lalu "Impor peta".</li>
+      <li>Ukuran: impor dibatasi ±${Math.round(PX_CAP / 1e6)} juta piksel per peta; peta lebih besar diperkecil otomatis. Untuk detail tinggi di area luas, potong per blok.</li>
+    </ol></details>`;
+  for (const btn of document.querySelectorAll('#app [data-thumb]')) {
+    const m = MAPS.find(x => x.id === btn.dataset.thumb); if (!m) continue;
+    if (!m.thumb) { m.thumb = await makeThumb(m).catch(() => null); if (m.thumb) pdbPut('maps', m.id, m).catch(() => {}); }
+    if (m.thumb && document.body.contains(btn)) { const u = URL.createObjectURL(m.thumb); mapThumbURLs.push(u); btn.innerHTML = `<img src="${u}" alt="">`; }
+  }
+}
+const mapIn = document.createElement('input'); mapIn.type = 'file'; mapIn.id = 'mapIn'; mapIn.hidden = true;
+mapIn.accept = '.pdf,.tif,.tiff,.kmz,.mbtiles,.zip,application/pdf,image/tiff,application/vnd.google-earth.kmz,application/zip';
+document.body.appendChild(mapIn);
+mapIn.addEventListener('change', async () => { const f = mapIn.files[0]; mapIn.value = ''; if (f) await importMapFile(f); });
+$('app').addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-pm]'); if (!b) return;
+  const a = b.dataset.pm, m = MAPS.find(x => x.id === b.dataset.id);
+  if (a === 'import') mapIn.click();
+  else if (a === 'open' && m) openMap(m);
+  else if (a === 'off') { useOfflineMap(null); renderPetaSaya(); toast('Peta offline dilepas; kembali ke peta dasar.'); }
+  else if (a === 'ren' && m) { const n = prompt('Nama peta', m.name); if (n && n.trim()) { m.name = n.trim(); await pdbPut('maps', m.id, m); renderPetaSaya(); } }
+  else if (a === 'del' && m) { if (!arm(b, 'delmap' + m.id, 'Ketuk lagi untuk menghapus')) return; await deleteMap(m.id); if (offlineId() === m.id) useOfflineMap(null); renderPetaSaya(); toast('Peta dihapus dari HP'); }
+});
 /* ================= Mulai ================= */
-applyTheme(); updateNet(); inatLoadSaved();
+applyTheme(); updateNet(); inatLoadSaved(); loadMaps();
 history.replaceState(view, '');
 render();
 if (activeSurvey() && activeSurvey().trackOn) startTrack(activeSurvey());

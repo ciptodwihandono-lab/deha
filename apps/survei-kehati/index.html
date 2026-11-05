@@ -153,7 +153,10 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 #mapWrap { position: fixed; left: 0; right: 0; top: var(--top, 56px); bottom: calc(58px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
 #map { position: absolute; inset: 0; background: #cfd8d3; }
 .mapctl { position: absolute; z-index: 800; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
-.mapctl button { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 650; cursor: pointer; box-shadow: var(--shadow); text-align: left; }
+.mapctl button { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; box-shadow: var(--shadow); }
+.mapctl button svg { width: 22px; height: 22px; }
+.mapctl .mtools { display: flex; flex-direction: column; gap: 6px; }
+.mapctl #mMenu[aria-expanded="true"] { background: var(--accent-soft); }
 .mapctl button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .mapinfo { position: absolute; z-index: 800; left: 10px; right: 90px; bottom: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; box-shadow: var(--shadow); }
 .mapinfo:empty { display: none; }
@@ -196,13 +199,16 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 <main id="app"></main>
 <div id="mapWrap" hidden>
   <div id="map"></div>
-  <div class="mapctl">
-    <button type="button" id="mBase">Satelit</button>
-    <button type="button" id="mLocate">Posisi saya</button>
-    <button type="button" id="mFit">Semua titik</button>
-    <button type="button" id="mDraw" aria-pressed="false">Gambar luasan</button>
-    <button type="button" id="mCompass">Kompas</button>
-    <button type="button" id="mPetaku">Peta Saya</button>
+  <div class="mapctl" id="mapctl">
+    <button type="button" id="mMenu" aria-expanded="false" aria-label="Alat peta" title="Alat peta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <div class="mtools" id="mTools" hidden>
+      <button type="button" id="mBase" aria-label="Ganti peta dasar: satelit" title="Peta dasar: satelit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
+      <button type="button" id="mLocate" aria-label="Posisi saya" title="Posisi saya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      <button type="button" id="mFit" aria-label="Tampilkan semua titik" title="Semua titik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+      <button type="button" id="mDraw" aria-pressed="false" aria-label="Gambar luasan" title="Gambar luasan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3-14 11 4-4 10z"/><circle cx="5" cy="19" r="1.5" fill="currentColor"/><circle cx="8" cy="5" r="1.5" fill="currentColor"/><circle cx="19" cy="9" r="1.5" fill="currentColor"/></svg></button>
+      <button type="button" id="mCompass" aria-label="Kompas" title="Kompas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 6 2.5 6h-5z" fill="#d33" stroke="#d33"/><path d="m12 18-2.5-6h5z"/></svg></button>
+      <button type="button" id="mPetaku" aria-label="Peta Saya (impor GeoPDF)" title="Peta Saya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
+    </div>
   </div>
   <div class="mapinfo" id="mapInfo"></div>
 </div>
@@ -1334,7 +1340,7 @@ $('mDraw').addEventListener('click', () => {
 });
 $('mBase').addEventListener('click', () => {
   MAP.base = MAP.base === 'sat' ? 'osm' : 'sat'; const b = BASES[MAP.base];
-  MAP.tile.setUrl(b[0]); MAP.tile.options.attribution = b[1]; $('mBase').textContent = MAP.base === 'sat' ? 'Satelit' : 'Peta jalan';
+  MAP.tile.setUrl(b[0]); MAP.tile.options.attribution = b[1]; { const t = MAP.base === 'sat' ? 'Peta dasar: satelit' : 'Peta dasar: peta jalan'; $('mBase').title = t; $('mBase').setAttribute('aria-label', 'Ganti ' + t.toLowerCase()); toast(t); }
 });
 $('mLocate').addEventListener('click', async () => {
   toast('Mencari posisi…'); const c = LAST_POS && MAP.me ? LAST_POS : await getPos();
@@ -1342,6 +1348,13 @@ $('mLocate').addEventListener('click', async () => {
   showMe(c); MAP.m.setView([c.latitude, c.longitude], Math.max(MAP.m.getZoom(), 17));
 });
 $('mFit').addEventListener('click', fitAll);
+/* Tombol alat peta dilipat ke satu tombol ☰ agar peta tidak tertutup; keadaannya diingat. */
+function setMapMenu(open) {
+  $('mTools').hidden = !open; $('mMenu').setAttribute('aria-expanded', String(open));
+  try { localStorage.setItem(AI_APP + '-mapmenu', open ? '1' : '0'); } catch (e) {}
+}
+$('mMenu').addEventListener('click', () => setMapMenu($('mTools').hidden));
+try { setMapMenu(localStorage.getItem(AI_APP + '-mapmenu') === '1'); } catch (e) {}
 /* Titik biru posisi saya selalu tampil selama tab Peta terbuka (seperti Avenza), dengan lingkaran akurasi. */
 let mapWatch = null;
 function showMe(c) {

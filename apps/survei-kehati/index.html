@@ -158,8 +158,15 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 .mapctl .mtools { display: flex; flex-direction: column; gap: 6px; }
 .mapctl #mMenu[aria-expanded="true"] { background: var(--accent-soft); }
 .mapctl button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-.mapinfo { position: absolute; z-index: 800; left: 10px; right: 90px; bottom: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; box-shadow: var(--shadow); }
+.mapinfo { position: absolute; z-index: 800; left: 10px; right: 90px; bottom: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; box-shadow: var(--shadow); }
 .mapinfo:empty { display: none; }
+.mapinfo .mi-tog { float: right; margin: -4px -6px 2px 8px; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); font-size: 16px; line-height: 1; cursor: pointer; }
+.mapinfo.min { right: auto; padding: 0; background: none; border: 0; box-shadow: none; }
+.mapinfo.min .mi-open { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 600 13px/1.2 inherit; box-shadow: var(--shadow); cursor: pointer; }
+/* Atribusi peta: kecil dan tidak menimpa panel info (berada di luar kontainer peta yang bisa diputar). */
+#mapWrap .leaflet-control-attribution { font-size: 10px; line-height: 1.4; padding: 0 5px; max-width: calc(100vw - 110px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(255,255,255,.75); color: #333; }
+#mapWrap .leaflet-control-attribution a { color: #0b5cad; }
+#mapWrap .leaflet-bottom.leaflet-right .leaflet-control { margin: 0; }
 .pin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
 .pin.cam { width: 24px; height: 24px; display: grid; place-items: center; background: #fff; color: #222; }
 .pin.cam svg { width: 14px; height: 14px; }
@@ -194,6 +201,10 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 .progress .pbox { background: var(--surface); border-radius: 12px; padding: 16px; width: min(360px, 100%); display: flex; flex-direction: column; gap: 8px; }
 .progress .pbar { height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
 .progress .pbar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.chooser { position: fixed; inset: 0; z-index: 2150; background: rgba(0,0,0,.35); display: flex; align-items: flex-end; justify-content: center; padding: 16px 16px calc(84px + env(safe-area-inset-bottom, 0px)); }
+.chooser .cbox { background: var(--surface); border-radius: 14px; padding: 14px; width: min(420px, 100%); display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.chooser .cbox .btn { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; gap: 2px; }
+.chooser .cbox .btn small { font-weight: 500; font-size: 12px; opacity: .85; }
 .toast { position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 2200; max-width: calc(100% - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 .sticky-actions { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); background: var(--bg); padding-block: 8px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 3; }
 .sticky-actions .btn { flex: 1 1 140px; }
@@ -1020,7 +1031,7 @@ async function startSurvey(s) {
   const t = nowS(); s.mulai = { t, lat: null, lon: null, acc: null }; s.selesai = null; s.jamMulai = hm(t); s.jamSelesai = ''; S.active = s.id;
   if (!s.tanggal) s.tanggal = today();
   s.trackOn = true; touch(s); save(); render(); startTrack(s); keepAwake();
-  toast('Survei dimulai. Jalur GPS direkam; foto dari tombol kamera masuk ke survei ini.');
+  toast('Survei dimulai. Jalur GPS direkam; tombol kamera di peta bisa menyimpan foto sebagai titik survei ini.');
   const c = roundC(await getPos()); if (c && s.mulai && s.mulai.t === t) { Object.assign(s.mulai, c); touch(s); if (view.v === 'survey') render(); }
 }
 async function stopSurvey(s, silent) {
@@ -1156,7 +1167,23 @@ function askPhotoGeo() { photoGeo = getPos(20000); }
    Koleksi pengamatan, TERPISAH dari survei berjalan (tidak menambah catatan survei dan tidak memulai survei). */
 $('fab').addEventListener('click', () => {
   if (view.v === 'obs') { PHOTO_TO = { sid: view.sid, oid: view.id }; askPhotoGeo(); $('camIn').click(); return; }
-  PHOTO_TO = { sid: koleksi().id, oid: null }; askPhotoGeo(); $('camIn').click();
+  const live = activeSurvey();
+  if (!live) { PHOTO_TO = { sid: koleksi().id, oid: null }; askPhotoGeo(); $('camIn').click(); return; }
+  // Survei live berjalan: pilih tujuan foto setiap kali memotret.
+  const n = Object.values(live.obs).filter(o => /^Titik \d+$/.test(o.stasiun || '')).length;
+  const ch = document.createElement('div'); ch.className = 'chooser'; ch.setAttribute('role', 'dialog'); ch.setAttribute('aria-label', 'Simpan foto ke');
+  ch.innerHTML = `<div class="cbox"><b>Simpan foto ini ke:</b>
+    <button type="button" class="btn" data-to="live">📍 Titik survei live: ${esc(surveyName(live))}<small>jadi titik lokasi baru (Titik ${n + 1}); foto di lokasi yang sama digabung</small></button>
+    <button type="button" class="btn ghost" data-to="koleksi">🗂 Koleksi pengamatan<small>terpisah dari survei</small></button>
+    <button type="button" class="btn ghost sm" data-to="">Batal</button></div>`;
+  ch.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-to]'); if (!b && ev.target !== ch) return;
+    ch.remove(); const to = b ? b.dataset.to : '';
+    if (!to) return;
+    PHOTO_TO = to === 'live' ? { sid: live.id, oid: null, titik: true } : { sid: koleksi().id, oid: null };
+    askPhotoGeo(); $('camIn').click();
+  });
+  document.body.appendChild(ch); ch.querySelector('[data-to=live]').focus();
 });
 ['camIn', 'galIn'].forEach(id => $(id).addEventListener('change', ev => {
   const files = [...ev.target.files]; ev.target.value = '';
@@ -1224,7 +1251,10 @@ async function addPhotos(files, to) {
     o = Object.values(s.obs).find(x => x.tax === 'foto' && !x.nama && x.lat != null && now - (x.t || 0) <= 900 && distBear(x.lat, x.lon, geo.lat, geo.lon)[0] <= Math.max(15, geo.acc || 0)) || null;
     if (o) to.joined = true;
   }
-  if (!o) { o = newObs(s, 'foto'); made = true; }
+  if (!o) {
+    o = newObs(s, 'foto'); made = true;
+    if (to.titik) o.stasiun = `Titik ${Object.values(s.obs).filter(x => /^Titik \d+$/.test(x.stasiun || '')).length + 1}`;
+  }
   const firstPhoto = !(o._photos || []).length;
   if (o.lat == null && geo && !gal) Object.assign(o, geo);
   toast(files.length > 1 ? `Menyimpan ${files.length} foto…` : 'Menyimpan foto…');
@@ -1256,7 +1286,7 @@ async function addPhotos(files, to) {
   if (notes.length) o.catatan = [String(o.catatan || '').trim(), ...notes].filter(Boolean).join('\n');
   touch(s); save();
   if (o.lat == null) autoGPS(s, o);   // GPS belum dapat saat foto disimpan: coba lagi di latar belakang
-  toast(`${made ? (s.koleksi && !to.oid ? 'Foto tersimpan di Koleksi (terpisah dari survei)' : 'Foto tersimpan sebagai titik baru') : to.joined ? `Foto ditambahkan ke titik foto di lokasi yang sama (${o._photos.length} foto)` : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)}${gal ? (o._photos[o._photos.length - 1].gps === 'foto' ? ', lokasi dari foto' : ', foto tanpa data lokasi') : ''})` : ' — lokasi belum ada'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
+  toast(`${made ? (s.koleksi && !to.oid ? 'Foto tersimpan di Koleksi (terpisah dari survei)' : to.titik ? `Foto tersimpan sebagai ${o.stasiun} di ${surveyName(s)}` : 'Foto tersimpan sebagai titik baru') : to.joined ? `Foto ditambahkan ke titik foto di lokasi yang sama (${o._photos.length} foto)` : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)}${gal ? (o._photos[o._photos.length - 1].gps === 'foto' ? ', lokasi dari foto' : ', foto tanpa data lokasi') : ''})` : ' — lokasi belum ada'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
   if (aiOn()) aiEnqueue({ sid: s.id, oid: o.id }, true);
   if (view.v === 'peta') { drawSurveyLayers(); }
   else if (made || (to.joined && view.v !== 'obs')) { OBS_DETAIL = false; go({ v: 'obs', sid: s.id, id: o.id }); if (made && idReady()) idFromObs(s, o); }
@@ -1349,7 +1379,18 @@ function drawSurveyLayers() {
   drawTitik();
   updateMapInfo();
 }
+/* Panel info peta (kiri bawah) bisa dikecilkan jadi satu tombol kecil; keadaannya diingat. */
+let MI_MIN = false; try { MI_MIN = localStorage.getItem(AI_APP + '-mapinfo-min') === '1'; } catch (e) {}
+function setMapInfoMin(on) { MI_MIN = on; try { localStorage.setItem(AI_APP + '-mapinfo-min', on ? '1' : '0'); } catch (e) {} updateMapInfo(); }
 function updateMapInfo() {
+  mapInfoFill();
+  const el = $('mapInfo'); if (!el.innerHTML.trim()) return;
+  const label = MAP.draw ? 'Gambar luasan' : MAP.rotUI ? 'Putar peta' : MAP.addPt ? 'Buat titik' : 'Info peta';
+  el.classList.toggle('min', MI_MIN);
+  if (MI_MIN) el.innerHTML = `<button type="button" class="mi-open" data-m="mimax" aria-label="Tampilkan panel ${label}">▴ ${label}</button>`;
+  else el.insertAdjacentHTML('afterbegin', '<button type="button" class="mi-tog" data-m="mimin" aria-label="Kecilkan panel" title="Kecilkan">▾</button>');
+}
+function mapInfoFill() {
   const el = $('mapInfo');
   if (MAP.draw) {
     const s = S.surveys[MAP.draw];
@@ -1379,6 +1420,8 @@ $('mapWrap').addEventListener('click', ev => {
   if (m === 'done') { stopDraw(); }
   if (m === 'pmoff') { useOfflineMap(null); updateMapInfo(); toast('Peta offline dilepas.'); }
   if (m === 'all') { MAP.focus = null; renderMap(); fitAll(); }
+  if (m === 'mimin') { setMapInfoMin(true); return; }
+  if (m === 'mimax') { setMapInfoMin(false); return; }
   if (m === 'tphere') { getPos().then(c => { if (c) addTitik(c.latitude, c.longitude); else toast('GPS belum dapat sinyal.'); }); }
   if (m === 'tpdone') setAddPt(false);
   if (m === 'tpdel') { if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; return; } delTitik(b.dataset.tid); }

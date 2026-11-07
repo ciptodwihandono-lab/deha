@@ -163,6 +163,8 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 .pin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
 .pin.cam { width: 24px; height: 24px; display: grid; place-items: center; background: #fff; color: #222; }
 .pin.cam svg { width: 14px; height: 14px; }
+.pin { position: relative; }
+.pinN { position: absolute; right: -9px; top: -9px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #c0392b; color: #fff; font: 700 10px/16px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 1.5px #fff; }
 .me { width: 16px; height: 16px; border-radius: 50%; background: #2a7fff; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 .vtx { width: 14px; height: 14px; border-radius: 50%; background: #ffd23f; border: 2px solid #333; }
 /* Titik buatan pengguna (waypoint) dan peta yang bisa diputar */
@@ -1217,6 +1219,13 @@ async function addPhotos(files, to) {
   const gal = !!to.gallery;
   let o = to.oid && s.obs[to.oid], made = false;
   const geo = roundC(await (photoGeo || Promise.resolve(null)).catch(() => null)); photoGeo = null;
+  if (!o && geo && !gal) {
+    // Foto berikutnya di tempat yang sama (≤ 15 m, ≤ 15 menit) masuk ke titik foto yang sudah ada (belum diberi nama jenis),
+    // bukan membuat titik baru yang bertumpuk.
+    const now = nowS();
+    o = Object.values(s.obs).find(x => x.tax === 'foto' && !x.nama && x.lat != null && now - (x.t || 0) <= 900 && distBear(x.lat, x.lon, geo.lat, geo.lon)[0] <= Math.max(15, geo.acc || 0)) || null;
+    if (o) to.joined = true;
+  }
   if (!o) { o = newObs(s, 'foto'); made = true; }
   const firstPhoto = !(o._photos || []).length;
   if (o.lat == null && geo && !gal) Object.assign(o, geo);
@@ -1249,10 +1258,10 @@ async function addPhotos(files, to) {
   if (notes.length) o.catatan = [String(o.catatan || '').trim(), ...notes].filter(Boolean).join('\n');
   touch(s); save();
   if (o.lat == null) autoGPS(s, o);   // GPS belum dapat saat foto disimpan: coba lagi di latar belakang
-  toast(`${made ? 'Foto tersimpan sebagai titik baru' : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)}${gal ? (o._photos[o._photos.length - 1].gps === 'foto' ? ', lokasi dari foto' : ', foto tanpa data lokasi') : ''})` : ' — lokasi belum ada'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
+  toast(`${made ? 'Foto tersimpan sebagai titik baru' : to.joined ? `Foto ditambahkan ke titik foto di lokasi yang sama (${o._photos.length} foto)` : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)}${gal ? (o._photos[o._photos.length - 1].gps === 'foto' ? ', lokasi dari foto' : ', foto tanpa data lokasi') : ''})` : ' — lokasi belum ada'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
   if (aiOn()) aiEnqueue({ sid: s.id, oid: o.id }, true);
   if (view.v === 'peta') { drawSurveyLayers(); }
-  else if (made) { OBS_DETAIL = false; go({ v: 'obs', sid: s.id, id: o.id }); if (idReady()) idFromObs(s, o); }
+  else if (made || (to.joined && view.v !== 'obs')) { OBS_DETAIL = false; go({ v: 'obs', sid: s.id, id: o.id }); if (made && idReady()) idFromObs(s, o); }
   else if (view.v === 'obs' && view.id === o.id) render();
 }
 let thumbURLs = [];
@@ -1319,15 +1328,24 @@ function drawSurveyLayers() {
     if ((area || []).length >= 3 && s.area.mode !== 'transek') L.polygon(area.map(p => [p[0], p[1]]), { color: '#ffd23f', weight: 2, fillOpacity: .15 }).addTo(MAP.layers);
     if (MAP.draw === s.id) s.area.coords.forEach(p => L.marker(p, { icon: L.divIcon({ className: '', html: '<div class="vtx"></div>', iconSize: [14, 14] }), interactive: false }).addTo(MAP.layers));
     if ((s.track || []).length > 1) L.polyline(s.track.map(p => [p[0], p[1]]), { color: '#ff3b30', weight: 3 }).addTo(MAP.layers);
-    for (const o of Object.values(s.obs)) {
-      if (o.lat == null) continue;
-      const t = taxOf(o.tax);
-      const mk = o.tax === 'foto'
-        ? L.marker([o.lat, o.lon], { icon: L.divIcon({ className: '', html: `<div class="pin cam">${CAM_SVG}</div>`, iconSize: [24, 24] }) })
-        : L.marker([o.lat, o.lon], { icon: L.divIcon({ className: '', html: `<div class="pin" style="background:${t.c}"></div>`, iconSize: [18, 18] }) });
-      mk.bindPopup(`<b>${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? 'Titik foto' : t.l)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' ? ` · ${esc(o.jumlah)} ind.` : ''}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}<br><button type="button" class="btn sm" style="margin-top:6px" data-mopen="${s.id}|${o.id}">Buka</button>`);
-      mk.addTo(MAP.layers);
-    }
+  }
+  // Catatan di lokasi yang sama (≤ 12 m) digabung jadi satu penanda dengan angka, supaya titik tidak bertumpuk ganda.
+  const groups = [];
+  for (const s of mapSurveys()) for (const o of Object.values(s.obs)) {
+    if (o.lat == null) continue;
+    const g = groups.find(g => distBear(g.lat, g.lon, o.lat, o.lon)[0] <= 12);
+    if (g) g.items.push([s, o]); else groups.push({ lat: o.lat, lon: o.lon, items: [[s, o]] });
+  }
+  const line = ([s, o]) => { const t = taxOf(o.tax), np = (o._photos || []).length; return `<div style="margin-top:6px"><b>${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? 'Titik foto' : t.l)}</b>${o.ilmiah ? ` <i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' && o.jumlah !== '' ? ` · ${esc(o.jumlah)} ind.` : ''}${np ? ` · ${np} foto` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`; };
+  for (const g of groups) {
+    const n = g.items.length, sp = g.items.find(([, o]) => o.tax !== 'foto'), np = g.items.reduce((a, [, o]) => a + (o._photos || []).length, 0);
+    const badge = n > 1 ? `<span class="pinN">${n}</span>` : '';
+    const mk = !sp
+      ? L.marker([g.lat, g.lon], { icon: L.divIcon({ className: '', html: `<div class="pin cam">${CAM_SVG}${badge}</div>`, iconSize: [24, 24] }) })
+      : L.marker([g.lat, g.lon], { icon: L.divIcon({ className: '', html: `<div class="pin" style="background:${taxOf(sp[1].tax).c}">${badge}</div>`, iconSize: [18, 18] }) });
+    mk.bindPopup(n === 1 ? line(g.items[0]).replace('<div style="margin-top:6px">', '<div>')
+      : `<b>${n} catatan di lokasi ini</b>${np ? ` · ${np} foto` : ''}<div style="max-height:220px;overflow:auto">${g.items.map(line).join('')}</div>`, { maxWidth: 260 });
+    mk.addTo(MAP.layers);
   }
   drawTitik();
   updateMapInfo();

@@ -1152,13 +1152,11 @@ function wmLines(s, o, lat, lon, acc, taken) {
 }
 let photoGeo = null, PHOTO_TO = null, LAST_POS = null;
 function askPhotoGeo() { photoGeo = getPos(20000); }
-/* Tombol kamera bulat: di form pengamatan menambah foto ke catatan itu; di tempat lain membuat titik foto baru
-   pada survei yang sedang berjalan (bila belum ada, survei baru dimulai otomatis). */
+/* Tombol kamera bulat: di form pengamatan menambah foto ke catatan itu; di peta membuat titik foto di
+   Koleksi pengamatan, TERPISAH dari survei berjalan (tidak menambah catatan survei dan tidak memulai survei). */
 $('fab').addEventListener('click', () => {
   if (view.v === 'obs') { PHOTO_TO = { sid: view.sid, oid: view.id }; askPhotoGeo(); $('camIn').click(); return; }
-  let s = activeSurvey() || (view.v === 'survey' && S.surveys[view.id]);
-  if (!s) { s = newSurvey(); startSurvey(s); toast('Survei baru dimulai otomatis. Lengkapi nama lokasinya nanti.'); }
-  PHOTO_TO = { sid: s.id, oid: null }; askPhotoGeo(); $('camIn').click();
+  PHOTO_TO = { sid: koleksi().id, oid: null }; askPhotoGeo(); $('camIn').click();
 });
 ['camIn', 'galIn'].forEach(id => $(id).addEventListener('change', ev => {
   const files = [...ev.target.files]; ev.target.value = '';
@@ -1258,7 +1256,7 @@ async function addPhotos(files, to) {
   if (notes.length) o.catatan = [String(o.catatan || '').trim(), ...notes].filter(Boolean).join('\n');
   touch(s); save();
   if (o.lat == null) autoGPS(s, o);   // GPS belum dapat saat foto disimpan: coba lagi di latar belakang
-  toast(`${made ? 'Foto tersimpan sebagai titik baru' : to.joined ? `Foto ditambahkan ke titik foto di lokasi yang sama (${o._photos.length} foto)` : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)}${gal ? (o._photos[o._photos.length - 1].gps === 'foto' ? ', lokasi dari foto' : ', foto tanpa data lokasi') : ''})` : ' — lokasi belum ada'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
+  toast(`${made ? (s.koleksi && !to.oid ? 'Foto tersimpan di Koleksi (terpisah dari survei)' : 'Foto tersimpan sebagai titik baru') : to.joined ? `Foto ditambahkan ke titik foto di lokasi yang sama (${o._photos.length} foto)` : `${n} foto tersimpan`}${o.lat != null ? ` (${fmtCoord(o.lat, o.lon)}${gal ? (o._photos[o._photos.length - 1].gps === 'foto' ? ', lokasi dari foto' : ', foto tanpa data lokasi') : ''})` : ' — lokasi belum ada'}${aiOn() ? ' · AI membaca habitat…' : ''}`);
   if (aiOn()) aiEnqueue({ sid: s.id, oid: o.id }, true);
   if (view.v === 'peta') { drawSurveyLayers(); }
   else if (made || (to.joined && view.v !== 'obs')) { OBS_DETAIL = false; go({ v: 'obs', sid: s.id, id: o.id }); if (made && idReady()) idFromObs(s, o); }
@@ -1333,8 +1331,9 @@ function drawSurveyLayers() {
   const groups = [];
   for (const s of mapSurveys()) for (const o of Object.values(s.obs)) {
     if (o.lat == null) continue;
-    const g = groups.find(g => distBear(g.lat, g.lon, o.lat, o.lon)[0] <= 12);
-    if (g) g.items.push([s, o]); else groups.push({ lat: o.lat, lon: o.lon, items: [[s, o]] });
+    // Hanya digabung dalam survei yang sama: foto koleksi tidak disatukan dengan catatan survei.
+    const g = groups.find(g => g.sid === s.id && distBear(g.lat, g.lon, o.lat, o.lon)[0] <= 12);
+    if (g) g.items.push([s, o]); else groups.push({ sid: s.id, lat: o.lat, lon: o.lon, items: [[s, o]] });
   }
   const line = ([s, o]) => { const t = taxOf(o.tax), np = (o._photos || []).length; return `<div style="margin-top:6px"><b>${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? 'Titik foto' : t.l)}</b>${o.ilmiah ? ` <i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' && o.jumlah !== '' ? ` · ${esc(o.jumlah)} ind.` : ''}${np ? ` · ${np} foto` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`; };
   for (const g of groups) {
@@ -1369,7 +1368,7 @@ function updateMapInfo() {
   const f = MAP.focus && S.surveys[MAP.focus], om = typeof activeOffline === 'function' ? activeOffline() : null;
   const omTxt = om ? `<div style="margin-bottom:4px">🗺 Peta offline: <b>${esc(om.name)}</b> <button type="button" class="btn sm ghost" data-m="pmoff">Lepas</button></div>` : '';
   el.innerHTML = omTxt + (f ? `<b>${esc(surveyName(f))}</b> · ${n} titik${areaOf(f).m2 ? ` · luas ${fmtArea(areaOf(f).m2)}` : ''}${f.track.length > 1 ? ` · jalur ${fmtLen(pathLen(f.track))}` : ''} <button type="button" class="btn sm ghost" data-m="all" style="margin-left:6px">Semua survei</button>`
-    : `${list.length} survei · ${n} titik. Tombol kamera membuat titik foto di posisi Anda.`);
+    : `${list.length} survei · ${n} titik. Tombol kamera membuat titik foto di posisi Anda (disimpan di Koleksi, terpisah dari survei).`);
 }
 $('mapWrap').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;

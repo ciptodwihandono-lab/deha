@@ -165,6 +165,23 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 .pin.cam svg { width: 14px; height: 14px; }
 .me { width: 16px; height: 16px; border-radius: 50%; background: #2a7fff; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 .vtx { width: 14px; height: 14px; border-radius: 50%; background: #ffd23f; border: 2px solid #333; }
+/* Titik buatan pengguna (waypoint) dan peta yang bisa diputar */
+.wp { position: relative; width: 16px; height: 16px; transform: rotate(var(--mrinv, 0deg)); }
+.wp i { position: absolute; inset: 0; background: var(--c, #e63946); border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
+.wp span { position: absolute; left: 20px; top: -2px; white-space: nowrap; font: 700 12px/1.2 system-ui, sans-serif; color: #111; background: rgba(255,255,255,.88); padding: 1px 5px; border-radius: 5px; box-shadow: 0 0 0 1px rgba(0,0,0,.2); }
+#map .leaflet-popup-content-wrapper { transform: rotate(var(--mrinv, 0deg)); transform-origin: 50% calc(100% + 20px); }
+#map .leaflet-popup-tip-container { transform: rotate(var(--mrinv, 0deg)); transform-origin: 50% 100%; }
+.wpop { display: flex; flex-direction: column; gap: 6px; min-width: 210px; }
+.wpop input, .wpop textarea { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); width: 100%; box-sizing: border-box; }
+.wpop textarea { min-height: 48px; resize: vertical; }
+.wpop .row { display: flex; gap: 6px; flex-wrap: wrap; }
+.wpop .cols { display: flex; gap: 4px; }
+.wpop .cols button { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); cursor: pointer; padding: 0; }
+#mNorth { position: absolute; z-index: 800; right: 10px; top: 92px; width: 42px; height: 42px; display: grid; place-items: center; padding: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 50%; cursor: pointer; box-shadow: var(--shadow); }
+#mNorth svg { width: 26px; height: 26px; transition: transform .08s linear; }
+#mNorth.follow { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.rotbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rotbar input[type=range] { flex: 1 1 120px; min-width: 100px; }
 .viewer { position: fixed; inset: 0; z-index: 2000; background: #000; display: flex; flex-direction: column; }
 .viewer img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
 .viewer .vbar { display: flex; gap: 8px; align-items: center; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); color: #fff; font-size: 13px; flex-wrap: wrap; }
@@ -207,9 +224,12 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
       <button type="button" id="mFit" aria-label="Tampilkan semua titik" title="Semua titik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
       <button type="button" id="mDraw" aria-pressed="false" aria-label="Gambar luasan" title="Gambar luasan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3-14 11 4-4 10z"/><circle cx="5" cy="19" r="1.5" fill="currentColor"/><circle cx="8" cy="5" r="1.5" fill="currentColor"/><circle cx="19" cy="9" r="1.5" fill="currentColor"/></svg></button>
       <button type="button" id="mCompass" aria-label="Kompas" title="Kompas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 6 2.5 6h-5z" fill="#d33" stroke="#d33"/><path d="m12 18-2.5-6h5z"/></svg></button>
+      <button type="button" id="mPoint" aria-pressed="false" aria-label="Buat titik" title="Buat titik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg></button>
+      <button type="button" id="mRotate" aria-pressed="false" aria-label="Putar peta" title="Putar peta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/><path d="m12 8 2 5h-4z" fill="currentColor"/></svg></button>
       <button type="button" id="mPetaku" aria-label="Peta Saya (impor GeoPDF)" title="Peta Saya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
     </div>
   </div>
+  <button type="button" id="mNorth" hidden aria-label="Arah utara: ketuk untuk mengembalikan utara ke atas" title="Utara ke atas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 16 12H8z" fill="#d33"/><path d="M12 22 8 12h8z" fill="currentColor" opacity=".55"/><text x="12" y="9.6" text-anchor="middle" font-size="5.5" font-weight="700" fill="#fff" font-family="system-ui,sans-serif">U</text></svg></button>
   <div class="mapinfo" id="mapInfo"></div>
 </div>
 <button type="button" class="fab" id="fab" aria-label="Ambil foto dan buat titik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
@@ -631,7 +651,7 @@ const IUCN_LABEL = { CR: 'Kritis (CR)', EN: 'Genting (EN)', VU: 'Rentan (VU)', N
 /* ================= Penyimpanan ================= */
 const KEY = 'survei-kehati-v1';
 const AI_APP = 'survei-kehati';
-function blank() { return { v: 1, profile: { pengamat: '' }, surveys: {}, active: null, deleted: {} }; }
+function blank() { return { v: 1, profile: { pengamat: '' }, surveys: {}, active: null, deleted: {}, titik: [] }; }
 function load() { try { const r = localStorage.getItem(KEY); if (r) return Object.assign(blank(), JSON.parse(r)); } catch (e) {} return blank(); }
 let S = load();
 let saveTimer = null;
@@ -1279,10 +1299,14 @@ function renderMap() {
     L.control.zoom({ position: 'topright' }).addTo(MAP.m);
     MAP.tile = L.tileLayer(BASES.sat[0], { attribution: BASES.sat[1], maxZoom: 21, maxNativeZoom: BASES.sat[2] }).addTo(MAP.m);
     MAP.layers = L.layerGroup().addTo(MAP.m);
-    MAP.m.on('click', ev => { if (MAP.draw) { const s = S.surveys[MAP.draw]; s.area.coords.push([+ev.latlng.lat.toFixed(7), +ev.latlng.lng.toFixed(7)]); s.area.mode = ''; touch(s); drawSurveyLayers(); } });
+    rotPatch();
+    // Kontrol zoom & atribusi dipindah ke luar kontainer peta supaya tidak ikut berputar.
+    $('mapWrap').appendChild(MAP.m._controlContainer); $('mapWrap').classList.add('leaflet-touch');
+    MAP.tp = L.layerGroup().addTo(MAP.m);
+    MAP.m.on('click', ev => { if (MAP.addPt && !MAP.draw) { addTitik(ev.latlng.lat, ev.latlng.lng); return; } if (MAP.draw) { const s = S.surveys[MAP.draw]; s.area.coords.push([+ev.latlng.lat.toFixed(7), +ev.latlng.lng.toFixed(7)]); s.area.mode = ''; touch(s); drawSurveyLayers(); } });
     setTimeout(() => { MAP.m.invalidateSize(); fitAll(); }, 30);
     drawOffline();
-  } else setTimeout(() => MAP.m.invalidateSize(), 30);
+  } else setTimeout(() => { MAP.m.invalidateSize(); if (ROT.deg) { $('map').style.width = ''; rotApply(ROT.deg, false); } }, 30);
   drawSurveyLayers();
   if (MAP.focus) setTimeout(fitAll, 60);
 }
@@ -1305,6 +1329,7 @@ function drawSurveyLayers() {
       mk.addTo(MAP.layers);
     }
   }
+  drawTitik();
   updateMapInfo();
 }
 function updateMapInfo() {
@@ -1312,6 +1337,14 @@ function updateMapInfo() {
   if (MAP.draw) {
     const s = S.surveys[MAP.draw];
     el.innerHTML = `<b>Gambar luasan:</b> ketuk peta di setiap sudut batas. ${s.area.coords.length} titik · <b>${fmtArea(polyArea(s.area.coords))}</b><div class="row" style="margin-top:6px"><button type="button" class="btn sm ghost" data-m="undo">Urungkan</button><button type="button" class="btn sm ghost" data-m="mehere">Sudut di posisi saya</button><button type="button" class="btn sm" data-m="done">Selesai</button></div>`;
+    return;
+  }
+  if (MAP.rotUI) {
+    el.innerHTML = `<b>Putar peta</b> · ${Math.round(-ROT.deg + 360) % 360}° ${ROT.follow ? '(mengikuti arah HP)' : ''}<div class="rotbar" style="margin-top:6px"><button type="button" class="btn sm ghost" data-m="rotl" aria-label="Putar kiri 15 derajat">⟲ 15°</button><input type="range" min="-180" max="180" step="1" value="${Math.round(ROT.deg)}" data-m="rotr" aria-label="Sudut putar"><button type="button" class="btn sm ghost" data-m="rotrr" aria-label="Putar kanan 15 derajat">⟳ 15°</button></div><div class="row" style="margin-top:6px"><button type="button" class="btn sm ghost" data-m="rotn">Utara ke atas</button><button type="button" class="btn sm ${ROT.follow ? '' : 'ghost'}" data-m="rotf">🧭 ${ROT.follow ? 'Berhenti ikut arah HP' : 'Ikuti arah HP'}</button><button type="button" class="btn sm" data-m="rotx">Tutup</button></div><div class="note" style="margin-top:4px">Bisa juga diputar dengan dua jari.</div>`;
+    return;
+  }
+  if (MAP.addPt) {
+    el.innerHTML = `<b>Buat titik:</b> ketuk peta di lokasi titik. ${S.titik.length} titik tersimpan.<div class="row" style="margin-top:6px"><button type="button" class="btn sm ghost" data-m="tphere">Titik di posisi saya</button><button type="button" class="btn sm" data-m="tpdone">Selesai</button></div>`;
     return;
   }
   const list = mapSurveys(), n = list.reduce((a, s) => a + Object.values(s.obs).filter(o => o.lat != null).length, 0);
@@ -1329,6 +1362,23 @@ $('mapWrap').addEventListener('click', ev => {
   if (m === 'done') { stopDraw(); }
   if (m === 'pmoff') { useOfflineMap(null); updateMapInfo(); toast('Peta offline dilepas.'); }
   if (m === 'all') { MAP.focus = null; renderMap(); fitAll(); }
+  if (m === 'tphere') { getPos().then(c => { if (c) addTitik(c.latitude, c.longitude); else toast('GPS belum dapat sinyal.'); }); }
+  if (m === 'tpdone') setAddPt(false);
+  if (m === 'tpdel') { if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Ketuk lagi untuk menghapus'; return; } delTitik(b.dataset.tid); }
+  if (m === 'tpgo') { const t = S.titik.find(x => x.id === b.dataset.tid); if (t) goTitik(t); }
+  if (m === 'tpcol') { const t = S.titik.find(x => x.id === b.dataset.tid); if (t) { t.c = b.dataset.c; t.u = Date.now(); saveSoon(); const mk = MAP.tpMk && MAP.tpMk[t.id]; if (mk) mk.setIcon(titikIcon(t)); } }
+  if (m === 'rotl') rotApply(ROT.deg - 15, true);
+  if (m === 'rotrr') rotApply(ROT.deg + 15, true);
+  if (m === 'rotn') { followSet(false); rotApply(0); }
+  if (m === 'rotf') followSet(!ROT.follow);
+  if (m === 'rotx') setRotUI(false);
+});
+$('mapWrap').addEventListener('input', ev => {
+  const el = ev.target;
+  if (el.dataset.m === 'rotr') { followSet(false, true); rotApply(+el.value, false, true); return; }
+  const f = el.dataset.tp; if (!f) return;
+  const t = S.titik.find(x => x.id === el.closest('.wpop').dataset.tid); if (!t) return;
+  t[f] = el.value; t.u = Date.now(); saveSoon();
 });
 function startDraw(s) { MAP.draw = s.id; MAP.focus = s.id; $('mDraw').setAttribute('aria-pressed', 'true'); drawSurveyLayers(); toast('Ketuk peta di setiap sudut batas area survei.'); }
 function stopDraw() { const s = MAP.draw && S.surveys[MAP.draw]; MAP.draw = null; $('mDraw').setAttribute('aria-pressed', 'false'); if (s) { save(); toast(`Luasan tersimpan: ${fmtArea(polyArea(s.area.coords))}`); } drawSurveyLayers(); }
@@ -1362,6 +1412,7 @@ function showMe(c) {
   const ll = [c.latitude, c.longitude];
   if (!MAP.me) MAP.me = L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [16, 16] }), zIndexOffset: 1000, interactive: false }).addTo(MAP.m); else MAP.me.setLatLng(ll);
   if (!MAP.acc) MAP.acc = L.circle(ll, { radius: c.accuracy, color: '#2a7fff', weight: 1, fillOpacity: .12, interactive: false }).addTo(MAP.m); else MAP.acc.setLatLng(ll).setRadius(c.accuracy);
+  if (MAP.goLine && MAP.goT) MAP.goLine.setLatLngs([ll, [MAP.goT.lat, MAP.goT.lon]]);
 }
 function mapWatchSet(on) {
   if (on && mapWatch == null && navigator.geolocation) mapWatch = navigator.geolocation.watchPosition(p => { LAST_POS = p.coords; showMe(p.coords); }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
@@ -1381,7 +1432,172 @@ function fitAll() {
   if (!MAP.m) return;
   const pts = [];
   for (const s of mapSurveys()) { Object.values(s.obs).forEach(o => { if (o.lat != null) pts.push([o.lat, o.lon]); }); (s.area.coords || []).forEach(p => pts.push(p)); (s.track || []).forEach(p => pts.push([p[0], p[1]])); if (s.mulai && s.mulai.lat != null) pts.push([s.mulai.lat, s.mulai.lon]); }
-  if (pts.length === 1) MAP.m.setView(pts[0], 17); else if (pts.length) MAP.m.fitBounds(pts, { padding: [30, 30], maxZoom: 18 });
+  S.titik.forEach(t => pts.push([t.lat, t.lon]));
+  const pad = rotPad();
+  if (pts.length === 1) MAP.m.setView(pts[0], 17); else if (pts.length) MAP.m.fitBounds(pts, { paddingTopLeft: [30 + pad[0], 30 + pad[1]], paddingBottomRight: [30 + pad[0], 30 + pad[1]], maxZoom: 18 });
+}
+
+/* ================= Titik peta (waypoint) =================
+   Titik buatan sendiri, terpisah dari catatan survei (seperti placemark di Avenza): ketuk peta atau pakai posisi GPS,
+   beri nama, keterangan, dan warna; bisa digeser, dihapus, dan diarahkan (jarak + arah dari posisi saya).
+   Ikut tersimpan di cadangan .json dan ekspor GPX/KML/GeoJSON. */
+const TP_COLORS = ['#e63946', '#f4a261', '#2a9d8f', '#3a86ff', '#8338ec', '#111111'];
+function titikIcon(t) { return L.divIcon({ className: '', html: `<div class="wp" style="--c:${esc(t.c || TP_COLORS[0])}"><i></i><span>${esc(t.nama || 'Titik')}</span></div>`, iconSize: [16, 16], iconAnchor: [8, 16], popupAnchor: [0, -16] }); }
+function distBear(a, b, c, d) {
+  const R = 6371008.8, r = Math.PI / 180, dl = (d - b) * r, p1 = a * r, p2 = c * r;
+  const h = Math.sin((c - a) * r / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  const brg = (Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) / r + 360) % 360;
+  return [2 * R * Math.asin(Math.sqrt(h)), brg];
+}
+const ARAH8 = ['U', 'TL', 'T', 'Tg', 'S', 'BD', 'B', 'BL'];
+function titikPopup(t) {
+  let jarak = '';
+  if (LAST_POS) { const [dm, br] = distBear(LAST_POS.latitude, LAST_POS.longitude, t.lat, t.lon); jarak = `<br>Dari posisi saya: <b>${fmtLen(dm)}</b> · arah <b>${Math.round(br)}° (${ARAH8[Math.round(br / 45) % 8]})</b>`; }
+  return `<div class="wpop" data-tid="${t.id}"><input type="text" data-tp="nama" value="${esc(t.nama)}" aria-label="Nama titik" placeholder="Nama titik"><textarea data-tp="ket" aria-label="Keterangan" placeholder="Keterangan (opsional)">${esc(t.ket || '')}</textarea>
+    <div class="cols">${TP_COLORS.map(c => `<button type="button" data-m="tpcol" data-tid="${t.id}" data-c="${c}" style="background:${c}" aria-label="Warna"></button>`).join('')}</div>
+    <div class="note">${esc(fmtCoord(t.lat, t.lon))}${jarak}<br><span style="opacity:.75">Tahan & geser penanda untuk memindahkan.</span></div>
+    <div class="row"><button type="button" class="btn sm" data-m="tpgo" data-tid="${t.id}">Arahkan ke sini</button><button type="button" class="btn sm danger" data-m="tpdel" data-tid="${t.id}">Hapus</button></div></div>`;
+}
+function drawTitik() {
+  if (!MAP.m || !MAP.tp) return;
+  MAP.tp.clearLayers(); MAP.tpMk = {};
+  for (const t of S.titik) {
+    const mk = L.marker([t.lat, t.lon], { icon: titikIcon(t), draggable: true, autoPan: true, zIndexOffset: 500 });
+    mk.bindPopup(() => titikPopup(t), { minWidth: 220 });
+    mk.on('dragend', () => { const ll = mk.getLatLng(); t.lat = +ll.lat.toFixed(7); t.lon = +ll.lng.toFixed(7); t.u = Date.now(); save(); toast('Titik dipindahkan.'); });
+    mk.on('popupclose', () => { mk.setIcon(titikIcon(t)); save(); });
+    mk.addTo(MAP.tp); MAP.tpMk[t.id] = mk;
+  }
+  if (MAP.goLine && MAP.goT && LAST_POS) MAP.goLine.setLatLngs([[LAST_POS.latitude, LAST_POS.longitude], [MAP.goT.lat, MAP.goT.lon]]);
+}
+function addTitik(lat, lon) {
+  let n = S.titik.length + 1; const names = new Set(S.titik.map(t => t.nama)); while (names.has('T' + n)) n++;
+  const t = { id: 'tp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nama: 'T' + n, ket: '', c: TP_COLORS[0], lat: +lat.toFixed(7), lon: +lon.toFixed(7), t: Math.floor(Date.now() / 1000), u: Date.now() };
+  S.titik.push(t); save(); drawTitik(); updateMapInfo();
+  const mk = MAP.tpMk[t.id]; if (mk) setTimeout(() => mk.openPopup(), 30);
+  toast(`Titik ${t.nama} dibuat.`);
+}
+function delTitik(id) {
+  S.titik = S.titik.filter(t => t.id !== id); S.deleted[id] = Date.now();
+  if (MAP.goT && MAP.goT.id === id) goTitik(null);
+  save(); MAP.m.closePopup(); drawTitik(); updateMapInfo(); toast('Titik dihapus.');
+}
+function goTitik(t) {
+  if (MAP.goLine) { MAP.goLine.remove(); MAP.goLine = null; } MAP.goT = t;
+  if (!t) return;
+  if (!LAST_POS) { toast('Menunggu posisi GPS…'); mapWatchSet(true); }
+  const from = LAST_POS ? [LAST_POS.latitude, LAST_POS.longitude] : [t.lat, t.lon];
+  MAP.goLine = L.polyline([from, [t.lat, t.lon]], { color: '#3a86ff', weight: 3, dashArray: '8 8', interactive: false }).addTo(MAP.m);
+  if (LAST_POS) { const [dm, br] = distBear(LAST_POS.latitude, LAST_POS.longitude, t.lat, t.lon); toast(`${t.nama}: ${fmtLen(dm)}, arah ${Math.round(br)}° (${ARAH8[Math.round(br / 45) % 8]}). Garis biru menunjukkan arah.`); }
+  MAP.m.closePopup();
+}
+function setAddPt(on) {
+  MAP.addPt = on; $('mPoint').setAttribute('aria-pressed', String(on));
+  if (on) { if (MAP.draw) stopDraw(); setRotUI(false, true); toast('Ketuk peta untuk menaruh titik.'); }
+  updateMapInfo();
+}
+$('mPoint').addEventListener('click', () => setAddPt(!MAP.addPt));
+
+/* ================= Putar peta =================
+   Leaflet tidak bisa memutar peta, jadi kontainer peta dibuat persegi (diagonal layar) lalu diputar dengan CSS.
+   Posisi ketukan dan arah geser jari dikoreksi dengan sudut putar, sehingga ketuk, geser, cubit, dan buat titik tetap tepat.
+   Cara memutar: dua jari, tombol ⟲/⟳/penggeser, atau "Ikuti arah HP" (kompas). Tombol U mengembalikan utara ke atas. */
+const ROT = { deg: 0, follow: false, h: null, gest: false };
+function rotVec(x, y, deg) { const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [x * c - y * s, x * s + y * c]; }
+function rotPad() { const m = $('map'), w = $('mapWrap'); return ROT.deg && m.offsetWidth > w.clientWidth ? [(m.offsetWidth - w.clientWidth) / 2, (m.offsetHeight - w.clientHeight) / 2] : [0, 0]; }
+function rotPatch() {
+  if (L.Map.prototype._rotPatched) return;
+  L.Map.prototype._rotPatched = true;
+  const m2c = L.Map.prototype.mouseEventToContainerPoint;
+  L.Map.prototype.mouseEventToContainerPoint = function (e) {
+    if (!ROT.deg || this !== MAP.m) return m2c.call(this, e);
+    const c = this._container, r = c.getBoundingClientRect();
+    const v = rotVec(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2), -ROT.deg);
+    return L.point(v[0] + c.clientWidth / 2, v[1] + c.clientHeight / 2);
+  };
+  const DP = L.Draggable.prototype, down = DP._onDown, move = DP._onMove;
+  const inMap = el => MAP.m && MAP.m._container.contains(el);
+  DP._onDown = function (e) { down.call(this, e); if (ROT.deg && inMap(this._element)) this._parentScale = { x: 1, y: 1 }; };
+  DP._onMove = function (e) {
+    if (!ROT.deg || !this._startPoint || !inMap(this._element) || (e.touches && e.touches.length > 1)) return move.call(this, e);
+    const f = e.touches && e.touches.length === 1 ? e.touches[0] : e;
+    const v = rotVec(f.clientX - this._startPoint.x, f.clientY - this._startPoint.y, -ROT.deg);
+    return move.call(this, { type: e.type, target: e.target, srcElement: e.srcElement, clientX: this._startPoint.x + v[0], clientY: this._startPoint.y + v[1], preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() });
+  };
+}
+function rotApply(deg, ui, keep) {
+  deg = ((deg % 360) + 540) % 360 - 180; if (Math.abs(deg) < 0.5) deg = 0;
+  ROT.deg = deg;
+  const map = $('map'), wrap = $('mapWrap');
+  if (deg === 0 && !keep && !ROT.gest) {
+    if (map.style.width) { map.style.cssText = ''; if (MAP.m) MAP.m.invalidateSize({ animate: false }); }
+    map.style.transform = '';
+  } else {
+    const W = wrap.clientWidth, H = wrap.clientHeight, D = Math.ceil(Math.hypot(W, H));
+    if (W && H && map.offsetWidth !== D || map.offsetHeight !== D) {
+      Object.assign(map.style, { inset: 'auto', width: D + 'px', height: D + 'px', left: Math.round((W - D) / 2) + 'px', top: Math.round((H - D) / 2) + 'px' });
+      if (MAP.m) {
+        MAP.m.invalidateSize({ animate: false });
+        const tz = MAP.m.touchZoom; if (tz && tz._zooming) tz._centerPoint = MAP.m.getSize()._divideBy(2);
+      }
+    }
+    map.style.transform = `rotate(${deg}deg)`;
+  }
+  map.style.setProperty('--mrinv', `${-deg}deg`);
+  const nb = $('mNorth'); nb.hidden = deg === 0 && !ROT.follow; nb.classList.toggle('follow', ROT.follow); nb.querySelector('svg').style.transform = `rotate(${deg}deg)`;
+  if (MAP.rotUI && ui !== false) updateMapInfo();
+}
+window.addEventListener('resize', () => { if (ROT.deg) { $('map').style.width = ''; rotApply(ROT.deg, false); } });
+function setRotUI(on, quiet) {
+  MAP.rotUI = on; $('mRotate').setAttribute('aria-pressed', String(on));
+  if (on && MAP.addPt) setAddPt(false);
+  if (!quiet) updateMapInfo();
+}
+$('mRotate').addEventListener('click', () => setRotUI(!MAP.rotUI));
+$('mNorth').addEventListener('click', () => { followSet(false); rotApply(0); toast('Utara di atas.'); });
+/* Putar dengan dua jari: mulai berputar setelah jari berputar lebih dari 12° agar tidak bentrok dengan cubit-zoom. */
+(() => {
+  let g = null;
+  const ang = t => Math.atan2(t[1].clientY - t[0].clientY, t[1].clientX - t[0].clientX) * 180 / Math.PI;
+  const opt = { passive: true, capture: true };
+  document.addEventListener('touchstart', e => { g = e.touches.length === 2 && $('map').contains(e.target) ? { a0: ang(e.touches), r0: ROT.deg, on: false } : null; }, opt);
+  document.addEventListener('touchmove', e => {
+    if (!g || e.touches.length !== 2) return;
+    let d = ((ang(e.touches) - g.a0) % 360 + 540) % 360 - 180;
+    if (!g.on) { if (Math.abs(d) < 12) return; g.on = true; ROT.gest = true; if (ROT.follow) followSet(false, true); }
+    let r = g.r0 + d; if (Math.abs(((r % 360) + 540) % 360 - 180) < 4) r = 0;
+    rotApply(r, true, true);
+  }, opt);
+  document.addEventListener('touchend', e => { if (e.touches.length < 2 && g) { const was = g.on; g = null; if (was) { ROT.gest = false; setTimeout(() => { if (!ROT.deg) rotApply(0); }, 350); } } }, opt);
+})();
+/* Ikuti arah HP: peta diputar sesuai arah hadap (kompas perangkat), seperti mode "heading up". */
+function onOrient(e) {
+  let h = null;
+  if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;
+  else if (e.absolute && e.alpha != null) h = 360 - e.alpha;
+  if (h == null || !ROT.follow) return;
+  const so = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  h = (h + so + 360) % 360; ROT.h = h;
+  const want = -h, diff = Math.abs(((want - ROT.deg) % 360 + 540) % 360 - 180);
+  if (diff > 1) rotApply(want, diff > 3);
+}
+async function followSet(on, quiet) {
+  if (on === ROT.follow) return;
+  if (on) {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try { if (await DeviceOrientationEvent.requestPermission() !== 'granted') { toast('Izin sensor kompas ditolak.'); return; } } catch (e) { /* lanjut */ }
+    }
+    ROT.follow = true; ROT.h = null;
+    window.addEventListener('deviceorientationabsolute', onOrient); window.addEventListener('deviceorientation', onOrient);
+    toast('Peta mengikuti arah HP. Pegang HP mendatar.');
+    setTimeout(() => { if (ROT.follow && ROT.h == null) { followSet(false, true); toast('Sensor kompas tidak terbaca di perangkat ini.'); } }, 3000);
+  } else {
+    ROT.follow = false;
+    window.removeEventListener('deviceorientationabsolute', onOrient); window.removeEventListener('deviceorientation', onOrient);
+    if (!quiet) toast('Berhenti mengikuti arah HP.');
+  }
+  rotApply(ROT.deg);
+  if (MAP.rotUI) updateMapInfo();
 }
 
 /* ================= Analisis =================
@@ -1814,6 +2030,7 @@ function geojson() {
     if (ring.length >= 3) F.push({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [[...ring, ring[0]].map(p => [p[1], p[0]])] }, properties: { ...base, jenis_fitur: 'luasan survei', luas_ha: +(areaOf(s).m2 / 10000).toFixed(4) } });
     if (s.track.length > 1) F.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: s.track.map(p => [p[1], p[0]]) }, properties: { ...base, jenis_fitur: 'jalur GPS', panjang_m: Math.round(pathLen(s.track)) } });
   }
+  for (const t of S.titik) F.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [t.lon, t.lat] }, properties: { jenis_fitur: 'titik peta', nama: t.nama, keterangan: t.ket || '', warna: t.c || '', waktu: t.t ? new Date(t.t * 1000).toISOString() : '' } });
   return JSON.stringify({ type: 'FeatureCollection', features: F }, null, 1);
 }
 function gpx() {
@@ -1825,6 +2042,7 @@ function gpx() {
     const ring = s.area.mode === '' ? s.area.coords : [];
     if (ring.length >= 3) trks.push({ name: `Luasan ${surveyName(s)} ${fmtArea(areaOf(s).m2)}`, segs: [[...ring, ring[0]].map(p => ({ lat: p[0], lon: p[1] }))] });
   }
+  for (const t of S.titik) wpts.push({ lat: t.lat, lon: t.lon, time: t.t ? t.t * 1000 : null, name: t.nama || 'Titik', desc: ['Titik peta', t.ket].filter(Boolean).join(' · ') });
   return NavTools.toGPX({ name: 'Survei KEHATI', wpts, trks }, 'Survei KEHATI');
 }
 /* GPX → survei baru: waypoint menjadi catatan (jenis belum diisi), track menjadi jalur GPS, rute (≥3 titik) menjadi batas luasan. */
@@ -1852,6 +2070,7 @@ function kml() {
     if (s.track.length > 1) out += `<Placemark><name>Jalur GPS ${x(fmtLen(pathLen(s.track)))}</name><LineString><coordinates>${s.track.map(p => `${p[1]},${p[0]},0`).join(' ')}</coordinates></LineString></Placemark>`;
     out += '</Folder>';
   }
+  if (S.titik.length) out += `<Folder><name>Titik peta</name>${S.titik.map(t => `<Placemark><name>${x(t.nama || 'Titik')}</name><description>${x(t.ket || '')}</description><Point><coordinates>${t.lon},${t.lat},0</coordinates></Point></Placemark>`).join('')}</Folder>`;
   return out + '</Document></kml>';
 }
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -1912,6 +2131,11 @@ function mergeBackup(obj) {
     if (!cur) { S.surveys[id] = s; n++; continue; }
     for (const [oid, o] of Object.entries(s.obs || {})) if (!cur.obs[oid]) { cur.obs[oid] = o; n++; }
     if ((s.updated || 0) > (cur.updated || 0)) { const obs = cur.obs; Object.assign(cur, s, { obs }); }
+  }
+  for (const t of d.titik || []) {
+    if (S.deleted[t.id]) continue;
+    const cur = S.titik.find(x => x.id === t.id);
+    if (!cur) { S.titik.push(t); n++; } else if ((t.u || 0) > (cur.u || 0)) Object.assign(cur, t);
   }
   save(); return n;
 }

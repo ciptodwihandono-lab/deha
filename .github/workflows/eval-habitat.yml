@@ -1,0 +1,19 @@
+# Sementara: uji tebakan habitat AI (prompt lama vs baru) pada foto Wikimedia Commons.
+name: Uji AI habitat KEHATI
+on:
+  push:
+    branches: [claude/relaxed-bardeen-277ku4]
+    paths: ['tools/eval_habitat.py', 'tools/ail_prompts_new.json', '.github/workflows/eval-habitat.yml']
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q torch --index-url https://download.pytorch.org/whl/cpu && pip install -q transformers pillow numpy
+      - run: python tools/eval_habitat.py

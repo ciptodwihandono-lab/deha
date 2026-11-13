@@ -72,6 +72,23 @@ def evaluate(name, groups, fam):
 evaluate('LAMA', OLD, lambda k: k)
 FOREST = {'HT', 'HS', 'HG'}
 P, keys = evaluate('BARU', NEW, lambda k: 'HT' if k in FOREST else k)
+# Aturan cek-silang vegetasi (sama dengan aplikasi)
+VG = json.load(open('tools/ail_prompts_new.json'))['veg']
+vk, VT = temb({x[0] or '(kosong)': [x[1]] for x in VG})
+SV = I @ VT.T * 100; PV = np.exp(SV - SV.max(1, keepdims=True)); PV /= PV.sum(1, keepdims=True)
+vi = {k: i for i, k in enumerate(vk)}
+def rule(p, pv):
+  top = keys[int(p.argmax())]
+  mg = pv[vi['Mangrove (Avicennia/Rhizophora)']] + pv[vi['Nipah']]
+  fo = pv[vi['Pohon hutan besar']] + pv[vi['Liana / rotan']] + pv[vi['Paku-pakuan']]
+  if top in FOREST and mg >= 0.45: return 'MG'
+  if top == 'MG' and mg < 0.15 and fo >= 0.3: return 'HT'
+  return top
+ok = 0; per = {}
+for (k, q, fn, _), p, pv in zip(imgs, P, PV):
+  t = rule(p, pv); t = 'HT' if t in FOREST else t; g = t == k; ok += g; per.setdefault(k, [0, 0]); per[k][0] += g; per[k][1] += 1
+print(f'\n== BARU + cek vegetasi: benar {ok}/{len(imgs)} = {ok / len(imgs):.0%}')
+for k, (a, n) in per.items(): print(f'  {k}: {a}/{n}')
 print('\nRincian HT (hutan) versi baru:')
 for (k, q, fn, _), p in zip(imgs, P):
   if k in ('HT', 'MG'): print(f'  [{k}] {fn[:40]:40s} -> ' + ', '.join(f'{keys[i]} {p[i]:.2f}' for i in np.argsort(-p)[:3]))

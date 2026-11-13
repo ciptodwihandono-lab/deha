@@ -892,7 +892,7 @@ function obsItemHTML(s, o) {
 /* ---------- Form catatan: cari jenis → jumlah → aktivitas; sisanya di "Detail lainnya" ---------- */
 function renderObs() {
   const s = S.surveys[view.sid], o = s.obs[view.id], t = taxOf(o.tax);
-  setTitle(o.nama || 'Catat jenis', surveyName(s), o.ilmiah);
+  setTitle(o.nama || (o.tax === 'foto' && o.stasiun ? '📍 ' + o.stasiun : 'Catat jenis'), surveyName(s), o.ilmiah);
   const sp = o.sp && SP_BY_SCI[o.sp], picked = !!(o.sp || (o.nama && o.tax !== 'foto'));
   const idp = ID.res && ID.res.target && ID.res.target.oid === o.id ? idPanelHTML('obs') : '';
   const nph = (o._photos || []).length, isVeg = o.tax === 'tumbuhan';
@@ -902,7 +902,7 @@ function renderObs() {
     $('app').innerHTML = `${seg}
       ${nph ? `<div class="photos" id="photos">${o._photos.map(p => `<button type="button" data-ph="${p.id}" aria-label="${esc(p.name)}"></button>`).join('')}</div>` : ''}
       <div class="fields">
-        <div class="field"><label>Nama / nomor titik</label><input type="text" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. Titik 3, ST2, P1"></div>
+        <div class="field w"><label for="ptIn" style="font-weight:700;font-size:15px">📍 Nama titik / lokasi</label><input type="text" id="ptIn" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. Titik 3, Muara Kudap, Plot 2" style="font-size:17px"></div>
         <div class="field"><label>Jam</label><input type="time" data-o="waktu" value="${esc(o.waktu)}"></div>
         <div class="field w"><span class="lbl">Habitat</span>${chipsHTML(HABITAT, o.hab, 'data-hab')}</div>
         <div class="field w"><label>Deskripsi habitat</label><textarea data-o="deskripsi" rows="3" placeholder="Tutupan vegetasi, substrat, genangan, gangguan… (bisa diisi AI dari foto)">${esc(o.deskripsi)}</textarea>${nph ? '<button type="button" class="btn ghost sm" data-a="aiobs">Isi dengan AI dari foto</button>' : ''}</div>
@@ -914,7 +914,8 @@ function renderObs() {
       <button type="button" class="btn danger block" data-a="delobs">Hapus titik ini</button>`;
     loadThumbs(); return;
   }
-  $('app').innerHTML = `${seg}${idp}
+  const ptField = o.tax === 'foto' && !picked ? `<div class="field"><label for="ptIn" style="font-weight:700;font-size:15px">📍 Titik / lokasi</label><input type="text" id="ptIn" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. Titik 3, Muara Kudap, Plot 2" autocomplete="off"><span class="hint">Isi bila foto ini bukan jenis tertentu, atau jenisnya belum diketahui.</span></div>` : '';
+  $('app').innerHTML = `${seg}${idp}${ptField}
     ${nph ? `<div class="photos" id="photos">${o._photos.map(p => `<button type="button" data-ph="${p.id}" aria-label="${esc(p.name)}"></button>`).join('')}</div>` : ''}
     ${picked ? `<div class="box"><div style="display:flex;gap:10px;align-items:center"><span class="dotc" style="background:${t.c}"></span><span style="flex:1;min-width:0"><b style="font-size:18px">${spName(o.nama, o.ilmiah)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br><span class="note">${esc(t.l)}${o.famili ? ' · ' + esc(o.famili) : ''}${sp && sp.iucn ? ' · IUCN ' + esc(sp.iucn) : ''}${sp && sp.p ? ' · <b>Dilindungi</b>' : ''}</span></span><button type="button" class="btn ghost sm" data-a="gantijenis">Ganti</button></div></div>`
       : `<div class="field"><label for="spIn" style="font-weight:700;font-size:15px">Jenis apa?</label>
@@ -933,7 +934,7 @@ function renderObs() {
         ${isVeg ? `<div class="field w"><span class="lbl">Tingkat pertumbuhan (untuk INP)</span>${chipsHTML(TINGKAT, o.tingkat, 'data-ting')}</div>
         <div class="field"><label>Keliling batang (cm)</label><input type="number" inputmode="decimal" data-o="keliling" value="${esc(o.keliling)}"><span class="hint" id="dbhHint">${num(o.keliling) ? `DBH ${fmtNum(num(o.keliling) / Math.PI, 1)} cm` : 'setinggi dada; DBH dihitung otomatis'}</span></div>
         <div class="field"><label>Tinggi (m)</label><input type="number" inputmode="decimal" data-o="tinggi" value="${esc(o.tinggi)}"></div>` : ''}
-        <div class="field"><label>Stasiun / plot</label><input type="text" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. ST1, P3"></div>
+        ${ptField ? '' : `<div class="field"><label>Stasiun / plot</label><input type="text" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. ST1, P3"></div>`}
         <div class="field"><label>Jam</label><input type="time" data-o="waktu" value="${esc(o.waktu)}"></div>
         ${t.det && t.det.length ? `<div class="field w"><span class="lbl">Cara perjumpaan</span>${chipsHTML(t.det.map(x => [x, x]), o.det, 'data-det')}</div>` : ''}
         <div class="field w"><span class="lbl">Habitat</span>${chipsHTML(HABITAT, o.hab, 'data-hab')}</div>
@@ -1038,7 +1039,7 @@ $('app').addEventListener('click', async ev => {
     case 'titiknext': { save(); const no = newObs(s, 'foto', { titik: true, jumlah: '', stasiun: nextTitik(s), hab: [...asList(o.hab)] }); autoGPS(s, no); go({ v: 'obs', sid: s.id, id: no.id }, true); toast(`${no.stasiun} dibuat. Ambil foto titiknya.`); break; }
     case 'obsdone': case 'obsnext': {
       if (o.nama && !o.sp && o.tax === 'foto') { OBS_DETAIL = true; render(); toast('Jenis diketik bebas: pilih kelompoknya (burung, mamalia, …) di Detail lainnya.'); return; }
-      if (!o.titik && !o.nama && !(o._photos || []).length && o.tax === 'foto') { delete s.obs[o.id]; touch(s); }   // catatan kosong tidak disimpan
+      if (!o.titik && !o.nama && !o.stasiun && !(o._photos || []).length && o.tax === 'foto') { delete s.obs[o.id]; touch(s); }   // catatan kosong tidak disimpan
       save();
       if (a === 'obsdone') { history.back(); break; }
       const no = newObs(s, 'foto', { hint: hintTax(o), jumlah: '', stasiun: o.stasiun, hab: [...asList(o.hab)], lat: o.lat, lon: o.lon, acc: o.acc }); OBS_DETAIL = false; autoGPS(s, no);
@@ -1185,7 +1186,7 @@ function drawWatermark(c, lines) {
 }
 function wmLines(s, o, lat, lon, acc, taken) {
   const d = new Date(taken * 1000);
-  const what = o.titik ? `📍 ${titikName(o)}` : o.tax === 'foto' ? (o.nama || 'Titik foto') : [o.nama, o.ilmiah].filter(Boolean).join(' · ') || taxOf(o.tax).l;
+  const what = o.titik ? `📍 ${titikName(o)}` : o.tax === 'foto' ? (o.nama || (o.stasiun ? `📍 ${o.stasiun}` : 'Titik foto')) : [o.nama, o.ilmiah].filter(Boolean).join(' · ') || taxOf(o.tax).l;
   return [
     [surveyName(s), s.lokasi && s.lokasi !== surveyName(s) ? s.lokasi : ''].filter(Boolean).join(' · '),
     what,
@@ -1405,7 +1406,7 @@ function drawSurveyLayers() {
   }
   const line = ([s, o]) => { const t = taxOf(o.tax), np = (o._photos || []).length;
     if (o.titik) return `<div style="margin-top:6px"><b>📍 ${esc(titikName(o))}</b> <span class="note">Titik KEHATI</span><br>${asList(o.hab).map(k => esc(HAB[k] || k)).join(', ') || 'habitat belum diisi'} · ${esc(o.waktu)}${np ? ` · ${np} foto` : ''}${o.deskripsi ? `<br><span class="note">${esc(String(o.deskripsi).slice(0, 120))}</span>` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`;
-    return `<div style="margin-top:6px"><b>${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? 'Titik foto' : t.l)}</b>${o.ilmiah ? ` <i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' && o.jumlah !== '' ? ` · ${esc(o.jumlah)} ind.` : ''}${np ? ` · ${np} foto` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`; };
+    return `<div style="margin-top:6px"><b>${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? (o.stasiun ? '📍 ' + o.stasiun : 'Titik foto') : t.l)}</b>${o.ilmiah ? ` <i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' && o.jumlah !== '' ? ` · ${esc(o.jumlah)} ind.` : ''}${np ? ` · ${np} foto` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`; };
   for (const g of groups) {
     const n = g.items.length, sp = g.items.find(([, o]) => o.tax !== 'foto'), np = g.items.reduce((a, [, o]) => a + (o._photos || []).length, 0);
     const badge = n > 1 ? `<span class="pinN">${n}</span>` : '';
@@ -2138,7 +2139,7 @@ function geojson() {
 function gpx() {
   const wpts = [], trks = [];
   for (const s of surveysSorted()) {
-    for (const o of obsList(s).reverse()) if (o.lat != null) wpts.push({ lat: o.lat, lon: o.lon, time: (o.t || 0) * 1000 || null, name: o.titik ? titikName(o) : o.nama || (o.tax === 'foto' ? 'Foto' : taxOf(o.tax).l),
+    for (const o of obsList(s).reverse()) if (o.lat != null) wpts.push({ lat: o.lat, lon: o.lon, time: (o.t || 0) * 1000 || null, name: o.titik ? titikName(o) : o.nama || (o.tax === 'foto' ? o.stasiun || 'Foto' : taxOf(o.tax).l),
       desc: [surveyName(s), o.titik ? TITIK_L : o.tax !== 'foto' ? taxOf(o.tax).l : '', o.ilmiah, o.tax !== 'foto' && o.jumlah !== '' ? o.jumlah + ' ind.' : '', o.deskripsi].filter(Boolean).join(' · ') });
     if (s.track.length > 1) trks.push({ name: `Jalur ${surveyName(s)} ${s.tanggal}`, segs: [s.track.map(p => ({ lat: p[0], lon: p[1], time: p[2] ? p[2] * 1000 : null }))] });
     const ring = s.area.mode === '' ? s.area.coords : [];
@@ -2166,7 +2167,7 @@ function kml() {
   let out = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Survei KEHATI</name>';
   for (const s of Object.values(S.surveys)) {
     out += `<Folder><name>${x(surveyName(s))} ${x(s.tanggal)}</name>`;
-    for (const o of Object.values(s.obs)) if (o.lat != null) out += `<Placemark><name>${x(o.titik ? titikName(o) : o.tax === 'foto' ? o.nama || 'Titik foto' : o.nama || taxOf(o.tax).l)}</name><description>${x([kindL(o), o.ilmiah, o.tax === 'foto' ? '' : o.jumlah + ' ind.', o.waktu, o.deskripsi].filter(Boolean).join(' · '))}</description><Point><coordinates>${o.lon},${o.lat},0</coordinates></Point></Placemark>`;
+    for (const o of Object.values(s.obs)) if (o.lat != null) out += `<Placemark><name>${x(o.titik ? titikName(o) : o.tax === 'foto' ? o.nama || o.stasiun || 'Titik foto' : o.nama || taxOf(o.tax).l)}</name><description>${x([kindL(o), o.ilmiah, o.tax === 'foto' ? '' : o.jumlah + ' ind.', o.waktu, o.deskripsi].filter(Boolean).join(' · '))}</description><Point><coordinates>${o.lon},${o.lat},0</coordinates></Point></Placemark>`;
     const ring = s.area.mode === 'track' ? s.track : s.area.mode === '' ? s.area.coords : [];
     if (ring.length >= 3) out += `<Placemark><name>Luasan ${x(fmtArea(areaOf(s).m2))}</name><Polygon><outerBoundaryIs><LinearRing><coordinates>${[...ring, ring[0]].map(p => `${p[1]},${p[0]},0`).join(' ')}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`;
     if (s.track.length > 1) out += `<Placemark><name>Jalur GPS ${x(fmtLen(pathLen(s.track)))}</name><LineString><coordinates>${s.track.map(p => `${p[1]},${p[0]},0`).join(' ')}</coordinates></LineString></Placemark>`;

@@ -1,9 +1,8 @@
-# Sementara: uji tebakan habitat AI (prompt lama vs baru) pada foto Wikimedia Commons.
+# Uji tebakan habitat AI Survei KEHATI (kalimat lama vs baru di tools/ail_prompts_new.json) pada foto Wikimedia Commons.
+# Jalankan manual dari tab Actions bila daftar kalimat habitat diubah.
 name: Uji AI habitat KEHATI
 on:
-  push:
-    branches: [claude/relaxed-bardeen-277ku4]
-    paths: ['tools/eval_habitat.py', 'tools/ail_prompts_new.json', '.github/workflows/eval-habitat.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

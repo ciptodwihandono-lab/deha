@@ -1916,18 +1916,18 @@ const AIL_TPL = ['a photo of {}.', 'a landscape photo of {}.', 'a field survey p
 /* Kelas habitat/substrat/vegetasi untuk AI (CLIP). Satu kelas boleh punya beberapa kalimat; embedding-nya dirata-rata.
    Diuji dengan foto Wikimedia Commons (tools/eval_habitat.py) agar hutan alami tidak tertebak mangrove. */
 const AIL_GROUPS = {
-  hab: [['MG', ['a mangrove forest with stilt roots growing in tidal mud', 'mangrove trees growing in seawater along the coast', 'a coastal mangrove swamp at low tide']],
+  hab: [['MG', ['a mangrove forest', 'mangrove trees with aerial stilt roots in tidal mud', 'a coastal mangrove forest at the sea edge']],
     ['MF', ['a muddy tidal mudflat', 'an exposed mudflat at low tide on the coast']],
     ['PP', ['a sandy beach', 'a tropical sandy beach with waves']],
     ['VP', ['coastal vegetation with casuarina trees and pandanus on a beach']],
-    ['TB', ['an aquaculture fish or shrimp pond', 'rectangular fish ponds with earth embankments']],
+    ['TB', ['an aquaculture fish pond', 'shrimp ponds in a coastal aquaculture area']],
     ['SW', ['a rice paddy field', 'green rice fields with rice plants']],
     ['KB', ['a farm field or vegetable garden', 'a cultivated field with crops']],
     ['KS', ['a coconut or oil palm plantation', 'rows of planted oil palm trees in a plantation']],
     ['PM', ['houses in a village', 'a rural settlement with buildings and roads']],
-    ['SG', ['a river or canal', 'a river flowing through the forest']],
-    ['RW', ['a swamp or flooded wetland', 'a freshwater marsh with standing water and reeds']],
-    ['HG', ['a peat swamp forest with dark tea-colored water', 'a flooded swamp forest with trees standing in water']],
+    ['SG', ['a river or canal', 'a river with flowing water and riverbanks']],
+    ['RW', ['a swamp or flooded wetland', 'a marsh with grasses and sedges growing in shallow water']],
+    ['HG', ['a freshwater peat swamp forest far from the sea with black water']],
     ['SM', ['shrubs and bushes', 'dense scrubland with small shrubs and tall grass']],
     ['HT', ['a dense natural tropical rainforest', 'the interior of a primary tropical forest with tall trees, lianas and thick undergrowth', 'an old-growth lowland rainforest with a closed canopy']],
     ['HS', ['a secondary forest with young thin trees', 'a regrowing logged forest with small trees and bushes']],
@@ -2042,7 +2042,7 @@ function ailCompose(P, userHab) {
   const hab = userHab && userHab.length ? userHab.map(k => HAB[k] || k).join(' / ').toLowerCase()
     : hp < 0.45 && hp2 >= 0.2 ? `kemungkinan ${HAB[hk].toLowerCase()} atau ${HAB[hk2].toLowerCase()}` : HAB[hk].toLowerCase() + (hp < 0.4 ? ' (kemungkinan)' : '');
   const fits = (l, p) => fam === 'hutan' || fam === 'darat' || fam === 'budidaya' || fam === 'air' ? !(VEG_PESISIR.has(l) && p < 0.5) : fam === 'pesisir' ? !(VEG_HUTAN.has(l) && p < 0.5) : true;
-  const subs = AIL_GROUPS.sub.map(([l], i) => [l, P.sub[i]]).filter(([l, p]) => fam === 'pesisir' || !SUB_PESISIR.has(l) || p >= 0.5).sort((a, b) => b[1] - a[1]);
+  const subs = AIL_GROUPS.sub.map(([l], i) => [l, P.sub[i]]).filter(([l, p]) => (fam === 'pesisir' || !SUB_PESISIR.has(l) || p >= 0.5) && !(fam === 'hutan' && l === 'lumpur' && p < 0.4)).sort((a, b) => b[1] - a[1]);
   const sub = subs.length ? subs[0][0] : ailTop('sub', P.sub)[0];
   const vegs = AIL_GROUPS.veg.map(([l], i) => [l, P.veg[i]]).filter(([l, p]) => l && p >= 0.15 && fits(l, p)).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0]);
   const bare = ailTop('veg', P.veg)[0] === '';

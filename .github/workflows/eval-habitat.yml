@@ -1,0 +1,18 @@
+# Uji tebakan habitat AI Survei KEHATI (kalimat lama vs baru di tools/ail_prompts_new.json) pada foto Wikimedia Commons.
+# Jalankan manual dari tab Actions bila daftar kalimat habitat diubah.
+name: Uji AI habitat KEHATI
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q torch --index-url https://download.pytorch.org/whl/cpu && pip install -q transformers pillow numpy
+      - run: python tools/eval_habitat.py

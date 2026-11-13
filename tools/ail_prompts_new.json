@@ -1,0 +1,172 @@
+{
+ "hab": {
+  "MG": [
+   "a mangrove forest",
+   "mangrove trees with aerial stilt roots in tidal mud",
+   "a coastal mangrove forest at the sea edge"
+  ],
+  "MF": [
+   "a muddy tidal mudflat",
+   "an exposed mudflat at low tide on the coast"
+  ],
+  "PP": [
+   "a sandy beach",
+   "a tropical sandy beach with waves"
+  ],
+  "VP": [
+   "coastal vegetation with casuarina trees and pandanus on a beach"
+  ],
+  "TB": [
+   "an aquaculture fish pond",
+   "shrimp ponds in a coastal aquaculture area"
+  ],
+  "SW": [
+   "a rice paddy field",
+   "green rice fields with rice plants"
+  ],
+  "KB": [
+   "a farm field or vegetable garden",
+   "a cultivated field with crops"
+  ],
+  "KS": [
+   "a coconut or oil palm plantation",
+   "rows of planted oil palm trees in a plantation"
+  ],
+  "PM": [
+   "houses in a village",
+   "a rural settlement with buildings and roads"
+  ],
+  "SG": [
+   "a river or canal",
+   "a river with flowing water and riverbanks"
+  ],
+  "RW": [
+   "a swamp or flooded wetland",
+   "a marsh with grasses and sedges growing in shallow water"
+  ],
+  "HG": [
+   "a freshwater peat swamp forest far from the sea with black water"
+  ],
+  "SM": [
+   "shrubs and bushes",
+   "dense scrubland with small shrubs and tall grass"
+  ],
+  "HT": [
+   "a dense natural tropical rainforest",
+   "the interior of a primary tropical forest with tall trees, lianas and thick undergrowth",
+   "an old-growth lowland rainforest with a closed canopy"
+  ],
+  "HS": [
+   "a secondary forest with young thin trees",
+   "a regrowing logged forest with small trees and bushes"
+  ],
+  "PD": [
+   "an open grassland or savanna",
+   "a meadow of tall grass with scattered trees"
+  ],
+  "LT": [
+   "bare open land",
+   "cleared land with bare soil"
+  ]
+ },
+ "sub": [
+  [
+   "lumpur",
+   "muddy ground"
+  ],
+  [
+   "lumpur berpasir",
+   "muddy sand"
+  ],
+  [
+   "pasir",
+   "sand"
+  ],
+  [
+   "tanah berumput",
+   "grassy ground"
+  ],
+  [
+   "air",
+   "water"
+  ],
+  [
+   "serasah daun",
+   "leaf litter on the forest floor"
+  ],
+  [
+   "tanah",
+   "brown soil"
+  ],
+  [
+   "batu",
+   "rocks and stones"
+  ]
+ ],
+ "veg": [
+  [
+   "Mangrove (Avicennia/Rhizophora)",
+   "mangrove trees with aerial stilt roots in mud"
+  ],
+  [
+   "Nipah",
+   "nipa palms growing in brackish water"
+  ],
+  [
+   "Cemara laut",
+   "casuarina pine trees on a beach"
+  ],
+  [
+   "Pandan",
+   "pandanus plants"
+  ],
+  [
+   "Ipomoea pes-caprae",
+   "creeping beach morning glory vines on sand"
+  ],
+  [
+   "Kelapa",
+   "coconut palm trees"
+  ],
+  [
+   "Sawit",
+   "oil palm trees"
+  ],
+  [
+   "Pohon hutan besar",
+   "tall rainforest trees with buttress roots"
+  ],
+  [
+   "Liana / rotan",
+   "woody lianas and rattan climbing on trees"
+  ],
+  [
+   "Paku-pakuan",
+   "ferns"
+  ],
+  [
+   "Bambu",
+   "bamboo"
+  ],
+  [
+   "Pisang",
+   "banana plants"
+  ],
+  [
+   "Padi",
+   "rice plants"
+  ],
+  [
+   "Rumput",
+   "grass"
+  ],
+  [
+   "Semak",
+   "shrubs"
+  ],
+  [
+   "",
+   "bare ground without plants"
+  ]
+ ]
+}

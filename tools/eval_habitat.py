@@ -1,6 +1,6 @@
 """Uji tebakan habitat AI (CLIP ViT-B/32, sama dengan Survei KEHATI) pada foto Wikimedia Commons.
 Membandingkan daftar kalimat (prompt) lama dan baru. Label benar diambil dari kata kunci pencarian."""
-import io, json, sys, time, urllib.parse, urllib.request
+import io, json, sys, time, urllib.error, urllib.parse, urllib.request
 import numpy as np, torch
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
@@ -25,9 +25,16 @@ QUERIES = {  # kelas benar: kata kunci pencarian Commons
   'TB': ['tambak udang', 'shrimp pond aquaculture'],
   'PM': ['desa Indonesia rumah', 'village houses Java'],
 }
+def get(req, tries=5):
+  for t in range(tries):
+    try: return urllib.request.urlopen(req, timeout=30).read()
+    except urllib.error.HTTPError as e:
+      if e.code != 429 or t == tries - 1: raise
+      time.sleep(5 * (t + 1))
 def search(q, n=6):
+  time.sleep(1.5)
   u = 'https://commons.wikimedia.org/w/api.php?' + urllib.parse.urlencode({'action': 'query', 'generator': 'search', 'gsrsearch': q + ' filetype:bitmap', 'gsrnamespace': 6, 'gsrlimit': n, 'prop': 'imageinfo', 'iiprop': 'url|mime', 'iiurlwidth': 480, 'format': 'json'})
-  d = json.load(urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=30))
+  d = json.loads(get(urllib.request.Request(u, headers=UA)))
   return [p['imageinfo'][0]['thumburl'] for p in (d.get('query', {}).get('pages', {}) or {}).values() if p.get('imageinfo') and p['imageinfo'][0].get('mime') == 'image/jpeg']
 imgs = []
 for k, qs in QUERIES.items():
@@ -35,8 +42,8 @@ for k, qs in QUERIES.items():
     try:
       for url in search(q):
         try:
-          b = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30).read()
-          imgs.append((k, q, url.rsplit('/', 1)[-1][:60], Image.open(io.BytesIO(b)).convert('RGB'))); time.sleep(0.2)
+          b = get(urllib.request.Request(url, headers=UA))
+          imgs.append((k, q, url.rsplit('/', 1)[-1][:60], Image.open(io.BytesIO(b)).convert('RGB'))); time.sleep(0.5)
         except Exception as e: print('skip', url, e)
     except Exception as e: print('search fail', q, e)
 print('foto:', len(imgs), {k: sum(1 for x in imgs if x[0] == k) for k in QUERIES})
@@ -45,11 +52,12 @@ def temb(groups):
   keys, vecs = [], []
   for k, ps in groups.items():
     with torch.no_grad():
-      t = m.get_text_features(**proc(text=[tp.format(p) for p in ps for tp in TPL], return_tensors='pt', padding=True))
+      x = proc(text=[tp.format(p) for p in ps for tp in TPL], return_tensors='pt', padding=True)
+      t = m.text_projection(m.text_model(input_ids=x['input_ids'], attention_mask=x['attention_mask']).pooler_output)
     t = t / t.norm(dim=-1, keepdim=True); v = t.mean(0); keys.append(k); vecs.append((v / v.norm()).numpy())
   return keys, np.stack(vecs)
 with torch.no_grad():
-  I = torch.cat([m.get_image_features(**proc(images=[x[3] for x in imgs[i:i + 16]], return_tensors='pt')) for i in range(0, len(imgs), 16)])
+  I = torch.cat([m.visual_projection(m.vision_model(pixel_values=proc(images=[x[3] for x in imgs[i:i + 16]], return_tensors='pt')['pixel_values']).pooler_output) for i in range(0, len(imgs), 16)])
 I = (I / I.norm(dim=-1, keepdim=True)).numpy()
 def evaluate(name, groups, fam):
   keys, T = temb(groups); S = I @ T.T * 100; P = np.exp(S - S.max(1, keepdims=True)); P /= P.sum(1, keepdims=True)

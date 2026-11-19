@@ -3381,44 +3381,60 @@ async function cloudSync(auto) {
     }
     applyDeleted();
     const pushed = st.pushed || {};
+    // Survei besar (> ±900 KB, mis. jalur GPS seharian) disimpan berpotongan: {sid} + {sid}__p1, __p2, …
     const snap = await F.getDocs(col('kehati_survei'));
-    const remote = {};
-    snap.forEach(d => { try { remote[d.id] = JSON.parse(d.data().data); } catch (e) {} });
+    const raw = {}, parts = {}, remote = {};
+    snap.forEach(d => { const m = /^(.+)__p(\d+)$/.exec(d.id); if (m) (parts[m[1]] = parts[m[1]] || [])[+m[2]] = d.data().data; else raw[d.id] = d.data(); });
+    for (const [id, d] of Object.entries(raw)) { try { let txt = d.data || ''; for (let i = 1; i < (d.parts || 1); i++) txt += (parts[id] || [])[i] || ''; remote[id] = JSON.parse(txt); } catch (e) { console.warn('survei cloud rusak/terpotong', id, e); } }
     for (const rs of Object.values(remote)) if (mergeSurvey(rs)) down++;
     save();
-    // 2. Kirim survei yang berubah, hapus yang dihapus
+    // 2. Kirim survei yang berubah (satu survei gagal tidak menghentikan yang lain), hapus yang dihapus
+    const CHUNK = 900000, fails = [];
+    const putSurvey = async (s, body) => {
+      const n = Math.max(1, Math.ceil(body.length / CHUNK));
+      for (let i = 1; i < n; i++) await F.setDoc(ref('kehati_survei', `${s.id}__p${i}`), { data: body.slice(i * CHUNK, (i + 1) * CHUNK) });
+      await F.setDoc(ref('kehati_survei', s.id), { data: body.slice(0, CHUNK), parts: n, updated: s.updated || Date.now(), nama: surveyName(s) });
+      for (let i = n; i < ((raw[s.id] && raw[s.id].parts) || 1); i++) await F.deleteDoc(ref('kehati_survei', `${s.id}__p${i}`)).catch(() => {});
+    };
     for (const s of Object.values(S.surveys)) {
       const r = remote[s.id], body = jsonOf(s);
       if (r && jsonOf(r) === body) { pushed[s.id] = s.updated || 0; continue; }
-      await F.setDoc(ref('kehati_survei', s.id), { data: body, updated: s.updated || Date.now(), nama: surveyName(s) }); pushed[s.id] = s.updated || 0; up++;
+      try { await putSurvey(s, body); pushed[s.id] = s.updated || 0; up++; }
+      catch (e) { if (cloudErr(e) === 'izin') throw e; console.warn('gagal kirim survei', s.id, e); fails.push(`${surveyName(s)} (${cloudErr(e)})`); }
     }
-    for (const id of Object.keys(remote)) if (S.deleted[id]) { await F.deleteDoc(ref('kehati_survei', id)); up++; }
+    for (const id of Object.keys(remote)) if (S.deleted[id]) { for (let i = 1; i < ((raw[id] && raw[id].parts) || 1); i++) await F.deleteDoc(ref('kehati_survei', `${id}__p${i}`)).catch(() => {}); await F.deleteDoc(ref('kehati_survei', id)); up++; }
+    CLOUD.fails = fails;
+    { const failIds = new Set(Object.values(S.surveys).filter(x => fails.some(f => f.startsWith(surveyName(x) + ' ('))).map(x => x.id)); CLOUD.nCloud = new Set([...Object.keys(remote), ...Object.keys(S.surveys).filter(id => !failIds.has(id))].filter(id => id !== 'koleksi' && !S.deleted[id])).size; }
     const metaBody = { deleted: jsonOf(S.deleted), titik: jsonOf(S.titik), updated: Date.now() };
     if (!meta.exists() || meta.data().deleted !== metaBody.deleted || meta.data().titik !== metaBody.titik) await F.setDoc(ref('kehati_meta', 'state'), metaBody);
     // 3. Foto: kirim versi kecil yang belum ada di cloud, ambil yang belum ada di HP ini, hapus yang dihapus
     let changed = false;
     for (const s of Object.values(S.surveys)) for (const o of Object.values(s.obs)) for (const p of o._photos || []) {
-      if (p.c) continue; if (fotoUp >= 25) break;
+      if (p.c || (p.cerr || 0) >= 3) continue; if (fotoUp >= 25) break;
       const b = await pdbGet('foto', p.id).catch(() => null); if (!b) continue;
-      await F.setDoc(ref('kehati_foto', p.id), { sid: s.id, oid: o.id, data: await smallPhoto(b), t: p.t || 0 }); p.c = 1; changed = true; fotoUp++;
+      try { await F.setDoc(ref('kehati_foto', p.id), { sid: s.id, oid: o.id, data: await smallPhoto(b), t: p.t || 0 }); p.c = 1; delete p.cerr; changed = true; fotoUp++; }
+      catch (e) { if (cloudErr(e) === 'izin') throw e; p.cerr = (p.cerr || 0) + 1; console.warn('gagal kirim foto', p.id, e); }
       if (fotoUp % 5 === 0) cloudSet({ pushed });
     }
     for (const s of Object.values(S.surveys)) for (const o of Object.values(s.obs)) for (const p of o._photos || []) {
       if (!p.c || fotoDown >= 40) continue;
       if (await pdbGet('thumb', p.id).catch(() => null)) continue;
-      const d = await F.getDoc(ref('kehati_foto', p.id)); if (!d.exists()) continue;
-      const blob = await (await fetch(d.data().data)).blob();
-      await pdbPut('foto', p.id, blob); await pdbPut('thumb', p.id, (await shrink(blob, THUMB_MAX)).blob); p.small = 1; fotoDown++;
+      try {
+        const d = await F.getDoc(ref('kehati_foto', p.id)); if (!d.exists()) continue;
+        const blob = await (await fetch(d.data().data)).blob();
+        await pdbPut('foto', p.id, blob); await pdbPut('thumb', p.id, (await shrink(blob, THUMB_MAX)).blob); p.small = 1; fotoDown++;
+      } catch (e) { if (cloudErr(e) === 'izin') throw e; console.warn('gagal ambil foto', p.id, e); }
     }
     const delQ = st.delfoto || [];
     for (const id of delQ) { try { await F.deleteDoc(ref('kehati_foto', id)); } catch (e) {} }
     if (changed) {   // tanda foto sudah di cloud: kirim ulang survei yang berubah
-      for (const s of Object.values(S.surveys)) if ((s.obs && Object.values(s.obs).some(o => (o._photos || []).some(p => p.c))) && jsonOf(s) !== jsonOf(remote[s.id] || {})) await F.setDoc(ref('kehati_survei', s.id), { data: jsonOf(s), updated: s.updated || Date.now(), nama: surveyName(s) });
+      for (const s of Object.values(S.surveys)) if ((s.obs && Object.values(s.obs).some(o => (o._photos || []).some(p => p.c))) && jsonOf(s) !== jsonOf(remote[s.id] || {})) await putSurvey(s, jsonOf(s)).catch(e => console.warn(e));
     }
     save();
     CLOUD.last = Date.now(); cloudSet({ pushed, delfoto: [], last: CLOUD.last });
     CLOUD.note = `${up} dikirim · ${down} diterima · foto ${fotoUp} dikirim, ${fotoDown} diterima`;
-    if (!auto || down || fotoDown) toast(down || fotoDown ? `Sinkron: ${down} data dan ${fotoDown} foto baru dari perangkat lain.` : 'Sinkron selesai. Data sama di semua perangkat.');
+    if (fails.length) toast(`${fails.length} survei belum terkirim: ${fails[0]}. Dicoba lagi otomatis.`);
+    else if (!auto || down || fotoDown) toast(down || fotoDown ? `Sinkron: ${down} data dan ${fotoDown} foto baru dari perangkat lain.` : `Sinkron selesai. ${Object.keys(S.surveys).filter(k => k !== 'koleksi').length} survei sama di HP ini dan di cloud.`);
     if (down || fotoDown) { const a = document.activeElement; if (!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) render(); }
     else if (view.v === 'data') render();
     if (fotoUp >= 25 || fotoDown >= 40) cloudSyncSoon(1500);   // masih ada foto: lanjut bertahap
@@ -3435,6 +3451,8 @@ function cloudHTML() {
   const nFoto = Object.values(S.surveys).reduce((n, s) => n + Object.values(s.obs).reduce((m, o) => m + (o._photos || []).filter(p => !p.c).length, 0), 0);
   return `<section class="section card-sync"><h2>☁️ Sinkron antar perangkat</h2>
     ${u ? `<div class="box"><span>Masuk sebagai <b>${esc(u)}</b></span>
+        <span class="note">📱 Di perangkat ini: <b>${Object.keys(S.surveys).filter(k => k !== 'koleksi').length} survei</b>${CLOUD.nCloud != null ? ` · ☁️ di cloud: <b>${CLOUD.nCloud} survei</b>` : ''}</span>
+        ${(CLOUD.fails || []).length ? `<p class="note" style="color:var(--warn)">Belum terkirim: ${CLOUD.fails.map(esc).join('; ')}</p>` : ''}
         <span class="note">${last ? `Terakhir sinkron ${new Date(last).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Belum pernah sinkron'}${CLOUD.note ? ` · ${esc(CLOUD.note)}` : ''}${nFoto ? ` · ${nFoto} foto menunggu dikirim` : ''}</span>
         ${CLOUD.err ? `<p class="note" style="color:var(--bad)"><b>${esc(CLOUD.err)}</b></p>` : ''}
         <div class="row"><button type="button" class="btn" data-a="csync" ${CLOUD.busy ? 'disabled' : ''}>${CLOUD.busy ? 'Menyinkron…' : '🔄 Sinkron sekarang'}</button><button type="button" class="btn ghost" data-a="clogout">Keluar</button></div></div>

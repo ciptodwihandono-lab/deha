@@ -3454,7 +3454,8 @@ async function cloudSync(auto) {
   } catch (e) {
     console.warn(e); const m = cloudErr(e);
     CLOUD.err = cloudMsg(e);
-    if (!auto || m === 'izin') toast('Sinkron gagal: ' + CLOUD.err);
+    // Pesan otomatis hanya sekali per pembukaan aplikasi (tidak mengganggu); detail tetap di tab Data.
+    if (!auto || (m === 'izin' && !CLOUD.izinShown)) { toast('Sinkron gagal: ' + CLOUD.err); if (m === 'izin') CLOUD.izinShown = true; }
     if (view.v === 'data') render();
   } finally {
     CLOUD.busy = false; cloudPill();

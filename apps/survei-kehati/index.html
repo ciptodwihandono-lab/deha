@@ -3305,9 +3305,20 @@ async function cloudSdk() {
 function cloudErr(e) {
   const c = (e && e.code) || '', m = (e && e.message) || String(e);
   if (/permission-denied|insufficient permissions/i.test(c + m)) return 'izin';
+  if (/referer|referrer|api-key-not-valid|API_KEY|app-not-authorized|unauthorized-domain/i.test(c + m)) return 'kunci';
+  if (/failed to fetch dynamically imported module|importing a module script failed|Failed to fetch/i.test(m) && !c) return 'sdk';
+  if (/unavailable|deadline-exceeded|network/i.test(c)) return 'Koneksi ke server cloud terputus atau lambat. Coba lagi saat sinyal lebih baik.';
+  if (/resource-exhausted/i.test(c)) return 'Kuota gratis Firebase hari ini habis. Sinkron dilanjutkan besok otomatis.';
   return { 'auth/invalid-credential': 'Email atau kata sandi salah.', 'auth/wrong-password': 'Kata sandi salah.', 'auth/user-not-found': 'Akun belum terdaftar.',
     'auth/email-already-in-use': 'Email sudah terdaftar. Pakai Masuk.', 'auth/weak-password': 'Kata sandi minimal 6 karakter.', 'auth/invalid-email': 'Format email salah.',
     'auth/network-request-failed': 'Tidak ada sinyal internet.', 'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi nanti.' }[c] || m;
+}
+function cloudMsg(e) {
+  const m = cloudErr(e);
+  CLOUD.code = (e && e.code) || (e && e.message ? String(e.message).slice(0, 140) : '');
+  return m === 'izin' ? 'Akses database ditolak. Aturan Firestore perlu ditambah sekali (lihat tab Data → Sinkron).'
+    : m === 'kunci' ? 'Alamat aplikasi ini belum diizinkan memakai Firebase (kunci API / domain).'
+    : m === 'sdk' ? 'Layanan cloud tidak termuat (butuh sinyal internet, atau diblokir jaringan/penghemat data).' : m;
 }
 async function cloudLogin(email, pass, daftar) {
   const { A, F, auth, db } = await cloudSdk();
@@ -3317,6 +3328,8 @@ async function cloudLogin(email, pass, daftar) {
   return cred.user;
 }
 async function cloudLogout() { if (!CLOUD.fb) return; await CLOUD.fb.A.signOut(CLOUD.fb.auth); CLOUD.user = null; cloudPill(); }
+$('net').style.cursor = 'pointer'; $('net').setAttribute('role', 'button');
+$('net').addEventListener('click', () => { if (cloudState().email || CLOUD.err) go({ v: 'data' }); });
 function cloudPill() {
   const el = $('net'); if (!el) return;
   const on = navigator.onLine, u = CLOUD.user || cloudState().email;
@@ -3440,10 +3453,13 @@ async function cloudSync(auto) {
     if (fotoUp >= 25 || fotoDown >= 40) cloudSyncSoon(1500);   // masih ada foto: lanjut bertahap
   } catch (e) {
     console.warn(e); const m = cloudErr(e);
-    CLOUD.err = m === 'izin' ? 'Akses database ditolak. Aturan Firestore perlu ditambah sekali (lihat tab Data → Sinkron).' : m;
+    CLOUD.err = cloudMsg(e);
     if (!auto || m === 'izin') toast('Sinkron gagal: ' + CLOUD.err);
     if (view.v === 'data') render();
-  } finally { CLOUD.busy = false; cloudPill(); }
+  } finally {
+    CLOUD.busy = false; cloudPill();
+    if (view.v === 'data') { const a = document.activeElement; if (!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) render(); }
+  }
 }
 function cloudHTML() {
   const st = cloudState(), u = CLOUD.user ? CLOUD.user.email : st.email;
@@ -3462,7 +3478,9 @@ function cloudHTML() {
         <div class="field w"><label for="cPass">Kata sandi</label><input type="password" id="cPass" autocomplete="current-password"></div></div>
         <div class="row"><button type="button" class="btn" data-a="clogin">Masuk</button><button type="button" class="btn ghost" data-a="cdaftar">Daftar akun baru</button></div>
         ${CLOUD.err ? `<p class="note" style="color:var(--bad)"><b>${esc(CLOUD.err)}</b></p>` : ''}`}
-    ${/izin|Aturan Firestore/.test(CLOUD.err) ? `<details class="legend" open><summary>Cara mengizinkan (sekali saja, oleh admin Firebase)</summary><p class="note">Buka console.firebase.google.com → proyek <b>tally-sheet-burung</b> → Firestore Database → <b>Rules</b>. Tambahkan blok di bawah ini <b>di dalam</b> <code>match /databases/{database}/documents { … }</code> yang sudah ada (aturan Tally Sheet tetap), lalu tekan <b>Publish</b>.</p><pre style="white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px">${esc(CLOUD_RULES.split('\n').slice(3, 8).join('\n'))}</pre><button type="button" class="btn ghost sm" data-a="crules">Salin aturan</button></details>` : ''}
+    ${CLOUD.err && CLOUD.code ? `<p class="note" style="font-size:12px">Kode: <code>${esc(CLOUD.code)}</code></p>` : ''}
+    ${/kunci API/.test(CLOUD.err || '') ? `<details class="legend" open><summary>Cara mengizinkan (sekali saja, oleh admin)</summary><p class="note">1) console.firebase.google.com → proyek <b>tally-sheet-burung</b> → Authentication → Settings → <b>Authorized domains</b> → pastikan ada <code>ciptodwihandono-lab.github.io</code>.<br>2) Bila kunci API dibatasi: console.cloud.google.com → APIs &amp; Services → Credentials → kunci "Browser key" → Website restrictions → tambahkan <code>https://ciptodwihandono-lab.github.io/*</code> → Save.</p></details>` : ''}
+    ${/izin|Aturan Firestore/.test(CLOUD.err || '') ? `<details class="legend" open><summary>Cara mengizinkan (sekali saja, oleh admin Firebase)</summary><p class="note">Buka console.firebase.google.com → proyek <b>tally-sheet-burung</b> → Firestore Database → <b>Rules</b>. Tambahkan blok di bawah ini <b>di dalam</b> <code>match /databases/{database}/documents { … }</code> yang sudah ada (aturan Tally Sheet tetap), lalu tekan <b>Publish</b>.</p><pre style="white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px">${esc(CLOUD_RULES.split('\n').slice(3, 8).join('\n'))}</pre><button type="button" class="btn ghost sm" data-a="crules">Salin aturan</button></details>` : ''}
   </section>`;
 }
 async function cloudAction(a) {
@@ -3471,7 +3489,7 @@ async function cloudAction(a) {
     if (!email || !pass) { toast('Isi email dan kata sandi.'); return; }
     if (!navigator.onLine) { toast('Masuk butuh sinyal internet (sekali saja).'); return; }
     try { toast(a === 'cdaftar' ? 'Mendaftarkan akun…' : 'Masuk…'); CLOUD.err = ''; cloudSet({ lastEmail: email }); const u = await cloudLogin(email.trim(), pass, a === 'cdaftar'); CLOUD.user = u; cloudSet({ email: u.email }); render(); toast('Berhasil masuk. Menyinkron data…'); cloudSync(false); }
-    catch (e) { CLOUD.err = cloudErr(e); render(); toast(CLOUD.err); }
+    catch (e) { CLOUD.err = cloudMsg(e); render(); toast(CLOUD.err); }
   }
   if (a === 'clogout') { await cloudLogout().catch(() => {}); cloudSet({ email: '', pushed: {}, last: 0 }); CLOUD.last = 0; CLOUD.note = ''; CLOUD.err = ''; render(); toast('Keluar dari akun. Data tetap ada di perangkat ini.'); }
   if (a === 'csync') cloudSync(false);

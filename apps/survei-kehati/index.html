@@ -219,6 +219,56 @@ body.v-obs .fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); width:
 @media (max-width: 420px) { .fields { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr 1fr; } }
 @media print { .topbar, nav.tabs, .fab, .no-print, .toast { display: none !important; } body { padding: 0; background: #fff; color: #000; } main { max-width: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+/* ===== Tampilan baru: beranda berikon, kartu, peta berikon ===== */
+:root { --r: 14px; --shadow: 0 1px 2px rgba(20,40,30,.06), 0 4px 14px rgba(20,40,30,.06); }
+.ic { display: inline-grid; place-items: center; line-height: 1; font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
+.ic svg { width: 1em; height: 1em; }
+.ava { width: 42px; height: 42px; border-radius: 12px; flex: none; display: grid; place-items: center; font-size: 22px; background: color-mix(in srgb, var(--c, #888) 16%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, #888) 30%, transparent); }
+.ava svg { width: 24px; height: 24px; color: var(--c); }
+.hero { border-radius: 20px; padding: 18px 18px 16px; color: #fff; background: radial-gradient(120% 140% at 100% 0%, #3f8f6b 0%, #23443a 55%, #1b332b 100%); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden; }
+.hero::after { content: "🌿"; position: absolute; right: -6px; bottom: -14px; font-size: 92px; opacity: .14; transform: rotate(-12deg); pointer-events: none; }
+.hero h3 { font-size: 21px; margin: 0; font-weight: 700; }
+.hero .hs { font-size: 13px; opacity: .85; }
+.hstats { display: flex; gap: 8px; flex-wrap: wrap; }
+.hstats span { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { border: 1px solid var(--line); background: var(--surface); border-radius: 18px; padding: 14px; min-height: 108px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; text-align: left; cursor: pointer; box-shadow: var(--shadow); color: var(--fg); transition: transform .12s; }
+.tile:active { transform: scale(.97); }
+.tile .ti { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 26px; background: color-mix(in srgb, var(--c) 15%, var(--surface)); }
+.tile b { font-size: 16px; display: block; }
+.tile small { font-size: 12.5px; color: var(--muted); display: block; margin-top: 2px; }
+.tile.big { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-start; min-height: 84px; background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 70%, #000)); color: #fff; border: 0; }
+.tile.big .ti { background: rgba(255,255,255,.18); }
+.tile.big small { color: rgba(255,255,255,.85); }
+.minis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mini2 { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--fg); cursor: pointer; box-shadow: var(--shadow); }
+.mini2 .ic { font-size: 22px; }
+.scard { border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 12px 14px; text-align: left; width: 100%; cursor: pointer; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow); color: var(--fg); }
+.scard .main { flex: 1; min-width: 0; }
+.scard .t { font-weight: 650; font-size: 16px; overflow-wrap: anywhere; }
+.scard .s { font-size: 13px; color: var(--muted); }
+.scard .em { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.scard .em span { background: var(--surface-2); border-radius: 999px; padding: 2px 8px; font-size: 12.5px; font-weight: 600; }
+.scard.live { border-color: var(--bad); box-shadow: 0 0 0 2px color-mix(in srgb, var(--bad) 25%, transparent); }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+nav.tabs button { position: relative; }
+nav.tabs button[aria-current="page"] svg { background: var(--accent-soft); border-radius: 999px; padding: 3px 14px; width: 52px; height: 30px; box-sizing: border-box; }
+/* Peta: pin berikon, legenda saring, pilihan gaya peta */
+.mp { position: relative; width: 32px; height: 42px; transform: rotate(var(--mrinv, 0deg)); transform-origin: 50% 100%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+.mp svg.pinsvg { position: absolute; inset: 0; width: 32px; height: 42px; z-index: 0 !important; }
+.mp .e, .mp .pinN { z-index: 1; }
+.mp .e { position: absolute; left: 0; right: 0; top: 4px; text-align: center; font-size: 16px; line-height: 23px; font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
+.mp .e svg { width: 17px; height: 17px; vertical-align: middle; color: var(--c); }
+.mp .pinN { right: -8px; top: -6px; }
+.legbar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 6px; scrollbar-width: none; }
+.legbar button { flex: none; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); border-radius: 999px; padding: 4px 9px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.legbar button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.basepop { position: absolute; z-index: 850; left: 62px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.2); padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 190px; }
+.basepop button { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 9px 10px; border-radius: 10px; font-size: 14px; cursor: pointer; color: var(--fg); text-align: left; }
+.basepop button[aria-pressed="true"] { background: var(--accent-soft); font-weight: 700; }
+.basepop .ic { font-size: 20px; }
+.leaflet-popup-content-wrapper { border-radius: 14px; }
+#mapWrap .leaflet-control-scale-line { background: rgba(255,255,255,.8); border-color: #333; font-size: 10px; }
 </style>
 </head>
 <body>
@@ -293,6 +343,13 @@ const TAXA = [
 const TAX = Object.fromEntries(TAXA.map(t => [t.k, t]));
 const FOTO_TAX = { k: 'foto', l: 'Belum dikelompokkan', c: '#ffffff' };   // catatan baru / foto yang jenisnya belum dipilih
 const taxOf = k => TAX[k] || FOTO_TAX;
+/* Ikon kelompok (dipakai di beranda, daftar, form, dan peta). Capung tidak ada emojinya, jadi digambar. */
+const DRAGONFLY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v15"/><circle cx="12" cy="4.5" r="1.6" fill="currentColor"/><path d="M12 8c-2-2-7-3.5-8.5-2S7 10 12 9.5M12 8c2-2 7-3.5 8.5-2S17 10 12 9.5M12 11c-2-.5-6.5 0-7.5 1.5S8 15 12 12.5M12 11c2-.5 6.5 0 7.5 1.5S16 15 12 12.5"/></svg>';
+const TAX_IC = { burung: '🐦', mamalia: '🐒', reptil: '🦎', amfibi: '🐸', kupu: '🦋', capung: DRAGONFLY, serangga: '🐞', ikan: '🐟', bentos: '🦀', tumbuhan: '🌿', lain: '🍄', foto: '📷', titik: '🚩' };
+const kindOf = o => o.titik ? 'titik' : o.tax;
+const icOf = o => TAX_IC[typeof o === 'string' ? o : kindOf(o)] || '📷';
+const colOf = o => (typeof o !== 'string' && o.titik) || o === 'titik' ? '#1f7a4a' : typeof o === 'string' ? taxOf(o).c : o.tax === 'foto' ? '#6b7a72' : taxOf(o.tax).c;
+const avaHTML = o => `<span class="ava" style="--c:${colOf(o)}">${icOf(o)}</span>`;
 /* Titik KEHATI: foto sebuah titik/plot survei beserta habitatnya (bukan foto satwa/tumbuhan). Disimpan sebagai
    catatan tanpa jenis (tax 'foto') dengan penanda o.titik, sehingga tidak ikut dihitung di analisis jenis. */
 const TITIK_L = 'Titik KEHATI (habitat)';
@@ -680,7 +737,7 @@ function blank() { return { v: 1, profile: { pengamat: '' }, surveys: {}, active
 function load() { try { const r = localStorage.getItem(KEY); if (r) return Object.assign(blank(), JSON.parse(r)); } catch (e) {} return blank(); }
 let S = load();
 let saveTimer = null;
-function save() { clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Gagal menyimpan: memori browser penuh. Ekspor data lalu hapus survei lama.'); } }
+function save() { clearTimeout(saveTimer); if (CLOUD && !CLOUD.busy) cloudSyncSoon(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Gagal menyimpan: memori browser penuh. Ekspor data lalu hapus survei lama.'); } }
 function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
@@ -818,20 +875,38 @@ async function loadKThumbs() {
     try { const b = await pdbGet('thumb', el.dataset.kth); if (b) { const u = URL.createObjectURL(b); thumbURLs.push(u); el.innerHTML = `<img src="${u}" alt="">`; } } catch (e) {}
   }
 }
+/* Beranda: sapaan + ringkasan, tombol besar berikon, dan riwayat survei dengan ikon jenis yang ditemukan. */
+function taxSummary(s) {
+  const c = {}; for (const o of Object.values(s.obs)) { const k = kindOf(o); if (k === 'foto') continue; c[k] = (c[k] || 0) + (o.titik ? 1 : (+o.jumlah || 1)); }
+  return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, n]) => `<span><span class="ic" style="color:${colOf(k)}">${TAX_IC[k]}</span> ${n}</span>`).join('');
+}
 function renderList() {
-  setTitle('Survei KEHATI', S.profile.pengamat ? `Pengamat: ${S.profile.pengamat}` : 'Keanekaragaman hayati, tanpa sinyal');
-  const list = surveysSorted().filter(s => !s.koleksi), live = activeSurvey(), nk = S.surveys.koleksi ? Object.keys(S.surveys.koleksi.obs).length : 0;
+  const h = new Date().getHours(), salam = h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 19 ? 'Selamat sore' : 'Selamat malam';
+  setTitle('Survei KEHATI', 'Keanekaragaman hayati, tanpa sinyal');
+  const list = surveysSorted().filter(s => !s.koleksi), live = activeSurvey(), kol = S.surveys.koleksi;
+  const all = Object.values(S.surveys).flatMap(s => Object.values(s.obs));
+  const nsp = new Set(all.filter(o => o.tax !== 'foto' && (o.ilmiah || o.nama)).map(o => o.tax + (o.ilmiah || o.nama).toLowerCase())).size;
+  const nph = all.reduce((n, o) => n + (o._photos || []).length, 0), cu = cloudState().email;
+  const tile = (a, ic, c, t, sub, big) => `<button type="button" class="tile${big ? ' big' : ''}" style="--c:${c}" data-a="${a}"><span class="ti ic">${ic}</span><span><b>${t}</b><small>${sub}</small></span></button>`;
+  const mini = (a, ic, t) => `<button type="button" class="mini2" data-a="${a}"><span class="ic">${ic}</span>${t}</button>`;
   $('app').innerHTML = `
-    ${live ? `<div class="box" style="border-color:var(--bad)"><b>● Survei sedang berjalan</b><span>${esc(surveyName(live))} · mulai ${esc(live.jamMulai)}</span><button type="button" class="btn" data-a="opensurvey" data-id="${live.id}">Lanjutkan survei</button></div>`
-      : `<button type="button" class="btn block" style="min-height:64px;font-size:18px" data-a="startnew">▶ Mulai survei</button>
-         <p class="note">Satu ketukan: tanggal, jam mulai, dan koordinat GPS tercatat otomatis. Lalu cukup tulis nama lokasi dan catat jenis yang ditemukan.</p>`}
-    <div class="list"><button type="button" class="item" data-a="openkoleksi"><span class="dotc" style="background:var(--tide)"></span><span class="main"><span class="t">Koleksi pengamatan saya</span><br><span class="s">${nk ? `${nk} pengamatan` : 'Foto satwa/tumbuhan di mana saja, kenali jenisnya, simpan seperti di iNaturalist'}</span></span><span class="chev">›</span></button></div>
+    <div class="hero"><div><h3>${salam}${S.profile.pengamat ? ', ' + esc(S.profile.pengamat.split(' ')[0]) : ''} 👋</h3><span class="hs">${live ? `Survei <b>${esc(surveyName(live))}</b> sedang berjalan sejak ${esc(live.jamMulai)}` : 'Siap mencatat keanekaragaman hayati hari ini?'}</span></div>
+      <div class="hstats"><span>📋 ${list.length} survei</span><span>🧬 ${nsp} jenis</span><span>📷 ${nph} foto</span><span>${cu ? '☁️ tersinkron' : '📱 di HP ini'}</span></div></div>
+    <div class="tiles">
+      ${live ? tile('opensurvey" data-id="' + live.id, '●', '#b03636', 'Lanjutkan survei', esc(surveyName(live)) + ' · ' + Object.keys(live.obs).length + ' catatan', true)
+        : tile('startnew', '▶️', '#2b6a4f', 'Mulai survei', 'Tanggal, jam, dan GPS tercatat otomatis', true)}
+      ${tile('quickfoto', '📷', '#2a6f8c', 'Foto cepat', 'Hewan, tumbuhan, atau titik')}
+      ${tile('quicktitik', '🚩', '#1f7a4a', 'Titik KEHATI', 'Foto titik & habitatnya')}
+      ${tile('gojenis', '🔍', '#8a5a00', 'Kenali jenis', 'AI dari foto, 53 ribu jenis')}
+      ${tile('openkoleksi', '🗂️', '#7a4fb0', 'Koleksi saya', kol ? Object.keys(kol.obs).length + ' pengamatan' : 'Seperti iNaturalist')}
+    </div>
+    <div class="minis">${mini('gopeta', '🗺️', 'Peta')}${mini('goana', '📊', 'Analisis')}${mini('godata', '📤', 'Ekspor')}${mini('godata', '☁️', cu ? 'Sinkron' : 'Masuk')}</div>
     <section class="section"><h2>Riwayat survei (${list.length})</h2>
-      ${list.length ? `<div class="list">${list.map(s => {
+      ${list.length ? `<div class="stack">${list.map(s => {
         const o = Object.values(s.obs), sp = new Set(o.filter(x => x.tax !== 'foto' && (x.ilmiah || x.nama)).map(x => x.tax + (x.ilmiah || x.nama))).size;
-        const isLive = live === s, a = areaOf(s).m2;
-        return `<button type="button" class="item" data-a="opensurvey" data-id="${s.id}"><span class="main"><span class="t">${isLive ? '● ' : ''}${esc(surveyName(s))}</span><br><span class="s">${fmtDate(s.tanggal)}${s.jamMulai ? ` · ${s.jamMulai}–${s.jamSelesai || (isLive ? 'berjalan' : '?')}` : ''} · ${sp} jenis · ${o.length} catatan${a ? ` · ${fmtArea(a)}` : ''}</span></span><span class="chev">›</span></button>`;
-      }).join('')}</div>` : '<div class="empty">Belum ada survei.</div>'}
+        const isLive = live === s, a = areaOf(s).m2, em = taxSummary(s);
+        return `<button type="button" class="scard${isLive ? ' live' : ''}" data-a="opensurvey" data-id="${s.id}"><span class="ava" style="--c:${isLive ? '#b03636' : '#2b6a4f'}">${isLive ? '🔴' : '📋'}</span><span class="main"><span class="t">${esc(surveyName(s))}</span><br><span class="s">${fmtDate(s.tanggal)}${s.jamMulai ? ` · ${s.jamMulai}${s.jamSelesai ? '–' + s.jamSelesai : ''}` : ''} · ${sp} jenis${a ? ` · ${fmtArea(a)}` : ''}</span>${em ? `<span class="em">${em}</span>` : ''}</span><span class="chev">›</span></button>`;
+      }).join('')}</div>` : '<div class="empty">Belum ada survei. Tekan <b>Mulai survei</b> di atas.</div>'}
     </section>`;
 }
 
@@ -850,7 +925,7 @@ function renderSurvey() {
       <span class="note">${fmtDate(s.tanggal)} · ${s.jamMulai ? `${esc(s.jamMulai)}–${live ? 'berjalan' : esc(s.jamSelesai || '?')}` : 'belum dimulai'}${dur ? ` · ${fmtDur(dur)}` : ''}${len ? ` · jalur ${fmtLen(len)}` : ''}</span>
       ${live ? '<button type="button" class="btn danger" data-a="stop">■ Selesai survei</button>' : !s.mulai ? '<button type="button" class="btn" data-a="start">▶ Mulai survei sekarang</button>' : ''}
     </div>
-    <div class="row"><button type="button" class="btn" style="min-height:60px" data-a="sfoto">📷 Foto</button><button type="button" class="btn" style="min-height:60px" data-a="catat">+ Catat jenis</button></div>
+    <div class="tiles" style="grid-template-columns:repeat(3,1fr)"><button type="button" class="tile" style="--c:#2a6f8c;min-height:92px" data-a="sfoto"><span class="ti ic">📷</span><b>Foto</b></button><button type="button" class="tile" style="--c:#d9822b;min-height:92px" data-a="catat"><span class="ti ic">🐦</span><b>Catat jenis</b></button><button type="button" class="tile" style="--c:#1f7a4a;min-height:92px" data-a="stitik" data-sid="${s.id}"><span class="ti ic">🚩</span><b>Titik</b></button></div>
     <section class="section"><h2>Temuan · ${nsp} jenis · ${nind} individu</h2>
       ${obs.length ? `<div class="list">${obs.map(o => obsItemHTML(s, o)).join('')}</div>` : '<div class="empty">Belum ada temuan. Tekan <b>Catat jenis</b> atau <b>Foto</b>.</div>'}
     </section>
@@ -887,11 +962,11 @@ function obsItemHTML(s, o) {
   const t = taxOf(o.tax), sp = o.sp && SP_BY_SCI[o.sp], np = (o._photos || []).length;
   if (o.titik) {
     const hab = asList(o.hab).map(k => HAB[k] || k).join(', ');
-    return `<button type="button" class="item" data-a="openobs" data-id="${o.id}"><span class="dotc" style="background:#1f7a4a"></span><span class="main"><span class="t">📍 ${esc(titikName(o))}</span><br><span class="s">Titik KEHATI${hab ? ' · ' + esc(hab) : ''} · ${esc(o.waktu || '')}${np ? ` · ${np} foto` : ''}</span></span><span class="chev">›</span></button>`;
+    return `<button type="button" class="item" data-a="openobs" data-id="${o.id}">${avaHTML(o)}<span class="main"><span class="t">${esc(titikName(o))}</span><br><span class="s">Titik KEHATI${hab ? ' · ' + esc(hab) : ''} · ${esc(o.waktu || '')}${np ? ` · ${np} foto` : ''}</span></span><span class="chev">›</span></button>`;
   }
   const name = o.nama || (o.stasiun && o.tax === 'foto' ? `📍 ${o.stasiun}` : np ? 'Foto (jenis belum diisi)' : '(jenis belum diisi)');
   const tags = [sp && sp.iucn && !['LC', 'DD'].includes(sp.iucn) ? `<span class="tag iucn">${sp.iucn}</span>` : '', sp && sp.p ? '<span class="tag p">Dilindungi</span>' : ''].join(' ');
-  return `<button type="button" class="item" data-a="openobs" data-id="${o.id}"><span class="dotc" style="background:${t.c}"></span><span class="main"><span class="t">${o.nama ? spName(o.nama, o.ilmiah) : esc(name)} ${tags}</span><br><span class="s">${o.tax !== 'foto' ? esc(t.l) + ' · ' : ''}${o.ilmiah ? `<i class="sci">${esc(o.ilmiah)}</i> · ` : ''}${esc(o.waktu || '')}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}${asList(o.akt).length ? ' · ' + esc(asList(o.akt).join(', ')) : ''}</span></span>${o.tax !== 'foto' && o.jumlah !== '' ? `<span class="count">${esc(o.jumlah)}</span>` : ''}<span class="chev">›</span></button>`;
+  return `<button type="button" class="item" data-a="openobs" data-id="${o.id}">${avaHTML(o)}<span class="main"><span class="t">${o.nama ? spName(o.nama, o.ilmiah) : esc(name)} ${tags}</span><br><span class="s">${o.tax !== 'foto' ? esc(t.l) + ' · ' : ''}${o.ilmiah ? `<i class="sci">${esc(o.ilmiah)}</i> · ` : ''}${esc(o.waktu || '')}${(o._photos || []).length ? ` · ${o._photos.length} foto` : ''}${asList(o.akt).length ? ' · ' + esc(asList(o.akt).join(', ')) : ''}</span></span>${o.tax !== 'foto' && o.jumlah !== '' ? `<span class="count">${esc(o.jumlah)}</span>` : ''}<span class="chev">›</span></button>`;
 }
 
 /* ---------- Form catatan: cari jenis → jumlah → aktivitas; sisanya di "Detail lainnya" ---------- */
@@ -922,7 +997,7 @@ function renderObs() {
   const ptField = o.tax === 'foto' && !picked ? `<div class="field"><label for="ptIn" style="font-weight:700;font-size:15px">📍 Titik / lokasi</label><input type="text" id="ptIn" data-o="stasiun" value="${esc(o.stasiun)}" placeholder="mis. Titik 3, Muara Kudap, Plot 2" autocomplete="off"><span class="hint">Isi bila foto ini bukan jenis tertentu, atau jenisnya belum diketahui.</span></div>` : '';
   $('app').innerHTML = `${seg}${idp}${ptField}
     ${nph ? `<div class="photos" id="photos">${o._photos.map(p => `<button type="button" data-ph="${p.id}" aria-label="${esc(p.name)}"></button>`).join('')}</div>` : ''}
-    ${picked ? `<div class="box"><div style="display:flex;gap:10px;align-items:center"><span class="dotc" style="background:${t.c}"></span><span style="flex:1;min-width:0"><b style="font-size:18px">${spName(o.nama, o.ilmiah)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br><span class="note">${esc(t.l)}${o.famili ? ' · ' + esc(o.famili) : ''}${sp && sp.iucn ? ' · IUCN ' + esc(sp.iucn) : ''}${sp && sp.p ? ' · <b>Dilindungi</b>' : ''}</span></span><button type="button" class="btn ghost sm" data-a="gantijenis">Ganti</button></div></div>`
+    ${picked ? `<div class="box"><div style="display:flex;gap:10px;align-items:center">${avaHTML(o)}<span style="flex:1;min-width:0"><b style="font-size:18px">${spName(o.nama, o.ilmiah)}</b>${o.ilmiah ? `<br><i>${esc(o.ilmiah)}</i>` : ''}<br><span class="note">${esc(t.l)}${o.famili ? ' · ' + esc(o.famili) : ''}${sp && sp.iucn ? ' · IUCN ' + esc(sp.iucn) : ''}${sp && sp.p ? ' · <b>Dilindungi</b>' : ''}</span></span><button type="button" class="btn ghost sm" data-a="gantijenis">Ganti</button></div></div>`
       : `<div class="field"><label for="spIn" style="font-weight:700;font-size:15px">Jenis apa?</label>
         <input type="search" id="spIn" data-o="nama" value="${esc(o.nama)}" autocomplete="off" placeholder="Ketik nama lokal, Indonesia, atau ilmiah" style="font-size:17px">
         <div id="spSug"></div>
@@ -933,7 +1008,7 @@ function renderObs() {
     <details class="legend" ${OBS_DETAIL ? 'open' : ''} id="obsDetail"><summary>Detail lainnya (opsional)</summary>
       <div class="fields" style="margin-top:10px">
         ${!o.sp && o.tax !== 'foto' ? '' : ''}
-        ${!o.sp ? `<div class="field w"><span class="lbl">Kelompok ${o.nama ? '(jenis diketik bebas)' : ''}</span><div class="chips">${TAXA.map(x => `<button type="button" class="chip" data-tax="${x.k}" aria-pressed="${o.tax === x.k}"><span class="sw" style="background:${x.c}"></span>${x.l}</button>`).join('')}</div></div>
+        ${!o.sp ? `<div class="field w"><span class="lbl">Kelompok ${o.nama ? '(jenis diketik bebas)' : ''}</span><div class="chips">${TAXA.map(x => `<button type="button" class="chip" data-tax="${x.k}" aria-pressed="${o.tax === x.k}"><span class="ic" style="color:${x.c}">${TAX_IC[x.k]}</span>${x.l}</button>`).join('')}</div></div>
         <div class="field"><label>Nama ilmiah</label><input type="text" data-o="ilmiah" value="${esc(o.ilmiah)}" style="font-style:italic"></div>
         <div class="field"><label>Famili</label><input type="text" data-o="famili" value="${esc(o.famili)}"></div>` : ''}
         ${isVeg ? `<div class="field w"><span class="lbl">Tingkat pertumbuhan (untuk INP)</span>${chipsHTML(TINGKAT, o.tingkat, 'data-ting')}</div>
@@ -1051,7 +1126,7 @@ $('app').addEventListener('click', async ev => {
       go({ v: 'obs', sid: s.id, id: no.id }, true); setTimeout(() => { const el = $('spIn'); if (el) el.focus(); }, 60); break; }
     case 'delobs':
       if (!arm(b, 'delo', 'Ketuk lagi untuk menghapus')) return;
-      await deletePhotos(o._photos); delete s.obs[o.id]; touch(s); save(); history.back(); toast('Catatan dihapus'); break;
+      await deletePhotos(o._photos); delete s.obs[o.id]; S.deleted[o.id] = Date.now(); touch(s); save(); history.back(); toast('Catatan dihapus'); break;
     default: if (a) dataAction(a, b);
   }
 });
@@ -1133,7 +1208,7 @@ async function pdbDo(store, mode, fn) {
 const pdbGet = (store, k) => pdbDo(store, 'readonly', st => st.get(k));
 const pdbPut = (store, k, v) => pdbDo(store, 'readwrite', st => st.put(v, k));
 const pdbDel = (store, k) => pdbDo(store, 'readwrite', st => st.delete(k));
-async function deletePhotos(list) { for (const ph of list || []) { try { await pdbDel('foto', ph.id); await pdbDel('thumb', ph.id); } catch (e) {} } }
+async function deletePhotos(list) { const q = cloudState().delfoto || []; for (const ph of list || []) { S.deleted[ph.id] = Date.now(); if (ph.c) q.push(ph.id); } cloudSet({ delfoto: q }); for (const ph of list || []) { try { await pdbDel('foto', ph.id); await pdbDel('thumb', ph.id); } catch (e) {} } }
 async function shrink(file, max, wm, q = THUMB_Q) {
   let bmp;
   try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
@@ -1204,7 +1279,8 @@ function askPhotoGeo() { photoGeo = getPos(20000); }
 /* Tombol kamera bulat: di form pengamatan menambah foto ke catatan itu. Di peta, setiap memotret dipilih dulu
    apa yang difoto: hewan/tumbuhan (catatan jenis) atau Titik KEHATI (titik/plot survei beserta habitatnya),
    dan ke mana disimpan (survei live atau Koleksi). Survei hanya dimulai bila dipilih sendiri. */
-$('fab').addEventListener('click', () => {
+$('fab').addEventListener('click', () => photoChooser());
+function photoChooser() {
   if (view.v === 'obs') { PHOTO_TO = { sid: view.sid, oid: view.id }; askPhotoGeo(); $('camIn').click(); return; }
   const live = activeSurvey();
   const opt = (to, cls, title, sub) => `<button type="button" class="btn ${cls}" data-to="${to}">${title}<small>${sub}</small></button>`;
@@ -1226,7 +1302,7 @@ $('fab').addEventListener('click', () => {
     askPhotoGeo(); $('camIn').click();
   });
   document.body.appendChild(ch); ch.querySelector('[data-to]').focus();
-});
+}
 ['camIn', 'galIn'].forEach(id => $(id).addEventListener('change', ev => {
   const files = [...ev.target.files]; ev.target.value = '';
   if (files.length && PHOTO_TO) addPhotos(files, Object.assign({}, PHOTO_TO, { gallery: id === 'galIn' }));
@@ -1364,10 +1440,18 @@ $('viewerDel').addEventListener('click', async ev => {
 
 /* ================= Peta ================= */
 const MAP = { m: null, base: 'sat', layers: null, me: null, focus: null, draw: null };
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
 const BASES = {
-  sat: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra © Esri', 19],
-  osm: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap', 19],
+  sat: [ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra © Esri', 19, '🛰️', 'Satelit'],
+  hyb: [ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra & label © Esri', 19, '🏷️', 'Satelit + nama tempat'],
+  topo: [ESRI + 'World_Topo_Map/MapServer/tile/{z}/{y}/{x}', 'Topografi © Esri', 19, '⛰️', 'Topografi'],
+  osm: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap', 19, '🛣️', 'Peta jalan'],
 };
+const LABELS_URL = ESRI + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+/* Pin peta berbentuk tetes dengan ikon kelompok di dalam lingkaran putih. */
+const pinHTML = (c, ic, badge = '') => `<div class="mp" style="--c:${c}"><svg class="pinsvg" viewBox="0 0 32 42" aria-hidden="true"><path d="M16 1C7.7 1 1 7.6 1 15.8c0 10.6 13.4 24.6 14.1 25.3a1.2 1.2 0 0 0 1.8 0C17.6 40.4 31 26.4 31 15.8 31 7.6 24.3 1 16 1z" fill="${c}" stroke="#fff" stroke-width="2"/><circle cx="16" cy="15.6" r="11" fill="#fff"/></svg><span class="e">${ic}</span>${badge}</div>`;
+const pinIcon = (c, ic, badge) => L.divIcon({ className: '', html: pinHTML(c, ic, badge), iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -38] });
+let MAP_HIDE = new Set(); try { MAP_HIDE = new Set(JSON.parse(localStorage.getItem('survei-kehati-maphide') || '[]')); } catch (e) {}
 const HAB_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>';
 const CAM_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 function renderMap() {
@@ -1377,7 +1461,12 @@ function renderMap() {
   if (!MAP.m) {
     MAP.m = L.map('map', { zoomControl: false, attributionControl: true }).setView([-2.5, 118], 5);
     L.control.zoom({ position: 'topright' }).addTo(MAP.m);
-    MAP.tile = L.tileLayer(BASES.sat[0], { attribution: BASES.sat[1], maxZoom: 21, maxNativeZoom: BASES.sat[2] }).addTo(MAP.m);
+    try { MAP.base = localStorage.getItem('survei-kehati-base') || 'sat'; } catch (e) { MAP.base = 'sat'; }
+    if (!BASES[MAP.base]) MAP.base = 'sat';
+    MAP.tile = L.tileLayer(BASES[MAP.base][0], { attribution: BASES[MAP.base][1], maxZoom: 21, maxNativeZoom: BASES[MAP.base][2] }).addTo(MAP.m);
+    MAP.labels = L.tileLayer(LABELS_URL, { maxZoom: 21, maxNativeZoom: 19, pane: 'overlayPane', opacity: .95 });
+    if (MAP.base === 'hyb') MAP.labels.addTo(MAP.m);
+    L.control.scale({ imperial: false, position: 'bottomright', maxWidth: 90 }).addTo(MAP.m);
     MAP.layers = L.layerGroup().addTo(MAP.m);
     rotPatch();
     // Kontrol zoom & atribusi dipindah ke luar kontainer peta supaya tidak ikut berputar.
@@ -1396,30 +1485,27 @@ function drawSurveyLayers() {
   MAP.layers.clearLayers();
   for (const s of mapSurveys()) {
     const area = s.area.mode === 'track' ? s.track : s.area.coords;
-    if ((area || []).length >= 3 && s.area.mode !== 'transek') L.polygon(area.map(p => [p[0], p[1]]), { color: '#ffd23f', weight: 2, fillOpacity: .15 }).addTo(MAP.layers);
+    if ((area || []).length >= 3 && s.area.mode !== 'transek') L.polygon(area.map(p => [p[0], p[1]]), { color: '#ffd23f', weight: 2.5, dashArray: '8 6', fillColor: '#ffd23f', fillOpacity: .12 }).addTo(MAP.layers);
     if (MAP.draw === s.id) s.area.coords.forEach(p => L.marker(p, { icon: L.divIcon({ className: '', html: '<div class="vtx"></div>', iconSize: [14, 14] }), interactive: false }).addTo(MAP.layers));
-    if ((s.track || []).length > 1) L.polyline(s.track.map(p => [p[0], p[1]]), { color: '#ff3b30', weight: 3 }).addTo(MAP.layers);
+    if ((s.track || []).length > 1) { const ll = s.track.map(p => [p[0], p[1]]); L.polyline(ll, { color: '#fff', weight: 7, opacity: .85, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(MAP.layers); L.polyline(ll, { color: '#ff5a36', weight: 4, lineCap: 'round', lineJoin: 'round' }).addTo(MAP.layers); }
   }
   // Catatan di lokasi yang sama (≤ 12 m) digabung jadi satu penanda dengan angka, supaya titik tidak bertumpuk ganda.
   const groups = [];
   for (const s of mapSurveys()) for (const o of Object.values(s.obs)) {
-    if (o.lat == null) continue;
+    if (o.lat == null || MAP_HIDE.has(kindOf(o))) continue;
     // Hanya digabung dalam survei yang sama: foto koleksi tidak disatukan dengan catatan survei.
     const kind = o.titik ? 't' : 'o';
     const g = groups.find(g => g.sid === s.id && g.kind === kind && distBear(g.lat, g.lon, o.lat, o.lon)[0] <= 12);
     if (g) g.items.push([s, o]); else groups.push({ sid: s.id, kind, lat: o.lat, lon: o.lon, items: [[s, o]] });
   }
   const line = ([s, o]) => { const t = taxOf(o.tax), np = (o._photos || []).length;
-    if (o.titik) return `<div style="margin-top:6px"><b>📍 ${esc(titikName(o))}</b> <span class="note">Titik KEHATI</span><br>${asList(o.hab).map(k => esc(HAB[k] || k)).join(', ') || 'habitat belum diisi'} · ${esc(o.waktu)}${np ? ` · ${np} foto` : ''}${o.deskripsi ? `<br><span class="note">${esc(String(o.deskripsi).slice(0, 120))}</span>` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`;
-    return `<div style="margin-top:6px"><b>${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? (o.stasiun ? '📍 ' + o.stasiun : 'Titik foto') : t.l)}</b>${o.ilmiah ? ` <i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' && o.jumlah !== '' ? ` · ${esc(o.jumlah)} ind.` : ''}${np ? ` · ${np} foto` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`; };
+    if (o.titik) return `<div style="margin-top:6px"><b>🚩 ${esc(titikName(o))}</b> <span class="note">Titik KEHATI</span><br>${asList(o.hab).map(k => esc(HAB[k] || k)).join(', ') || 'habitat belum diisi'} · ${esc(o.waktu)}${np ? ` · ${np} foto` : ''}${o.deskripsi ? `<br><span class="note">${esc(String(o.deskripsi).slice(0, 120))}</span>` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`;
+    return `<div style="margin-top:6px"><b><span class="ic">${icOf(o)}</span> ${o.nama ? spName(o.nama, o.ilmiah) : esc(o.tax === 'foto' ? (o.stasiun ? '📍 ' + o.stasiun : 'Titik foto') : t.l)}</b>${o.ilmiah ? ` <i>${esc(o.ilmiah)}</i>` : ''}<br>${esc(t.l)} · ${esc(o.waktu)}${o.tax !== 'foto' && o.jumlah !== '' ? ` · ${esc(o.jumlah)} ind.` : ''}${np ? ` · ${np} foto` : ''} <button type="button" class="btn sm" data-mopen="${s.id}|${o.id}">Buka</button></div>`; };
   for (const g of groups) {
     const n = g.items.length, sp = g.items.find(([, o]) => o.tax !== 'foto'), np = g.items.reduce((a, [, o]) => a + (o._photos || []).length, 0);
     const badge = n > 1 ? `<span class="pinN">${n}</span>` : '';
-    const mk = g.kind === 't'
-      ? L.marker([g.lat, g.lon], { icon: L.divIcon({ className: '', html: `<div class="pin hab">${HAB_SVG}${badge}</div>`, iconSize: [24, 24] }) })
-      : !sp
-      ? L.marker([g.lat, g.lon], { icon: L.divIcon({ className: '', html: `<div class="pin cam">${CAM_SVG}${badge}</div>`, iconSize: [24, 24] }) })
-      : L.marker([g.lat, g.lon], { icon: L.divIcon({ className: '', html: `<div class="pin" style="background:${taxOf(sp[1].tax).c}">${badge}</div>`, iconSize: [18, 18] }) });
+    const lead = g.kind === 't' ? g.items[0][1] : (sp ? sp[1] : g.items[0][1]);
+    const mk = L.marker([g.lat, g.lon], { icon: pinIcon(colOf(lead), icOf(lead), badge), riseOnHover: true });
     mk.bindPopup(n === 1 ? line(g.items[0]).replace('<div style="margin-top:6px">', '<div>')
       : `<b>${n} ${g.kind === 't' ? 'titik KEHATI' : 'catatan'} di lokasi ini</b>${np ? ` · ${np} foto` : ''}<div style="max-height:220px;overflow:auto">${g.items.map(line).join('')}</div>`, { maxWidth: 260 });
     mk.addTo(MAP.layers);
@@ -1454,10 +1540,13 @@ function mapInfoFill() {
     return;
   }
   const list = mapSurveys(), n = list.reduce((a, s) => a + Object.values(s.obs).filter(o => o.lat != null).length, 0);
+  const cnt = {}; for (const s of list) for (const o of Object.values(s.obs)) if (o.lat != null) cnt[kindOf(o)] = (cnt[kindOf(o)] || 0) + 1;
+  const LBL = { titik: 'Titik KEHATI', foto: 'Foto' };
+  const leg = Object.keys(cnt).length ? `<div class="legbar" role="group" aria-label="Saring kelompok">${Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([k, c]) => `<button type="button" data-m="ftax" data-k="${k}" aria-pressed="${!MAP_HIDE.has(k)}" title="${esc(LBL[k] || taxOf(k).l)}"><span class="ic" style="color:${colOf(k)}">${TAX_IC[k] || '📷'}</span>${c}</button>`).join('')}</div>` : '';
   const f = MAP.focus && S.surveys[MAP.focus], om = typeof activeOffline === 'function' ? activeOffline() : null;
   const omTxt = om ? `<div style="margin-bottom:4px">🗺 Peta offline: <b>${esc(om.name)}</b> <button type="button" class="btn sm ghost" data-m="pmoff">Lepas</button></div>` : '';
-  el.innerHTML = omTxt + (f ? `<b>${esc(surveyName(f))}</b> · ${n} titik${areaOf(f).m2 ? ` · luas ${fmtArea(areaOf(f).m2)}` : ''}${f.track.length > 1 ? ` · jalur ${fmtLen(pathLen(f.track))}` : ''} <button type="button" class="btn sm ghost" data-m="all" style="margin-left:6px">Semua survei</button>`
-    : `${list.length} survei · ${n} titik. Tombol kamera: pilih foto hewan/tumbuhan atau 📍 Titik KEHATI (habitat).`);
+  el.innerHTML = leg + omTxt + (f ? `<b>${esc(surveyName(f))}</b> · ${n} titik${areaOf(f).m2 ? ` · luas ${fmtArea(areaOf(f).m2)}` : ''}${f.track.length > 1 ? ` · jalur ${fmtLen(pathLen(f.track))}` : ''} <button type="button" class="btn sm ghost" data-m="all" style="margin-left:6px">Semua survei</button>`
+    : `${list.length} survei · ${n} titik. Ketuk ikon di atas untuk menyaring; tombol 📷 untuk memotret.`);
 }
 $('mapWrap').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
@@ -1469,6 +1558,8 @@ $('mapWrap').addEventListener('click', ev => {
   if (m === 'pmoff') { useOfflineMap(null); updateMapInfo(); toast('Peta offline dilepas.'); }
   if (m === 'all') { MAP.focus = null; renderMap(); fitAll(); }
   if (m === 'mimin') { setMapInfoMin(true); return; }
+  if (m === 'ftax') { const k = b.dataset.k; if (MAP_HIDE.has(k)) MAP_HIDE.delete(k); else MAP_HIDE.add(k); try { localStorage.setItem('survei-kehati-maphide', JSON.stringify([...MAP_HIDE])); } catch (e) {} drawSurveyLayers(); return; }
+  if (m === 'base') { setBaseStyle(b.dataset.k); return; }
   if (m === 'mimax') { setMapInfoMin(false); return; }
   if (m === 'tphere') { getPos().then(c => { if (c) addTitik(c.latitude, c.longitude); else toast('GPS belum dapat sinyal.'); }); }
   if (m === 'tpdone') setAddPt(false);
@@ -1496,9 +1587,22 @@ $('mDraw').addEventListener('click', () => {
   if (!s) { toast('Buka survei dulu (tab Survei), lalu tekan "Gambar poligon di peta".'); return; }
   startDraw(s);
 });
-$('mBase').addEventListener('click', () => {
-  MAP.base = MAP.base === 'sat' ? 'osm' : 'sat'; const b = BASES[MAP.base];
-  MAP.tile.setUrl(b[0]); MAP.tile.options.attribution = b[1]; { const t = MAP.base === 'sat' ? 'Peta dasar: satelit' : 'Peta dasar: peta jalan'; $('mBase').title = t; $('mBase').setAttribute('aria-label', 'Ganti ' + t.toLowerCase()); toast(t); }
+function setBaseStyle(k) {
+  if (!BASES[k] || !MAP.m) return; MAP.base = k; const b = BASES[k];
+  MAP.tile.setUrl(b[0]); MAP.tile.options.attribution = b[1]; MAP.m.attributionControl && MAP.m.attributionControl._update && MAP.m.attributionControl._update();
+  if (k === 'hyb') MAP.labels.addTo(MAP.m); else MAP.labels.remove();
+  try { localStorage.setItem('survei-kehati-base', k); } catch (e) {}
+  const pop = document.querySelector('.basepop'); if (pop) pop.remove();
+  $('mBase').title = 'Gaya peta: ' + b[4]; toast('Gaya peta: ' + b[4]);
+}
+$('mBase').addEventListener('click', ev => {
+  ev.stopPropagation();
+  const old = document.querySelector('.basepop'); if (old) { old.remove(); return; }
+  const pop = document.createElement('div'); pop.className = 'basepop'; pop.setAttribute('role', 'menu');
+  pop.style.top = ($('mBase').getBoundingClientRect().top - $('mapWrap').getBoundingClientRect().top) + 'px';
+  pop.innerHTML = Object.entries(BASES).map(([k, b]) => `<button type="button" data-m="base" data-k="${k}" aria-pressed="${MAP.base === k}"><span class="ic">${b[3]}</span>${b[4]}</button>`).join('');
+  $('mapWrap').appendChild(pop);
+  setTimeout(() => document.addEventListener('click', function off(e) { if (!pop.contains(e.target)) { pop.remove(); } document.removeEventListener('click', off); }), 0);
 });
 $('mLocate').addEventListener('click', async () => {
   toast('Mencari posisi…'); const c = LAST_POS && MAP.me ? LAST_POS : await getPos();
@@ -2292,7 +2396,7 @@ function mergeBackup(obj) {
 function renderData() {
   setTitle('Data & pengaturan', buildLabel());
   const n = Object.values(S.surveys).reduce((a, s) => a + Object.keys(s.obs).length, 0), q = aiQueue().length;
-  $('app').innerHTML = `
+  $('app').innerHTML = `${cloudHTML()}
     <section class="section"><h2>Pengamat</h2><div class="fields"><div class="field w"><label>Nama pengamat utama</label><input type="text" data-prof="pengamat" value="${esc(S.profile.pengamat)}" placeholder="dipakai otomatis di survei baru"></div></div></section>
     <section class="section"><h2>Ekspor data</h2>
       <p class="note">${Object.keys(S.surveys).length} survei · ${n} catatan. Paket berisi CSV (buka di Excel/Google Sheets): survei, pengamatan, analisis indeks, analisis jenis, INP vegetasi; peta GeoJSON & KML (QGIS, Google Earth); cadangan .json; dan semua foto.</p>
@@ -2319,6 +2423,14 @@ function renderData() {
 }
 function buildLabel() { return APP_BUILD.startsWith('__') ? 'versi pengembangan' : APP_BUILD; }
 async function dataAction(a, b) {
+  if (a === 'quickfoto') return photoChooser();
+  if (a === 'quicktitik') { const live = activeSurvey(); let sv = live; if (!sv) { sv = newSurvey(); await startSurvey(sv); } PHOTO_TO = { sid: sv.id, oid: null, titik: true }; askPhotoGeo(); $('camIn').click(); return; }
+  if (a === 'stitik') { PHOTO_TO = { sid: b.dataset.sid, oid: null, titik: true }; askPhotoGeo(); $('camIn').click(); return; }
+  if (a === 'gojenis') return go({ v: 'jenis' });
+  if (a === 'gopeta') return go({ v: 'peta' });
+  if (a === 'goana') return go({ v: 'analisis' });
+  if (a === 'godata') return go({ v: 'data' });
+  if (['clogin', 'cdaftar', 'clogout', 'csync', 'crules'].includes(a)) return cloudAction(a);
   switch (a) {
     case 'zip': case 'zipshare': case 'ziplite': { b.disabled = true; try { const [z, name] = await zipAll(a !== 'ziplite'); await deliver(z, name, a === 'zipshare'); } catch (e) { progressEnd(); toast('Gagal menyusun paket: ' + (e.message || e)); } b.disabled = false; break; }
     case 'gpx': deliver(new Blob([gpx()], { type: 'application/gpx+xml' }), fileBase() + '.gpx'); break;
@@ -2379,7 +2491,7 @@ const THEMES = ['auto', 'light', 'dark'], THEME_LABEL = { auto: 'Otomatis', ligh
 let theme = (() => { try { return localStorage.getItem(AI_APP + '-theme') || 'auto'; } catch (e) { return 'auto'; } })();
 function applyTheme() { if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme); $('themeBtn').textContent = THEME_LABEL[theme]; }
 $('themeBtn').addEventListener('click', () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; try { localStorage.setItem(AI_APP + '-theme', theme); } catch (e) {} applyTheme(); });
-function updateNet() { $('net').textContent = navigator.onLine ? 'Online' : 'Offline'; }
+function updateNet() { if (typeof cloudPill === 'function') cloudPill(); else $('net').textContent = navigator.onLine ? 'Online' : 'Offline'; }
 window.addEventListener('online', () => { updateNet(); ailWarm(); }); window.addEventListener('offline', updateNet);
 function safeToReload() { const a = document.activeElement; return !activeSurvey() && $('progress').hidden && !(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) && view.v !== 'obs'; }
 async function manualUpdate(btn) {
@@ -3157,6 +3269,201 @@ $('app').addEventListener('click', async ev => {
   else if (a === 'ren' && m) { const n = prompt('Nama peta', m.name); if (n && n.trim()) { m.name = n.trim(); await pdbPut('maps', m.id, m); renderPetaSaya(); } }
   else if (a === 'del' && m) { if (!arm(b, 'delmap' + m.id, 'Ketuk lagi untuk menghapus')) return; await deleteMap(m.id); if (offlineId() === m.id) useOfflineMap(null); renderPetaSaya(); toast('Peta dihapus dari HP'); }
 });
+/* ================= Sinkron cloud (antar HP, laptop, dan web) =================
+   Login dengan akun yang sama seperti aplikasi Tally Sheet (proyek Firebase tally-sheet-burung). Data tiap akun
+   tersimpan privat di users/{uid}/…: survei (beserta catatan, Titik KEHATI, jalur, luasan), titik peta, daftar hapus,
+   dan foto ukuran kecil (±100 KB, maks. 1280 px) di dokumen Firestore (tanpa Firebase Storage, jadi tetap gratis).
+   Sinkron berjalan otomatis: saat login, saat aplikasi dibuka, beberapa detik setelah ada perubahan, dan saat sinyal kembali.
+   Penggabungan: survei & catatan digabung (tidak saling menimpa); untuk catatan yang sama dipakai versi survei yang
+   terakhir diubah; yang dihapus di satu perangkat ikut terhapus di perangkat lain. Foto asli tetap di HP pemotret. */
+const FB_CFG = { apiKey: 'AIzaSyAzUAs7YEhI31wGWPwE-f5aGEIAV-_F9bQ', authDomain: 'tally-sheet-burung.firebaseapp.com', projectId: 'tally-sheet-burung',
+  storageBucket: 'tally-sheet-burung.firebasestorage.app', messagingSenderId: '438211481394', appId: '1:438211481394:web:ed11c4c5eaf4ef32e4112b' };
+const FB_CDN = 'https://www.gstatic.com/firebasejs/10.14.1';
+var CLOUD_KEY = 'survei-kehati-cloud';
+const CLOUD_RULES = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Survei KEHATI: tiap akun hanya membaca/menulis datanya sendiri
+    match /users/{uid}/{koleksi}/{doc} {
+      allow read, write: if request.auth != null && request.auth.uid == uid
+        && koleksi in ['kehati_survei', 'kehati_meta', 'kehati_foto'];
+    }
+  }
+}`;
+var CLOUD = { fb: null, user: null, busy: false, timer: null, last: 0, err: '', note: '' };
+function cloudState() { try { return JSON.parse(localStorage.getItem(CLOUD_KEY) || '{}'); } catch (e) { return {}; } }
+function cloudSet(p) { try { localStorage.setItem(CLOUD_KEY, JSON.stringify(Object.assign(cloudState(), p))); } catch (e) {} }
+async function cloudSdk() {
+  if (CLOUD.fb) return CLOUD.fb;
+  const [{ initializeApp }, A, F] = await Promise.all([import(FB_CDN + '/firebase-app.js'), import(FB_CDN + '/firebase-auth.js'), import(FB_CDN + '/firebase-firestore.js')]);
+  const app = initializeApp(FB_CFG, 'kehati');
+  const auth = A.getAuth(app); try { await A.setPersistence(auth, A.browserLocalPersistence); } catch (e) {}
+  CLOUD.fb = { A, F, auth, db: F.getFirestore(app) };
+  A.onAuthStateChanged(auth, u => { CLOUD.user = u; cloudSet({ email: u ? u.email : '' }); cloudPill(); if (view.v === 'data') render(); if (u) cloudSyncSoon(500); });
+  return CLOUD.fb;
+}
+function cloudErr(e) {
+  const c = (e && e.code) || '', m = (e && e.message) || String(e);
+  if (/permission-denied|insufficient permissions/i.test(c + m)) return 'izin';
+  return { 'auth/invalid-credential': 'Email atau kata sandi salah.', 'auth/wrong-password': 'Kata sandi salah.', 'auth/user-not-found': 'Akun belum terdaftar.',
+    'auth/email-already-in-use': 'Email sudah terdaftar. Pakai Masuk.', 'auth/weak-password': 'Kata sandi minimal 6 karakter.', 'auth/invalid-email': 'Format email salah.',
+    'auth/network-request-failed': 'Tidak ada sinyal internet.', 'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi nanti.' }[c] || m;
+}
+async function cloudLogin(email, pass, daftar) {
+  const { A, F, auth, db } = await cloudSdk();
+  const cred = daftar ? await A.createUserWithEmailAndPassword(auth, email, pass) : await A.signInWithEmailAndPassword(auth, email, pass);
+  // Profil akun memakai format aplikasi Tally Sheet (admin bisa melihat dan menyetujuinya di sana).
+  try { const r = F.doc(db, 'users', cred.user.uid); if (!(await F.getDoc(r)).exists()) await F.setDoc(r, { email: cred.user.email, role: 'member', approved: false, shared: false, created_at: new Date().toISOString() }); } catch (e) {}
+  return cred.user;
+}
+async function cloudLogout() { if (!CLOUD.fb) return; await CLOUD.fb.A.signOut(CLOUD.fb.auth); CLOUD.user = null; cloudPill(); }
+function cloudPill() {
+  const el = $('net'); if (!el) return;
+  const on = navigator.onLine, u = CLOUD.user || cloudState().email;
+  el.textContent = !on ? 'Offline' : CLOUD.busy ? '☁ Sinkron…' : u && CLOUD.err ? '☁ Gagal' : u && CLOUD.last ? '☁ Tersinkron' : 'Online';
+  el.title = CLOUD.last ? 'Terakhir sinkron ' + new Date(CLOUD.last).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+}
+function cloudSyncSoon(ms = 6000) { clearTimeout(CLOUD.timer); if (!cloudState().email) return; CLOUD.timer = setTimeout(() => cloudSync(true), ms); }
+const jsonOf = x => JSON.stringify(x);
+/* Gabung survei dari cloud ke HP. Mengembalikan true bila survei lokal berubah. */
+function mergeSurvey(rs) {
+  if (!rs || !rs.id || S.deleted[rs.id]) return false;
+  const ls = S.surveys[rs.id];
+  const cleanObs = o => o && !S.deleted[o.id] && ((o._photos = (o._photos || []).filter(p => !S.deleted[p.id])), true);
+  if (!ls) { for (const [k, o] of Object.entries(rs.obs || {})) if (!cleanObs(o)) delete rs.obs[k]; S.surveys[rs.id] = rs; return true; }
+  const before = jsonOf(ls), remoteNewer = (rs.updated || 0) > (ls.updated || 0);
+  const obs = {};
+  for (const id of new Set([...Object.keys(ls.obs || {}), ...Object.keys(rs.obs || {})])) {
+    if (S.deleted[id]) continue;
+    const a = ls.obs && ls.obs[id], b = rs.obs && rs.obs[id];
+    const pick = a && b ? (remoteNewer ? b : a) : (a || b), other = pick === a ? b : a;
+    const ph = new Map(); for (const p of [...((pick && pick._photos) || []), ...((other && other._photos) || [])]) if (!S.deleted[p.id] && !ph.has(p.id)) ph.set(p.id, Object.assign({}, p, ph.get(p.id)));
+    // tanda "sudah di cloud" (c) dari salah satu sisi dipertahankan
+    for (const p of [...((a && a._photos) || []), ...((b && b._photos) || [])]) if (p.c && ph.has(p.id)) ph.get(p.id).c = 1;
+    obs[id] = Object.assign({}, pick, { _photos: [...ph.values()] });
+  }
+  if (remoteNewer) { const keep = { id: ls.id }; Object.assign(ls, rs, keep); }
+  ls.obs = obs;
+  return jsonOf(ls) !== before;
+}
+function applyDeleted() {
+  for (const id of Object.keys(S.deleted)) {
+    if (S.surveys[id]) { if (S.active === id) S.active = null; delete S.surveys[id]; }
+  }
+  for (const s of Object.values(S.surveys)) for (const [k, o] of Object.entries(s.obs)) {
+    if (S.deleted[k]) { delete s.obs[k]; continue; }
+    if ((o._photos || []).some(p => S.deleted[p.id])) o._photos = o._photos.filter(p => !S.deleted[p.id]);
+  }
+  S.titik = S.titik.filter(t => !S.deleted[t.id]);
+}
+async function smallPhoto(blob) {
+  let r = await shrink(blob, 1280, null, 0.7);
+  if (r.blob.size > 160000) r = await shrink(blob, 960, null, 0.6);
+  return await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(r.blob); });
+}
+async function cloudSync(auto) {
+  if (CLOUD.busy || !navigator.onLine) return;
+  const st = cloudState(); if (!st.email && !CLOUD.user) return;
+  CLOUD.busy = true; CLOUD.err = ''; cloudPill();
+  let up = 0, down = 0, fotoUp = 0, fotoDown = 0;
+  try {
+    const { F, auth, db } = await cloudSdk();
+    if (!auth.currentUser) await new Promise(ok => { const t = setTimeout(ok, 4000); const un = CLOUD.fb.A.onAuthStateChanged(auth, u => { if (u) { clearTimeout(t); un(); ok(); } }); });
+    const u = auth.currentUser; if (!u) { CLOUD.busy = false; cloudPill(); return; }
+    const col = n => F.collection(db, 'users', u.uid, n), ref = (n, id) => F.doc(db, 'users', u.uid, n, id);
+    // 1. Ambil daftar hapus & titik peta, lalu survei dari cloud
+    const meta = await F.getDoc(ref('kehati_meta', 'state'));
+    const before = jsonOf({ d: S.deleted, t: S.titik });
+    if (meta.exists()) {
+      const m = meta.data();
+      const rd = JSON.parse(m.deleted || '{}'); for (const [k, v] of Object.entries(rd)) if (!S.deleted[k] || S.deleted[k] < v) S.deleted[k] = v;
+      for (const t of JSON.parse(m.titik || '[]')) { if (S.deleted[t.id]) continue; const c = S.titik.find(x => x.id === t.id); if (!c) { S.titik.push(t); down++; } else if ((t.u || 0) > (c.u || 0)) Object.assign(c, t); }
+    }
+    applyDeleted();
+    const pushed = st.pushed || {};
+    const snap = await F.getDocs(col('kehati_survei'));
+    const remote = {};
+    snap.forEach(d => { try { remote[d.id] = JSON.parse(d.data().data); } catch (e) {} });
+    for (const rs of Object.values(remote)) if (mergeSurvey(rs)) down++;
+    save();
+    // 2. Kirim survei yang berubah, hapus yang dihapus
+    for (const s of Object.values(S.surveys)) {
+      const r = remote[s.id], body = jsonOf(s);
+      if (r && jsonOf(r) === body) { pushed[s.id] = s.updated || 0; continue; }
+      await F.setDoc(ref('kehati_survei', s.id), { data: body, updated: s.updated || Date.now(), nama: surveyName(s) }); pushed[s.id] = s.updated || 0; up++;
+    }
+    for (const id of Object.keys(remote)) if (S.deleted[id]) { await F.deleteDoc(ref('kehati_survei', id)); up++; }
+    const metaBody = { deleted: jsonOf(S.deleted), titik: jsonOf(S.titik), updated: Date.now() };
+    if (!meta.exists() || meta.data().deleted !== metaBody.deleted || meta.data().titik !== metaBody.titik) await F.setDoc(ref('kehati_meta', 'state'), metaBody);
+    // 3. Foto: kirim versi kecil yang belum ada di cloud, ambil yang belum ada di HP ini, hapus yang dihapus
+    let changed = false;
+    for (const s of Object.values(S.surveys)) for (const o of Object.values(s.obs)) for (const p of o._photos || []) {
+      if (p.c) continue; if (fotoUp >= 25) break;
+      const b = await pdbGet('foto', p.id).catch(() => null); if (!b) continue;
+      await F.setDoc(ref('kehati_foto', p.id), { sid: s.id, oid: o.id, data: await smallPhoto(b), t: p.t || 0 }); p.c = 1; changed = true; fotoUp++;
+      if (fotoUp % 5 === 0) cloudSet({ pushed });
+    }
+    for (const s of Object.values(S.surveys)) for (const o of Object.values(s.obs)) for (const p of o._photos || []) {
+      if (!p.c || fotoDown >= 40) continue;
+      if (await pdbGet('thumb', p.id).catch(() => null)) continue;
+      const d = await F.getDoc(ref('kehati_foto', p.id)); if (!d.exists()) continue;
+      const blob = await (await fetch(d.data().data)).blob();
+      await pdbPut('foto', p.id, blob); await pdbPut('thumb', p.id, (await shrink(blob, THUMB_MAX)).blob); p.small = 1; fotoDown++;
+    }
+    const delQ = st.delfoto || [];
+    for (const id of delQ) { try { await F.deleteDoc(ref('kehati_foto', id)); } catch (e) {} }
+    if (changed) {   // tanda foto sudah di cloud: kirim ulang survei yang berubah
+      for (const s of Object.values(S.surveys)) if ((s.obs && Object.values(s.obs).some(o => (o._photos || []).some(p => p.c))) && jsonOf(s) !== jsonOf(remote[s.id] || {})) await F.setDoc(ref('kehati_survei', s.id), { data: jsonOf(s), updated: s.updated || Date.now(), nama: surveyName(s) });
+    }
+    save();
+    CLOUD.last = Date.now(); cloudSet({ pushed, delfoto: [], last: CLOUD.last });
+    CLOUD.note = `${up} dikirim · ${down} diterima · foto ${fotoUp} dikirim, ${fotoDown} diterima`;
+    if (!auto || down || fotoDown) toast(down || fotoDown ? `Sinkron: ${down} data dan ${fotoDown} foto baru dari perangkat lain.` : 'Sinkron selesai. Data sama di semua perangkat.');
+    if (down || fotoDown) { const a = document.activeElement; if (!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) render(); }
+    else if (view.v === 'data') render();
+    if (fotoUp >= 25 || fotoDown >= 40) cloudSyncSoon(1500);   // masih ada foto: lanjut bertahap
+  } catch (e) {
+    console.warn(e); const m = cloudErr(e);
+    CLOUD.err = m === 'izin' ? 'Akses database ditolak. Aturan Firestore perlu ditambah sekali (lihat tab Data → Sinkron).' : m;
+    if (!auto || m === 'izin') toast('Sinkron gagal: ' + CLOUD.err);
+    if (view.v === 'data') render();
+  } finally { CLOUD.busy = false; cloudPill(); }
+}
+function cloudHTML() {
+  const st = cloudState(), u = CLOUD.user ? CLOUD.user.email : st.email;
+  const last = CLOUD.last || st.last;
+  const nFoto = Object.values(S.surveys).reduce((n, s) => n + Object.values(s.obs).reduce((m, o) => m + (o._photos || []).filter(p => !p.c).length, 0), 0);
+  return `<section class="section card-sync"><h2>☁️ Sinkron antar perangkat</h2>
+    ${u ? `<div class="box"><span>Masuk sebagai <b>${esc(u)}</b></span>
+        <span class="note">${last ? `Terakhir sinkron ${new Date(last).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Belum pernah sinkron'}${CLOUD.note ? ` · ${esc(CLOUD.note)}` : ''}${nFoto ? ` · ${nFoto} foto menunggu dikirim` : ''}</span>
+        ${CLOUD.err ? `<p class="note" style="color:var(--bad)"><b>${esc(CLOUD.err)}</b></p>` : ''}
+        <div class="row"><button type="button" class="btn" data-a="csync" ${CLOUD.busy ? 'disabled' : ''}>${CLOUD.busy ? 'Menyinkron…' : '🔄 Sinkron sekarang'}</button><button type="button" class="btn ghost" data-a="clogout">Keluar</button></div></div>
+        <p class="note">Data otomatis terkirim saat ada sinyal dan muncul di semua HP, laptop, dan web yang masuk dengan akun ini. Foto dikirim dalam ukuran kecil; foto asli tetap di HP pemotret.</p>`
+      : `<p class="note">Masuk dengan akun yang sama di HP, laptop, dan web. Data yang diisi di satu perangkat otomatis muncul di perangkat lain. Akun sama dengan aplikasi <b>Tally Sheet</b>.</p>
+        <div class="fields"><div class="field w"><label for="cEmail">Email</label><input type="email" id="cEmail" autocomplete="username" value="${esc(st.lastEmail || '')}"></div>
+        <div class="field w"><label for="cPass">Kata sandi</label><input type="password" id="cPass" autocomplete="current-password"></div></div>
+        <div class="row"><button type="button" class="btn" data-a="clogin">Masuk</button><button type="button" class="btn ghost" data-a="cdaftar">Daftar akun baru</button></div>
+        ${CLOUD.err ? `<p class="note" style="color:var(--bad)"><b>${esc(CLOUD.err)}</b></p>` : ''}`}
+    ${/izin|Aturan Firestore/.test(CLOUD.err) ? `<details class="legend" open><summary>Cara mengizinkan (sekali saja, oleh admin Firebase)</summary><p class="note">Buka console.firebase.google.com → proyek <b>tally-sheet-burung</b> → Firestore Database → <b>Rules</b>. Tambahkan blok di bawah ini <b>di dalam</b> <code>match /databases/{database}/documents { … }</code> yang sudah ada (aturan Tally Sheet tetap), lalu tekan <b>Publish</b>.</p><pre style="white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px">${esc(CLOUD_RULES.split('\n').slice(3, 8).join('\n'))}</pre><button type="button" class="btn ghost sm" data-a="crules">Salin aturan</button></details>` : ''}
+  </section>`;
+}
+async function cloudAction(a) {
+  if (a === 'clogin' || a === 'cdaftar') {
+    const email = ($('cEmail') || {}).value || '', pass = ($('cPass') || {}).value || '';
+    if (!email || !pass) { toast('Isi email dan kata sandi.'); return; }
+    if (!navigator.onLine) { toast('Masuk butuh sinyal internet (sekali saja).'); return; }
+    try { toast(a === 'cdaftar' ? 'Mendaftarkan akun…' : 'Masuk…'); CLOUD.err = ''; cloudSet({ lastEmail: email }); const u = await cloudLogin(email.trim(), pass, a === 'cdaftar'); CLOUD.user = u; cloudSet({ email: u.email }); render(); toast('Berhasil masuk. Menyinkron data…'); cloudSync(false); }
+    catch (e) { CLOUD.err = cloudErr(e); render(); toast(CLOUD.err); }
+  }
+  if (a === 'clogout') { await cloudLogout().catch(() => {}); cloudSet({ email: '', pushed: {}, last: 0 }); CLOUD.last = 0; CLOUD.note = ''; CLOUD.err = ''; render(); toast('Keluar dari akun. Data tetap ada di perangkat ini.'); }
+  if (a === 'csync') cloudSync(false);
+  if (a === 'crules') { try { await navigator.clipboard.writeText(CLOUD_RULES.split('\n').slice(3, 8).join('\n')); toast('Aturan disalin.'); } catch (e) { toast('Tidak bisa menyalin otomatis; salin manual dari kotak di atas.'); } }
+}
+window.addEventListener('online', () => cloudSyncSoon(1500));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - (CLOUD.last || 0) > 60000) cloudSyncSoon(800); });
+setInterval(() => { if (document.visibilityState === 'visible' && Date.now() - (CLOUD.last || 0) > 180000) cloudSyncSoon(100); }, 60000);
+if (cloudState().email && navigator.onLine) cloudSdk().catch(e => console.warn('cloud', e));
+
 /* ================= Mulai ================= */
 applyTheme(); updateNet(); inatLoadSaved(); loadMaps();
 history.replaceState(view, '');

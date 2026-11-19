@@ -1290,14 +1290,14 @@ function photoChooser() {
       + opt('satwa', 'ghost', '🐾 Hewan / tumbuhan', `catatan jenis di survei live ${esc(surveyName(live))}`)
       + opt('koleksi', 'ghost', '🗂 Hewan / tumbuhan ke Koleksi', 'terpisah dari survei')
     : opt('koleksi', '', '🐾 Hewan / tumbuhan', 'disimpan di Koleksi pengamatan')
-      + opt('titikbaru', 'ghost', '📍 Titik KEHATI (habitat)', 'titik/plot survei beserta habitatnya; memulai survei baru')}
+      + opt('titikbaru', 'ghost', '📍 Titik KEHATI (habitat)', 'titik & habitatnya, disimpan di Koleksi (tidak merekam jalur)')}
     <button type="button" class="btn ghost sm" data-to="">Batal</button></div>`;
   ch.addEventListener('click', ev => {
     const b = ev.target.closest('[data-to]'); if (!b && ev.target !== ch) return;
     ch.remove(); const to = b ? b.dataset.to : '';
     if (!to) return;
     let sv = live;
-    if (to === 'titikbaru') { sv = newSurvey(); startSurvey(sv); }
+    if (to === 'titikbaru') sv = koleksi();   // tidak memulai survei / tidak merekam jalur
     PHOTO_TO = to === 'koleksi' ? { sid: koleksi().id, oid: null } : { sid: sv.id, oid: null, titik: to === 'titik' || to === 'titikbaru' };
     askPhotoGeo(); $('camIn').click();
   });
@@ -2424,7 +2424,8 @@ function renderData() {
 function buildLabel() { return APP_BUILD.startsWith('__') ? 'versi pengembangan' : APP_BUILD; }
 async function dataAction(a, b) {
   if (a === 'quickfoto') return photoChooser();
-  if (a === 'quicktitik') { const live = activeSurvey(); let sv = live; if (!sv) { sv = newSurvey(); await startSurvey(sv); } PHOTO_TO = { sid: sv.id, oid: null, titik: true }; askPhotoGeo(); $('camIn').click(); return; }
+  // Titik KEHATI tanpa survei berjalan: disimpan di Koleksi, tidak memulai survei/merekam jalur.
+  if (a === 'quicktitik') { const sv = activeSurvey() || koleksi(); PHOTO_TO = { sid: sv.id, oid: null, titik: true }; askPhotoGeo(); $('camIn').click(); return; }
   if (a === 'stitik') { PHOTO_TO = { sid: b.dataset.sid, oid: null, titik: true }; askPhotoGeo(); $('camIn').click(); return; }
   if (a === 'gojenis') return go({ v: 'jenis' });
   if (a === 'gopeta') return go({ v: 'peta' });

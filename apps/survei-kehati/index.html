@@ -269,6 +269,102 @@ nav.tabs button[aria-current="page"] svg { background: var(--accent-soft); borde
 .basepop .ic { font-size: 20px; }
 .leaflet-popup-content-wrapper { border-radius: 14px; }
 #mapWrap .leaflet-control-scale-line { background: rgba(255,255,255,.8); border-color: #333; font-size: 10px; }
+/* ===== Desain sederhana & elegan (lapisan terakhir: menimpa gaya di atas) ===== */
+:root {
+  --bg: #f5f6f3; --surface: #ffffff; --surface-2: #eff1ec; --fg: #1a201c; --muted: #6b746e; --line: #e4e7e1;
+  --accent: #1f5f45; --accent-fg: #ffffff; --accent-soft: #e3eee8; --tide: #2a6f8c; --warn: #9a6410; --bad: #b3372f;
+  --bar: var(--bg); --bar-fg: var(--fg); --r: 16px;
+  --shadow: 0 1px 2px rgba(16, 24, 20, .04), 0 6px 20px rgba(16, 24, 20, .05);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1311; --surface: #171c19; --surface-2: #1f2521; --fg: #e8ede9; --muted: #98a39c; --line: #262d29;
+  --accent: #7fc8a3; --accent-fg: #0d1712; --accent-soft: #1d2c24; --bar: var(--bg); --bar-fg: var(--fg); --shadow: none; } }
+:root[data-theme="dark"] {
+  --bg: #0f1311; --surface: #171c19; --surface-2: #1f2521; --fg: #e8ede9; --muted: #98a39c; --line: #262d29;
+  --accent: #7fc8a3; --accent-fg: #0d1712; --accent-soft: #1d2c24; --bar: var(--bg); --bar-fg: var(--fg); --shadow: none; }
+body { font-size: 15.5px; letter-spacing: -.005em; }
+/* Bar atas terang, judul besar */
+.topbar { background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px); color: var(--fg); padding-top: calc(env(safe-area-inset-top, 0px) + 12px); padding-bottom: 10px; border-bottom: 1px solid transparent; }
+.topbar h1 { font-size: 19px; font-weight: 700; letter-spacing: -.015em; }
+.topbar .sub { color: var(--muted); opacity: 1; font-size: 12.5px; }
+.topbar .back { color: var(--accent); }
+.pill { border: 0; background: var(--surface-2); color: var(--muted); padding: 4px 10px; font-weight: 600; opacity: 1; }
+.iconbtn { border: 0; background: var(--surface-2); color: var(--muted); border-radius: 999px; width: 32px; height: 32px; padding: 0; font-size: 16px; display: grid; place-items: center; }
+.bar2 { margin: 8px -16px -10px; border-radius: 0; }
+.bar2.live { background: #a33a32; } .bar2.upd { background: var(--accent); }
+main { gap: 18px; padding-top: 6px; }
+/* Navigasi bawah */
+nav.tabs { background: color-mix(in srgb, var(--surface) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+nav.tabs button { font-size: 11.5px; font-weight: 500; }
+nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 650; }
+nav.tabs button[aria-current="page"] svg { background: var(--accent-soft); }
+/* Judul bagian: tidak lagi huruf kapital semua */
+h2 { font-size: 15px; text-transform: none; letter-spacing: -.01em; color: var(--fg); font-weight: 700; }
+.note { font-size: 13.5px; line-height: 1.5; }
+/* Kartu & daftar tanpa garis tepi */
+.list, .fields, .box, .scroll, .stat, .kcard, .scard, .tile, .mini2 { border: 0; box-shadow: var(--shadow); border-radius: var(--r); }
+.list { background: var(--surface); }
+.item { border-top: 1px solid var(--line); padding: 12px 16px; min-height: 60px; }
+.item .t { font-weight: 600; }
+.legend { background: var(--surface); border: 0; box-shadow: var(--shadow); border-radius: var(--r); padding: 12px 16px; }
+.legend summary { font-weight: 600; }
+.empty { border: 0; background: var(--surface); border-radius: var(--r); color: var(--muted); padding: 22px 16px; }
+.stats { gap: 10px; }
+.stat .v { font-family: var(--font-ui); font-weight: 750; letter-spacing: -.02em; }
+.ava { border-radius: 50%; box-shadow: none; background: var(--surface-2); width: 40px; height: 40px; font-size: 20px; }
+/* Tombol */
+.btn { border-radius: 14px; border: 0; font-weight: 650; min-height: 50px; box-shadow: none; }
+.btn.ghost { background: var(--surface-2); color: var(--fg); border: 0; }
+.btn.danger { background: transparent; color: var(--bad); border: 0; }
+.btn.danger.armed, .btn.armed { background: var(--bad); color: #fff; }
+.btn.sm { border-radius: 11px; min-height: 38px; }
+.mini { border: 0; background: var(--surface-2); color: var(--accent); border-radius: 12px; }
+/* Isian & pilihan */
+input[type=text], input[type=number], input[type=date], input[type=time], input[type=search], input[type=email], input[type=password], select, textarea { border: 1px solid transparent; background: var(--surface-2); border-radius: 12px; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field > label, .field > .lbl { font-weight: 600; font-size: 12.5px; }
+.chip { border: 0; background: var(--surface-2); min-height: 38px; padding: 7px 13px; font-weight: 500; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 650; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.seg { background: var(--surface-2); padding: 4px; border-radius: 14px; gap: 4px; }
+.seg button { border: 0; background: transparent; border-radius: 11px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.suggest { border: 0; box-shadow: 0 8px 28px rgba(0,0,0,.12); border-radius: 14px; }
+.aibox, .idhead, .dest { border: 0; background: var(--accent-soft); border-radius: 14px; }
+.photos button { border: 0; border-radius: 12px; }
+.kcard .kimg { background: var(--surface-2); }
+.fab { background: var(--accent); box-shadow: 0 8px 24px rgba(16, 60, 40, .28); }
+.toast { border-radius: 14px; font-weight: 500; }
+.chooser .cbox { border-radius: 22px; padding: 16px; gap: 10px; }
+.chooser .cbox .btn { border-radius: 14px; }
+/* Beranda sederhana */
+.greet { display: flex; flex-direction: column; gap: 4px; padding: 6px 2px 2px; }
+.greet h3 { font-size: 26px; font-weight: 750; letter-spacing: -.025em; }
+.greet .gs { color: var(--muted); font-size: 14px; }
+.cta { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; border-radius: 20px; padding: 16px 18px; background: var(--accent); color: var(--accent-fg); text-align: left; cursor: pointer; box-shadow: 0 10px 26px rgba(16, 60, 40, .18); }
+.cta.live { background: #a33a32; box-shadow: 0 10px 26px rgba(120, 30, 25, .2); }
+.cta .ci { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.16); font-size: 20px; flex: none; }
+.cta b { font-size: 17px; display: block; }
+.cta small { opacity: .85; font-size: 13px; }
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.quick button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--fg); cursor: pointer; padding: 4px 0; }
+.quick .qi { width: 56px; height: 56px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); display: grid; place-items: center; font-size: 24px; }
+.quick button:active .qi { transform: scale(.94); }
+.srow { display: flex; justify-content: space-between; align-items: baseline; }
+.srow a, .srow button.link { font-size: 13.5px; color: var(--accent); background: none; border: 0; font-weight: 600; cursor: pointer; padding: 0; }
+.scard { padding: 14px 16px; }
+.scard .em span { background: var(--surface-2); }
+.acts3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.acts3 button { border: 0; background: var(--surface); box-shadow: var(--shadow); border-radius: 16px; padding: 14px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 650; font-size: 14px; color: var(--fg); cursor: pointer; }
+.acts3 .qi { font-size: 24px; }
+/* Peta */
+.mapctl button { border: 0; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
+.mapinfo { border: 0; border-radius: 16px; box-shadow: 0 4px 18px rgba(0,0,0,.14); }
+.mapinfo .mi-tog { border: 0; background: var(--surface-2); }
+.legbar button { border: 0; background: var(--surface-2); }
+.basepop { border: 0; border-radius: 16px; }
+#mNorth { border: 0; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
+#mapWrap .leaflet-bar { border: 0; box-shadow: 0 2px 10px rgba(0,0,0,.14); border-radius: 14px; overflow: hidden; }
+#mapWrap .leaflet-bar a { border-bottom-color: var(--line); }
 </style>
 </head>
 <body>
@@ -887,21 +983,14 @@ function renderList() {
   const all = Object.values(S.surveys).flatMap(s => Object.values(s.obs));
   const nsp = new Set(all.filter(o => o.tax !== 'foto' && (o.ilmiah || o.nama)).map(o => o.tax + (o.ilmiah || o.nama).toLowerCase())).size;
   const nph = all.reduce((n, o) => n + (o._photos || []).length, 0), cu = cloudState().email;
-  const tile = (a, ic, c, t, sub, big) => `<button type="button" class="tile${big ? ' big' : ''}" style="--c:${c}" data-a="${a}"><span class="ti ic">${ic}</span><span><b>${t}</b><small>${sub}</small></span></button>`;
-  const mini = (a, ic, t) => `<button type="button" class="mini2" data-a="${a}"><span class="ic">${ic}</span>${t}</button>`;
+  const q = (a, ic, t) => `<button type="button" data-a="${a}"><span class="qi ic">${ic}</span>${t}</button>`;
   $('app').innerHTML = `
-    <div class="hero"><div><h3>${salam}${S.profile.pengamat ? ', ' + esc(S.profile.pengamat.split(' ')[0]) : ''} 👋</h3><span class="hs">${live ? `Survei <b>${esc(surveyName(live))}</b> sedang berjalan sejak ${esc(live.jamMulai)}` : 'Siap mencatat keanekaragaman hayati hari ini?'}</span></div>
-      <div class="hstats"><span>📋 ${list.length} survei</span><span>🧬 ${nsp} jenis</span><span>📷 ${nph} foto</span><span>${cu ? '☁️ tersinkron' : '📱 di HP ini'}</span></div></div>
-    <div class="tiles">
-      ${live ? tile('opensurvey" data-id="' + live.id, '●', '#b03636', 'Lanjutkan survei', esc(surveyName(live)) + ' · ' + Object.keys(live.obs).length + ' catatan', true)
-        : tile('startnew', '▶️', '#2b6a4f', 'Mulai survei', 'Tanggal, jam, dan GPS tercatat otomatis', true)}
-      ${tile('quickfoto', '📷', '#2a6f8c', 'Foto cepat', 'Hewan, tumbuhan, atau titik')}
-      ${tile('quicktitik', '🚩', '#1f7a4a', 'Titik KEHATI', 'Foto titik & habitatnya')}
-      ${tile('gojenis', '🔍', '#8a5a00', 'Kenali jenis', 'AI dari foto, 53 ribu jenis')}
-      ${tile('openkoleksi', '🗂️', '#7a4fb0', 'Koleksi saya', kol ? Object.keys(kol.obs).length + ' pengamatan' : 'Seperti iNaturalist')}
-    </div>
-    <div class="minis">${mini('gopeta', '🗺️', 'Peta')}${mini('goana', '📊', 'Analisis')}${mini('godata', '📤', 'Ekspor')}${mini('godata', '☁️', cu ? 'Sinkron' : 'Masuk')}</div>
-    <section class="section"><h2>Riwayat survei (${list.length})</h2>
+    <div class="greet"><h3>${salam}${S.profile.pengamat ? ', ' + esc(S.profile.pengamat.split(' ')[0]) : ''}</h3>
+      <span class="gs">${list.length} survei · ${nsp} jenis · ${nph} foto${cu ? ' · ☁️ tersinkron' : ''}</span></div>
+    ${live ? `<button type="button" class="cta live" data-a="opensurvey" data-id="${live.id}"><span class="ci">●</span><span><b>Lanjutkan survei</b><small>${esc(surveyName(live))} · ${Object.keys(live.obs).length} catatan</small></span></button>`
+      : `<button type="button" class="cta" data-a="startnew"><span class="ci">▶</span><span><b>Mulai survei</b><small>Tanggal, jam, dan GPS tercatat otomatis</small></span></button>`}
+    <div class="quick">${q('quickfoto', '📷', 'Foto')}${q('quicktitik', '🚩', 'Titik')}${q('gojenis', '🔍', 'Kenali')}${q('openkoleksi', '🗂️', 'Koleksi')}</div>
+    <section class="section"><div class="srow"><h2>Riwayat survei</h2>${list.length ? `<span class="note">${list.length}</span>` : ''}</div>
       ${list.length ? `<div class="stack">${list.map(s => {
         const o = Object.values(s.obs), sp = new Set(o.filter(x => x.tax !== 'foto' && (x.ilmiah || x.nama)).map(x => x.tax + (x.ilmiah || x.nama))).size;
         const isLive = live === s, a = areaOf(s).m2, em = taxSummary(s);
@@ -925,7 +1014,7 @@ function renderSurvey() {
       <span class="note">${fmtDate(s.tanggal)} · ${s.jamMulai ? `${esc(s.jamMulai)}–${live ? 'berjalan' : esc(s.jamSelesai || '?')}` : 'belum dimulai'}${dur ? ` · ${fmtDur(dur)}` : ''}${len ? ` · jalur ${fmtLen(len)}` : ''}</span>
       ${live ? '<button type="button" class="btn danger" data-a="stop">■ Selesai survei</button>' : !s.mulai ? '<button type="button" class="btn" data-a="start">▶ Mulai survei sekarang</button>' : ''}
     </div>
-    <div class="tiles" style="grid-template-columns:repeat(3,1fr)"><button type="button" class="tile" style="--c:#2a6f8c;min-height:92px" data-a="sfoto"><span class="ti ic">📷</span><b>Foto</b></button><button type="button" class="tile" style="--c:#d9822b;min-height:92px" data-a="catat"><span class="ti ic">🐦</span><b>Catat jenis</b></button><button type="button" class="tile" style="--c:#1f7a4a;min-height:92px" data-a="stitik" data-sid="${s.id}"><span class="ti ic">🚩</span><b>Titik</b></button></div>
+    <div class="acts3"><button type="button" data-a="sfoto"><span class="qi ic">📷</span>Foto</button><button type="button" data-a="catat"><span class="qi ic">🐦</span>Catat jenis</button><button type="button" data-a="stitik" data-sid="${s.id}"><span class="qi ic">🚩</span>Titik</button></div>
     <section class="section"><h2>Temuan · ${nsp} jenis · ${nind} individu</h2>
       ${obs.length ? `<div class="list">${obs.map(o => obsItemHTML(s, o)).join('')}</div>` : '<div class="empty">Belum ada temuan. Tekan <b>Catat jenis</b> atau <b>Foto</b>.</div>'}
     </section>
@@ -1883,7 +1972,7 @@ function renderAnalisis() {
   $('app').innerHTML = `
     <div class="fields no-print">
       <div class="field w"><label>Cakupan</label><select data-ana="sid"><option value="">Semua survei (${surveys.length})</option>${surveys.map(s => `<option value="${s.id}" ${ANA.sid === s.id ? 'selected' : ''}>${esc(surveyName(s))} · ${fmtDate(s.tanggal)}</option>`).join('')}</select></div>
-      <div class="field w"><span class="lbl">Taksa</span><div class="chips">${TAXA.map(x => `<button type="button" class="chip" data-anatax="${x.k}" aria-pressed="${ANA.tax === x.k}"><span class="sw" style="background:${x.c}"></span>${x.l} (${counts[x.k]})</button>`).join('')}</div></div>
+      <div class="field w"><span class="lbl">Taksa</span><div class="chips">${TAXA.map(x => `<button type="button" class="chip" data-anatax="${x.k}" aria-pressed="${ANA.tax === x.k}"><span class="ic">${TAX_IC[x.k]}</span>${x.l} (${counts[x.k]})</button>`).join('')}</div></div>
     </div>
     ${body}${sor}
     ${rows.length ? '<div class="row no-print"><button type="button" class="btn ghost" data-a="anacsv">Unduh tabel analisis (CSV)</button><button type="button" class="btn ghost" data-a="print">Cetak / PDF</button></div>' : ''}`;
@@ -1961,7 +2050,7 @@ function renderJenis() {
   $('app').innerHTML = `
     <section class="section">
       <input type="search" id="spQ" placeholder="Cari nama lokal, Indonesia, ilmiah, atau famili" value="${esc(JN.q)}" autocomplete="off">
-      <div class="chips"><button type="button" class="chip" data-jtax="" aria-pressed="${!JN.tax}">Semua</button>${TAXA.map(t => `<button type="button" class="chip" data-jtax="${t.k}" aria-pressed="${JN.tax === t.k}"><span class="sw" style="background:${t.c}"></span>${t.l}</button>`).join('')}</div>
+      <div class="chips"><button type="button" class="chip" data-jtax="" aria-pressed="${!JN.tax}">Semua</button>${TAXA.map(t => `<button type="button" class="chip" data-jtax="${t.k}" aria-pressed="${JN.tax === t.k}"><span class="ic">${TAX_IC[t.k]}</span>${t.l}</button>`).join('')}</div>
       <div class="aibox"><span><b>Identifikasi dari foto (AI di HP, seperti iNaturalist).</b> ${idReady() ? `Pilih foto satwa/tumbuhan; AI memberi saran jenis beserta persentase keyakinan${JN.tax ? ' (hanya ' + esc(taxOf(JN.tax).l.toLowerCase()) + ', sesuai saringan)' : ''}.` : 'Unduh dulu data identifikasi di tab Data (sekali, ±120 MB). Sementara itu AI hanya menebak kelompok satwa/tumbuhan.'} Penentuan akhir tetap oleh pengamat.</span>
         <div class="row"><button type="button" class="btn sm" data-a="idphoto">Pilih foto</button><button type="button" class="btn sm ghost" data-a="idcam">Ambil foto</button></div>
         ${JN.guess ? `<span>${JN.guess.map(([k, p]) => `${esc(taxOf(k).l)} ${Math.round(p * 100)}%`).join(' · ')}</span>` : ''}</div>
@@ -1984,7 +2073,7 @@ function renderJenisList() {
   $('jnCount').textContent = `${list.length.toLocaleString('id-ID')} jenis${nrec ? ` · ${nrec} sudah tercatat` : ''}${list.length > 200 ? ' · tampil 200 teratas, persempit pencarian' : ''}`;
   if (words.length && list.length < 8) inatSearch(q, renderJenisList); else INAT.res = [];
   const remote = words.length ? inatSugHTML(new Set(list.map(x => x.id)), 'list') : '';
-  $('jnList').innerHTML = (list.slice(0, 200).map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${spName(x.n, x.s)} ${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span>` : ''} ${x.p ? '<span class="tag p">Dilindungi</span>' : ''}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s || '')}</i> · ` : ''}${esc(x.f || '')}${x.en ? ' · ' + esc(x.en) : ''}</span></span>${x.rec ? `<span class="count">${x.ind}</span>` : ''}<span class="chev">›</span></button>`).join('') ) + remote || `<div class="empty">Tidak ada di daftar HP.${navigator.onLine ? '' : ' Pencarian iNaturalist butuh sinyal.'}</div>`;
+  $('jnList').innerHTML = (list.slice(0, 200).map(x => `<button type="button" class="item" data-sel="${esc(x.id)}">${avaHTML(x.tax)}<span class="main"><span class="t">${spName(x.n, x.s)} ${x.iucn && !['LC', 'DD'].includes(x.iucn) ? `<span class="tag iucn">${x.iucn}</span>` : ''} ${x.p ? '<span class="tag p">Dilindungi</span>' : ''}</span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s || '')}</i> · ` : ''}${esc(x.f || '')}${x.en ? ' · ' + esc(x.en) : ''}</span></span>${x.rec ? `<span class="count">${x.ind}</span>` : ''}<span class="chev">›</span></button>`).join('') ) + remote || `<div class="empty">Tidak ada di daftar HP.${navigator.onLine ? '' : ' Pencarian iNaturalist butuh sinyal.'}</div>`;
 }
 $('app').addEventListener('click', ev => { const b = ev.target.closest('[data-jtax]'); if (b) { JN.tax = b.dataset.jtax; renderJenis(); } });
 function renderSp() {
@@ -2490,7 +2579,7 @@ $('installBtn').addEventListener('click', doInstall);
 $('installX').addEventListener('click', () => { $('installbar').hidden = true; try { localStorage.setItem(AI_APP + '-installx', Date.now()); } catch (e) {} setTopVar(); });
 const THEMES = ['auto', 'light', 'dark'], THEME_LABEL = { auto: 'Otomatis', light: 'Terang', dark: 'Gelap' };
 let theme = (() => { try { return localStorage.getItem(AI_APP + '-theme') || 'auto'; } catch (e) { return 'auto'; } })();
-function applyTheme() { if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme); $('themeBtn').textContent = THEME_LABEL[theme]; }
+function applyTheme() { if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme); $('themeBtn').textContent = { auto: '◐', light: '☀︎', dark: '☾' }[theme]; $('themeBtn').title = 'Tema: ' + THEME_LABEL[theme]; $('themeBtn').setAttribute('aria-label', 'Ganti tema (sekarang ' + THEME_LABEL[theme] + ')'); }
 $('themeBtn').addEventListener('click', () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; try { localStorage.setItem(AI_APP + '-theme', theme); } catch (e) {} applyTheme(); });
 function updateNet() { if (typeof cloudPill === 'function') cloudPill(); else $('net').textContent = navigator.onLine ? 'Online' : 'Offline'; }
 window.addEventListener('online', () => { updateNet(); ailWarm(); }); window.addEventListener('offline', updateNet);
@@ -2748,7 +2837,7 @@ function inatSugHTML(localIds, mode) {
   if (!extra.length) return '';
   return mode === 'sug'
     ? extra.map(x => `<button type="button" data-pick="${esc(x.id)}">${spName(x.n, x.s)}${x.n !== x.s ? ` <i>${esc(x.s)}</i>` : ''} <span class="tag ai">iNaturalist · ${esc(taxOf(x.tax).l)}</span></button>`).join('')
-    : extra.map(x => `<button type="button" class="item" data-sel="${esc(x.id)}"><span class="dotc" style="background:${taxOf(x.tax).c}"></span><span class="main"><span class="t">${spName(x.n, x.s)} <span class="tag ai">iNaturalist</span></span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(taxOf(x.tax).l)}${x.ci ? ` · ${x.ci.toLocaleString('id-ID')} pengamatan di dunia` : ''}</span></span><span class="chev">›</span></button>`).join('');
+    : extra.map(x => `<button type="button" class="item" data-sel="${esc(x.id)}">${avaHTML(x.tax)}<span class="main"><span class="t">${spName(x.n, x.s)} <span class="tag ai">iNaturalist</span></span><br><span class="s">${x.n !== x.s ? `<i class="sci">${esc(x.s)}</i> · ` : ''}${esc(taxOf(x.tax).l)}${x.ci ? ` · ${x.ci.toLocaleString('id-ID')} pengamatan di dunia` : ''}</span></span><span class="chev">›</span></button>`).join('');
 }
 
 /* ================= Peta Saya: impor peta PDF/GeoTIFF/KMZ/MBTiles (seperti Avenza Maps) =================

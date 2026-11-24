@@ -14,7 +14,7 @@ const DATA = 'kehati-data';
 const MODEL = 'kehati-model';
 const MODEL_DIR = new URL('./model/', SCOPE).href;
 const DATA_DIR = new URL('./data/', SCOPE).href;
-const TILE_HOSTS = ['server.arcgisonline.com', 'tile.openstreetmap.org'];
+const TILE_HOSTS = ['server.arcgisonline.com', 'clarity.maptiles.arcgis.com', 'tile.openstreetmap.org'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));

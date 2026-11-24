@@ -1530,13 +1530,16 @@ $('viewerDel').addEventListener('click', async ev => {
 /* ================= Peta ================= */
 const MAP = { m: null, base: 'sat', layers: null, me: null, focus: null, draw: null };
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+// Bawaan: satelit + nama tempat & jalan (paling detail). "Satelit tajam" memakai Esri World Imagery (Clarity).
 const BASES = {
+  hyb: [ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra, label & jalan © Esri', 19, '🏷️', 'Satelit + nama & jalan'],
   sat: [ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra © Esri', 19, '🛰️', 'Satelit'],
-  hyb: [ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra & label © Esri', 19, '🏷️', 'Satelit + nama tempat'],
+  clr: ['https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra (Clarity) © Esri', 19, '🔎', 'Satelit tajam'],
   topo: [ESRI + 'World_Topo_Map/MapServer/tile/{z}/{y}/{x}', 'Topografi © Esri', 19, '⛰️', 'Topografi'],
   osm: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap', 19, '🛣️', 'Peta jalan'],
 };
 const LABELS_URL = ESRI + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+const ROADS_URL = ESRI + 'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
 /* Pin peta berbentuk tetes dengan ikon kelompok di dalam lingkaran putih. */
 const pinHTML = (c, ic, badge = '') => `<div class="mp" style="--c:${c}"><svg class="pinsvg" viewBox="0 0 32 42" aria-hidden="true"><path d="M16 1C7.7 1 1 7.6 1 15.8c0 10.6 13.4 24.6 14.1 25.3a1.2 1.2 0 0 0 1.8 0C17.6 40.4 31 26.4 31 15.8 31 7.6 24.3 1 16 1z" fill="${c}" stroke="#fff" stroke-width="2"/><circle cx="16" cy="15.6" r="11" fill="#fff"/></svg><span class="e">${ic}</span>${badge}</div>`;
 const pinIcon = (c, ic, badge) => L.divIcon({ className: '', html: pinHTML(c, ic, badge), iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -38] });
@@ -1550,10 +1553,10 @@ function renderMap() {
   if (!MAP.m) {
     MAP.m = L.map('map', { zoomControl: false, attributionControl: true }).setView([-2.5, 118], 5);
     L.control.zoom({ position: 'topright' }).addTo(MAP.m);
-    try { MAP.base = localStorage.getItem('survei-kehati-base') || 'sat'; } catch (e) { MAP.base = 'sat'; }
-    if (!BASES[MAP.base]) MAP.base = 'sat';
-    MAP.tile = L.tileLayer(BASES[MAP.base][0], { attribution: BASES[MAP.base][1], maxZoom: 21, maxNativeZoom: BASES[MAP.base][2] }).addTo(MAP.m);
-    MAP.labels = L.tileLayer(LABELS_URL, { maxZoom: 21, maxNativeZoom: 19, pane: 'overlayPane', opacity: .95 });
+    try { MAP.base = localStorage.getItem('survei-kehati-base') || 'hyb'; } catch (e) { MAP.base = 'hyb'; }
+    if (!BASES[MAP.base]) MAP.base = 'hyb';
+    MAP.tile = L.tileLayer(BASES[MAP.base][0], { attribution: BASES[MAP.base][1], maxZoom: 22, maxNativeZoom: BASES[MAP.base][2], detectRetina: false }).addTo(MAP.m);
+    MAP.labels = L.layerGroup([L.tileLayer(ROADS_URL, { maxZoom: 22, maxNativeZoom: 19, pane: 'overlayPane', opacity: .8 }), L.tileLayer(LABELS_URL, { maxZoom: 22, maxNativeZoom: 19, pane: 'overlayPane', opacity: .95 })]);
     if (MAP.base === 'hyb') MAP.labels.addTo(MAP.m);
     L.control.scale({ imperial: false, position: 'bottomright', maxWidth: 90 }).addTo(MAP.m);
     MAP.layers = L.layerGroup().addTo(MAP.m);

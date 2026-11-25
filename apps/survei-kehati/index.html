@@ -365,6 +365,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); backgro
 #mNorth { border: 0; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
 #mapWrap .leaflet-bar { border: 0; box-shadow: 0 2px 10px rgba(0,0,0,.14); border-radius: 14px; overflow: hidden; }
 #mapWrap .leaflet-bar a { border-bottom-color: var(--line); }
+/* Hemat baterai: tanpa efek blur dan animasi */
+html.hemat .topbar { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--bg); }
+html.hemat nav.tabs { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--surface); }
+html.hemat * { animation: none !important; transition: none !important; }
 </style>
 </head>
 <body>
@@ -832,6 +836,16 @@ const AI_APP = 'survei-kehati';
 function blank() { return { v: 1, profile: { pengamat: '' }, surveys: {}, active: null, deleted: {}, titik: [] }; }
 function load() { try { const r = localStorage.getItem(KEY); if (r) return Object.assign(blank(), JSON.parse(r)); } catch (e) {} return blank(); }
 let S = load();
+/* ===== Hemat baterai (bawaan: nyala) =====
+   Saat nyala: layar tidak dipaksa menyala selama survei (kecuali dipilih), titik jalur GPS disimpan & digambar
+   bertahap, sinkron cloud saat survei berjalan paling sering tiap 3 menit, GPS peta memakai posisi yang sedikit
+   lebih lama, tanpa efek blur/animasi. Otomatis dinyalakan bila baterai < 20% dan tidak sedang diisi. */
+const PWR_KEY = 'survei-kehati-hemat', AWAKE_KEY = 'survei-kehati-awake';
+function hemat() { try { return localStorage.getItem(PWR_KEY) !== '0'; } catch (e) { return true; } }
+function awakeOn() { try { return localStorage.getItem(AWAKE_KEY) === '1'; } catch (e) { return false; } }
+function applyPower() { document.documentElement.classList.toggle('hemat', hemat()); }
+applyPower();
+try { navigator.getBattery && navigator.getBattery().then(b => { const chk = () => { if (b.level < 0.2 && !b.charging && !hemat()) { try { localStorage.setItem(PWR_KEY, '1'); } catch (e) {} applyPower(); toast('Baterai di bawah 20%: mode hemat baterai dinyalakan.'); } }; chk(); b.addEventListener('levelchange', chk); b.addEventListener('chargingchange', chk); }).catch(() => {}); } catch (e) {}
 let saveTimer = null;
 function save() { clearTimeout(saveTimer); if (CLOUD && !CLOUD.busy) cloudSyncSoon(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Gagal menyimpan: memori browser penuh. Ekspor data lalu hapus survei lama.'); } }
 function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
@@ -1151,6 +1165,8 @@ $('app').addEventListener('change', ev => {
   // Tampilan diperbarui sedikit tertunda agar ketukan tombol yang memicu 'change' (blur) tidak hilang.
   if (['lebarTransek', 'tanggal', 'jamMulai', 'jamSelesai'].includes(el.dataset.s)) { save(); const v0 = view; setTimeout(() => { if (view === v0) render(); }, 350); }
   if (el.id === 'aiAuto') { try { localStorage.setItem(AI_APP + '-ai-auto', el.checked ? '1' : '0'); } catch (e) {} }
+  if (el.id === 'pwrHemat') { try { localStorage.setItem(PWR_KEY, el.checked ? '1' : '0'); } catch (e) {} applyPower(); toast(el.checked ? 'Mode hemat baterai nyala.' : 'Mode hemat baterai mati.'); }
+  if (el.id === 'pwrAwake') { try { localStorage.setItem(AWAKE_KEY, el.checked ? '1' : '0'); } catch (e) {} if (el.checked && activeSurvey()) keepAwake(); else releaseAwake(); toast(el.checked ? 'Layar tetap menyala selama survei.' : 'Layar boleh mati sendiri (hemat baterai).'); }
   if (el.id === 'wmOn') { try { localStorage.setItem(AI_APP + '-watermark', el.checked ? '1' : '0'); } catch (e) {} }
   if (el.dataset.ana) { ANA[el.dataset.ana] = el.value; render(); }
 });
@@ -1252,6 +1268,8 @@ async function getGPS(s, o, btn) {
 }
 async function autoGPS(s, o) { if (o.lat != null) return; const c = roundC(await getPos()); if (c && s.obs[o.id] && o.lat == null) { Object.assign(o, c); touch(s); if (view.v === 'obs' && view.id === o.id) render(); } }
 let trkWatch = null, wakeLock = null;
+const TRK = { saved: 0, drawn: 0, txt: 0 };
+document.addEventListener('visibilitychange', () => { if (document.hidden && activeSurvey()) save(); });
 const TRK_MAX_ACC = 30, TRK_MIN_STEP = 4;
 function startTrack(s) {
   if (!s || !s.trackOn || trkWatch != null || !navigator.geolocation) return;
@@ -1260,18 +1278,24 @@ function startTrack(s) {
     const c = p.coords; LAST_POS = c;
     if (c.accuracy > TRK_MAX_ACC) return;
     const pt = [+c.latitude.toFixed(7), +c.longitude.toFixed(7), nowS()], last = cur.track[cur.track.length - 1];
-    if (last && hav(last, pt) < TRK_MIN_STEP) return;
-    cur.track.push(pt); touch(cur); refreshLive(); if (view.v === 'peta') drawSurveyLayers();
-  }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+    if (last && hav(last, pt) < (hemat() ? 8 : TRK_MIN_STEP)) return;
+    cur.track.push(pt); cur.updated = Date.now();
+    // Simpan, gambar ulang peta, dan perbarui teks secara bertahap (bukan tiap titik) agar hemat baterai.
+    const now = Date.now(), gap = hemat() ? 30000 : 10000;
+    if (now - TRK.saved > gap) { TRK.saved = now; save(); }
+    if (view.v === 'peta' && now - TRK.drawn > (hemat() ? 15000 : 5000)) { TRK.drawn = now; drawSurveyLayers(); }
+    if (now - TRK.txt > 5000) { TRK.txt = now; refreshLive(); }
+  }, () => {}, { enableHighAccuracy: true, maximumAge: hemat() ? 10000 : 5000, timeout: 30000 });
 }
 function stopTrack() { if (trkWatch != null) { navigator.geolocation.clearWatch(trkWatch); trkWatch = null; } }
-async function keepAwake() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+async function keepAwake() { if (!awakeOn()) return; try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) {} }
 function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && activeSurvey()) { keepAwake(); startTrack(activeSurvey()); } });
 function refreshLive() {
-  const s = activeSurvey(); $('livebar').hidden = !s || (view.v === 'survey' && view.id === s.id);
+  const s = activeSurvey(), hide = !s || (view.v === 'survey' && view.id === s.id), changed = $('livebar').hidden !== hide;
+  $('livebar').hidden = hide;
   if (s) $('liveOpen').textContent = `● ${surveyName(s)} · mulai ${s.jamMulai}${s.trackOn ? ` · jalur ${fmtLen(pathLen(s.track))}` : ''}`;
-  setTopVar();
+  if (changed || !refreshLive.done) { refreshLive.done = true; setTopVar(); }
 }
 $('liveOpen').addEventListener('click', () => { const s = activeSurvey(); if (s) go({ v: 'survey', id: s.id }); });
 $('liveStop').addEventListener('click', () => { const s = activeSurvey(); if (s) stopSurvey(s); });
@@ -1555,7 +1579,7 @@ function renderMap() {
     L.control.zoom({ position: 'topright' }).addTo(MAP.m);
     try { MAP.base = localStorage.getItem('survei-kehati-base') || 'hyb'; } catch (e) { MAP.base = 'hyb'; }
     if (!BASES[MAP.base]) MAP.base = 'hyb';
-    MAP.tile = L.tileLayer(BASES[MAP.base][0], { attribution: BASES[MAP.base][1], maxZoom: 22, maxNativeZoom: BASES[MAP.base][2], detectRetina: false }).addTo(MAP.m);
+    MAP.tile = L.tileLayer(BASES[MAP.base][0], { attribution: BASES[MAP.base][1], maxZoom: 22, maxNativeZoom: BASES[MAP.base][2], detectRetina: false, updateWhenZooming: false, keepBuffer: hemat() ? 1 : 2 }).addTo(MAP.m);
     MAP.labels = L.layerGroup([L.tileLayer(ROADS_URL, { maxZoom: 22, maxNativeZoom: 19, pane: 'overlayPane', opacity: .8 }), L.tileLayer(LABELS_URL, { maxZoom: 22, maxNativeZoom: 19, pane: 'overlayPane', opacity: .95 })]);
     if (MAP.base === 'hyb') MAP.labels.addTo(MAP.m);
     L.control.scale({ imperial: false, position: 'bottomright', maxWidth: 90 }).addTo(MAP.m);
@@ -1718,8 +1742,10 @@ function showMe(c) {
   if (!MAP.acc) MAP.acc = L.circle(ll, { radius: c.accuracy, color: '#2a7fff', weight: 1, fillOpacity: .12, interactive: false }).addTo(MAP.m); else MAP.acc.setLatLng(ll).setRadius(c.accuracy);
   if (MAP.goLine && MAP.goT) MAP.goLine.setLatLngs([ll, [MAP.goT.lat, MAP.goT.lon]]);
 }
+// GPS peta berhenti saat aplikasi tidak tampil (layar mati / pindah aplikasi) dan lanjut saat dibuka lagi.
+document.addEventListener('visibilitychange', () => { if (document.hidden) mapWatchSet(false); else if (view.v === 'peta') mapWatchSet(true); });
 function mapWatchSet(on) {
-  if (on && mapWatch == null && navigator.geolocation) mapWatch = navigator.geolocation.watchPosition(p => { LAST_POS = p.coords; showMe(p.coords); }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  if (on && mapWatch == null && navigator.geolocation) mapWatch = navigator.geolocation.watchPosition(p => { LAST_POS = p.coords; showMe(p.coords); }, () => {}, { enableHighAccuracy: true, maximumAge: hemat() ? 15000 : 5000, timeout: 30000 });
   if (!on && mapWatch != null) { navigator.geolocation.clearWatch(mapWatch); mapWatch = null; }
 }
 /* Kompas & navigasi: kompas + inklinometer, deklinasi WMM, matahari/bulan, format koordinat. */
@@ -2489,6 +2515,12 @@ function renderData() {
   setTitle('Data & pengaturan', buildLabel());
   const n = Object.values(S.surveys).reduce((a, s) => a + Object.keys(s.obs).length, 0), q = aiQueue().length;
   $('app').innerHTML = `${cloudHTML()}
+    <section class="section"><h2>🔋 Baterai</h2><div class="box">
+      <label class="check"><input type="checkbox" id="pwrHemat" ${hemat() ? 'checked' : ''}>Mode hemat baterai</label>
+      <span class="note">Jalur GPS disimpan & digambar bertahap, sinkron cloud dijarangkan saat survei, GPS peta berhenti saat layar mati, tanpa efek animasi. Disarankan selalu nyala.</span>
+      <label class="check"><input type="checkbox" id="pwrAwake" ${awakeOn() ? 'checked' : ''}>Layar tetap menyala selama survei</label>
+      <span class="note">Nyalakan bila jalur GPS harus lengkap tanpa putus (browser menghentikan GPS saat layar mati), tetapi baterai jauh lebih boros. Tips lain: pakai tema gelap, kurangi kecerahan layar, dan unduh peta offline sebelum ke lapangan.</span>
+    </div></section>
     <section class="section"><h2>Pengamat</h2><div class="fields"><div class="field w"><label>Nama pengamat utama</label><input type="text" data-prof="pengamat" value="${esc(S.profile.pengamat)}" placeholder="dipakai otomatis di survei baru"></div></div></section>
     <section class="section"><h2>Ekspor data</h2>
       <p class="note">${Object.keys(S.surveys).length} survei · ${n} catatan. Paket berisi CSV (buka di Excel/Google Sheets): survei, pengamatan, analisis indeks, analisis jenis, INP vegetasi; peta GeoJSON & KML (QGIS, Google Earth); cadangan .json; dan semua foto.</p>
@@ -3429,7 +3461,12 @@ function cloudPill() {
   el.textContent = !on ? 'Offline' : CLOUD.busy ? '☁ Sinkron…' : u && CLOUD.err ? '☁ Gagal' : u && CLOUD.last ? '☁ Tersinkron' : 'Online';
   el.title = CLOUD.last ? 'Terakhir sinkron ' + new Date(CLOUD.last).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 }
-function cloudSyncSoon(ms = 6000) { clearTimeout(CLOUD.timer); if (!cloudState().email) return; CLOUD.timer = setTimeout(() => cloudSync(true), ms); }
+function cloudSyncSoon(ms = 6000) {
+  clearTimeout(CLOUD.timer); if (!cloudState().email) return;
+  // Saat survei berjalan, data berubah tiap beberapa detik (jalur GPS): sinkron dijarangkan agar hemat baterai & kuota.
+  if (typeof activeSurvey === 'function' && activeSurvey() && CLOUD.last) ms = Math.max(ms, CLOUD.last + (hemat() ? 180000 : 60000) - Date.now());
+  CLOUD.timer = setTimeout(() => cloudSync(true), ms);
+}
 const jsonOf = x => JSON.stringify(x);
 /* Gabung survei dari cloud ke HP. Mengembalikan true bila survei lokal berubah. */
 function mergeSurvey(rs) {

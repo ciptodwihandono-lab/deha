@@ -812,6 +812,12 @@ function loadSpeciesData() {
     }
     SP_META.loaded = true; SP_META.total = SPECIES.length;
     spApplyAlias();
+    // Catatan lama yang namanya diketik bebas tetapi sama persis dengan nama/alias di daftar jenis: kenali otomatis.
+    try { let fixed = 0; for (const sv of Object.values(S.surveys)) for (const o of Object.values(sv.obs)) {
+      if (o.tax !== 'foto' || o.titik || !o.nama || o.sp) continue;
+      const nm = o.nama.trim().toLowerCase(), hit = spFind(o.nama, '', 30).find(x => [x.n, x.s, x.en, ...String(x.al || '').split(',')].some(v => v && v.trim().toLowerCase() === nm));
+      if (hit) { pickSpecies(o, hit); if (o.jumlah === '') o.jumlah = 1; sv.updated = Date.now(); fixed++; }
+    } if (fixed) { save(); setTimeout(() => toast(`${fixed} catatan yang diketik bebas kini dikenali jenisnya.`), 800); } } catch (e) { console.warn(e); }
     if (added) { for (const x of SPECIES) x._q = `${x.n} ${x.s} ${x.f} ${x.en || ''} ${x.al || ''}`.toLowerCase(); if (view.v === 'jenis') renderJenis(); }
     return added;
   })();
@@ -1273,7 +1279,12 @@ $('app').addEventListener('click', async ev => {
     case 'ksatwa': o.titik = false; touch(s); save(); render(); break;
     case 'titiknext': { save(); const no = newObs(s, 'foto', { titik: true, jumlah: '', stasiun: nextTitik(s), hab: [...asList(o.hab)] }); autoGPS(s, no); go({ v: 'obs', sid: s.id, id: no.id }, true); toast(`${no.stasiun} dibuat. Ambil foto titiknya.`); break; }
     case 'obsdone': case 'obsnext': {
-      if (o.nama && !o.sp && o.tax === 'foto') { OBS_DETAIL = true; render(); toast('Jenis diketik bebas: pilih kelompoknya (burung, mamalia, …) di Detail lainnya.'); return; }
+      if (o.nama && !o.sp && o.tax === 'foto' && !o.titik) {
+        // Nama yang diketik sama dengan nama/alias/nama ilmiah di daftar jenis: kenali otomatis.
+        const nm = o.nama.trim().toLowerCase(), hit = spFind(o.nama, hintTax(o), 30).find(x => [x.n, x.s, x.en, ...String(x.al || '').split(',')].some(v => v && v.trim().toLowerCase() === nm));
+        if (hit) { pickSpecies(o, hit); if (o.jumlah === '') o.jumlah = 1; touch(s); toast(`Dikenali: ${hit.n} (${hit.s})`); }
+        else { OBS_DETAIL = true; render(); toast('Jenis diketik bebas: pilih kelompoknya (burung, mamalia, …) di Detail lainnya.'); return; }
+      }
       if (!o.titik && !o.nama && !o.stasiun && !(o._photos || []).length && o.tax === 'foto') { delete s.obs[o.id]; touch(s); }   // catatan kosong tidak disimpan
       save();
       if (a === 'obsdone') { history.back(); break; }
@@ -2039,9 +2050,14 @@ function sorensen(a, b) { const A = new Set(a), B = new Set(b); let c = 0; A.for
 function renderAnalisis() {
   setTitle('Analisis', ANA.sid && S.surveys[ANA.sid] ? surveyName(S.surveys[ANA.sid]) : 'Semua survei');
   const surveys = surveysSorted();
-  const rows = anaObs(ANA.sid, ANA.tax), t = TAX[ANA.tax];
   const counts = Object.fromEntries(TAXA.map(x => [x.k, anaObs(ANA.sid, x.k).length]));
+  // Buka kelompok yang ada datanya (mis. hanya mamalia tercatat), kecuali pengguna sudah memilih sendiri.
+  if (!ANA.userTax && !counts[ANA.tax]) { const best = TAXA.map(x => x.k).sort((a, b) => counts[b] - counts[a])[0]; if (counts[best]) ANA.tax = best; }
+  const rows = anaObs(ANA.sid, ANA.tax), t = TAX[ANA.tax];
+  const scopeS = ANA.sid ? [S.surveys[ANA.sid]].filter(Boolean) : Object.values(S.surveys);
+  const nBebas = scopeS.reduce((n, s) => n + Object.values(s.obs).filter(o => o.tax === 'foto' && !o.titik && o.nama).length, 0);
   let body = '';
+  const bebasNote = nBebas ? `<p class="note" style="color:var(--warn)">⚠️ ${nBebas} catatan bernama jenis belum dikelompokkan (diketik bebas, belum dipilih dari daftar) sehingga belum dihitung. Buka catatannya lalu pilih jenis dari saran atau pilih kelompoknya di "Detail lainnya".</p>` : '';
   if (!rows.length) body = `<div class="empty">Belum ada catatan ${esc(t.l.toLowerCase())} bernama jenis${ANA.sid ? ' di survei ini' : ''}.</div>`;
   else if (ANA.tax === 'tumbuhan') body = vegHTML(rows) + faunaHTML(faunaStats(rows), 'Seluruh tingkat');
   else body = faunaHTML(faunaStats(rows));
@@ -2053,7 +2069,7 @@ function renderAnalisis() {
       <div class="field w"><label>Cakupan</label><select data-ana="sid"><option value="">Semua survei (${surveys.length})</option>${surveys.map(s => `<option value="${s.id}" ${ANA.sid === s.id ? 'selected' : ''}>${esc(surveyName(s))} · ${fmtDate(s.tanggal)}</option>`).join('')}</select></div>
       <div class="field w"><span class="lbl">Taksa</span><div class="chips">${TAXA.map(x => `<button type="button" class="chip" data-anatax="${x.k}" aria-pressed="${ANA.tax === x.k}"><span class="ic">${TAX_IC[x.k]}</span>${x.l} (${counts[x.k]})</button>`).join('')}</div></div>
     </div>
-    ${body}${sor}
+    ${bebasNote}${body}${sor}
     ${rows.length ? '<div class="row no-print"><button type="button" class="btn ghost" data-a="anacsv">Unduh tabel analisis (CSV)</button><button type="button" class="btn ghost" data-a="print">Cetak / PDF</button></div>' : ''}`;
 }
 function faunaHTML(st, title) {
@@ -2091,7 +2107,7 @@ function vegHTML(rows) {
   </section>`;
 }
 $('app').addEventListener('click', ev => {
-  const b = ev.target.closest('[data-anatax]'); if (b) { ANA.tax = b.dataset.anatax; render(); }
+  const b = ev.target.closest('[data-anatax]'); if (b) { ANA.tax = b.dataset.anatax; ANA.userTax = true; render(); }
 });
 $('app').addEventListener('change', ev => {
   const el = ev.target; if (el.dataset.plot) { S.profile.plot = Object.assign(plotSides(), { [el.dataset.plot]: Math.max(0.5, num(el.value) || PLOT_DEF[el.dataset.plot]) }); save(); render(); }

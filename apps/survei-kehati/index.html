@@ -811,13 +811,63 @@ function loadSpeciesData() {
       }
     }
     SP_META.loaded = true; SP_META.total = SPECIES.length;
-    if (added) { for (const x of SPECIES) x._q = `${x.n} ${x.s} ${x.f} ${x.en || ''}`.toLowerCase(); if (view.v === 'jenis') renderJenis(); }
+    spApplyAlias();
+    if (added) { for (const x of SPECIES) x._q = `${x.n} ${x.s} ${x.f} ${x.en || ''} ${x.al || ''}`.toLowerCase(); if (view.v === 'jenis') renderJenis(); }
     return added;
   })();
   return spLoadP;
 }
 const spPop = x => (x.c || 0) + 3 * (x.ci || 0);
-const spText = x => x._q || (x._q = `${x.n} ${x.s} ${x.f} ${x.en || ''}`.toLowerCase());
+/* Nama Indonesia & nama lokal (alias) primata yang sering dicari tetapi tidak ada/kurang lengkap di data GBIF/iNat,
+   serta catatan primata yang bukan dari Indonesia atau salah ketik di sumber data (disembunyikan dari pencarian). */
+const SP_ALIAS = {
+  'Trachypithecus auratus': ['Lutung jawa', 'lutung budeng, budeng, lutung hitam, javan langur'],
+  'Trachypithecus mauritius': ['Lutung jawa barat', 'lutung budeng barat'],
+  'Trachypithecus cristatus': ['Lutung kelabu', 'lutung perak, silvery lutung'],
+  'Trachypithecus obscurus': ['Lutung kacamata', 'lutung dusky'],
+  'Presbytis rubicunda': ['Lutung merah', 'kelasi, lutung kelasi'],
+  'Presbytis melalophos': ['Simpai', 'lutung simpai, surili sumatra'],
+  'Presbytis sumatrana': ['Simpai hitam', 'lutung simpai hitam'],
+  'Presbytis mitrata': ['Simpai mitrata', 'lutung simpai'],
+  'Presbytis bicolor': ['Simpai dua warna', 'lutung simpai'],
+  'Presbytis percura': ['Simpai Riau', 'lutung simpai, surili riau'],
+  'Presbytis thomasi': ['Kedih', 'rungka, lutung kedih, lutung thomas'],
+  'Presbytis comata': ['Surili jawa', 'surili, lutung surili'],
+  'Presbytis potenziani': ['Lutung Mentawai', 'joja, surili mentawai'],
+  'Presbytis siberu': ['Lutung Siberut', 'joja siberut, surili siberut'],
+  'Presbytis femoralis': ['Lutung kokah', 'kokah, surili belang'],
+  'Presbytis frontata': ['Lutung dahi putih', 'surili dahi putih'],
+  'Presbytis siamensis': ['Surili paha putih', 'lutung paha putih, kokah'],
+  'Presbytis natunae': ['Kekah', 'lutung natuna, surili natuna'],
+  'Presbytis canicrus': ['Lutung kelabu Kutai', 'lutung banggat kutai'],
+  'Presbytis hosei': ['Lutung banggat', 'surili kelabu kalimantan'],
+  'Presbytis chrysomelas': ['Lutung bunga', 'surili sarawak'],
+  'Simias concolor': ['Simakobu', 'lutung ekor babi, lutung mentawai hidung pesek'],
+  'Nasalis larvatus': ['Bekantan', 'monyet belanda, kera hidung panjang'],
+  'Symphalangus syndactylus': ['Siamang', 'owa siamang, ungko besar'],
+  'Hylobates muelleri': ['Owa kalimantan', 'kelempiau, owa abu-abu'],
+  'Hylobates moloch': ['Owa jawa', 'owa abu-abu, wau-wau'],
+  'Tarsius spectrumgurskyae': ['Tarsius', 'tangkasi, binatang hantu, singapuar'],
+  'Tarsius tarsier': ['Tarsius Selayar', 'tangkasi, binatang hantu'],
+  'Cephalopachus bancanus': ['Mentilin', 'tarsius barat, kera hantu'],
+  'Nycticebus hilleri': ['Kukang sumatra', 'malu-malu'],
+  'Nycticebus borneanus': ['Kukang kalimantan', 'malu-malu'],
+  'Nycticebus menagensis': ['Kukang filipina', 'malu-malu'],
+};
+const SP_HIDE = new Set(['Semnopithecus entellus', 'Semnopithecus vetulus', 'Trachypithecus germaini', 'Trachypithecus barbei', 'Rhinopithecus roxellana',
+  'Macaca mulatta', 'Macaca fuscata', 'Macaca sinica', 'Macaca leonina', 'Macaca arctoides', 'Hoolock hoolock', 'Hylobates pileatus', 'Loris tardigradus',
+  'Carlito syrichta', 'Homo sapiens', 'Homo erectus', 'Presbytis potenziarti', 'Presbytis cornata', 'Macaco nemestrina', 'Tarsius tarsius']);
+function spApplyAlias() {
+  for (let i = SPECIES.length - 1; i >= 0; i--) {
+    const x = SPECIES[i];
+    if (x.tax === 'mamalia' && SP_HIDE.has(x.s)) { SPECIES.splice(i, 1); continue; }
+    const a = SP_ALIAS[x.s]; if (!a) continue;
+    // Belum ada nama Indonesia (nama = nama ilmiah atau nama Inggris): pakai nama Indonesia dari daftar alias.
+    if (!x.n || x.n === x.s || (x.en && x.n === x.en) || /\b(langur|surili|monkey|gibbon|tarsier|loris|macaque)\b/i.test(x.n)) { if (x.n && x.n !== x.s) x.en = x.en || x.n; x.n = a[0]; }
+    x.al = a.join(', '); x._q = '';
+  }
+}
+const spText = x => x._q || (x._q = `${x.n} ${x.s} ${x.f} ${x.en || ''} ${x.al || ''}`.toLowerCase());
 /* Pencarian: semua kata harus cocok; urutan: kelompok yang sedang dicatat, awal nama cocok, jenis yang paling sering tercatat. */
 function spFind(q, tax, limit) {
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);

@@ -3718,8 +3718,14 @@ const CEMARA_KEY = 'survei-cemara-v1';
 const CEM_PRIM = { TC: 'Trachypithecus cristatus', MF: 'Macaca fascicularis' };
 const CEM_AKT = { MK: 'Makan', BG: 'Bergerak', IS: 'Istirahat', SO: 'Sosial', MM: 'Makan', TB: 'Terbang', DM: 'Diam', BS: 'Bersuara' };
 const CEM_KEL = { BU: 'burung', MA: 'mamalia', RE: 'reptil', AM: 'amfibi', KC: 'kupu', TU: 'tumbuhan', LN: 'lain' };
-const CEM_FORM = { B1: ['hitung', 'burung', 'Burung pantai'], F2: ['jumpa', 'mamalia', 'Primata'], F3: [null, 'reptil', 'Herpetofauna & buaya'], E2: ['ikan', 'ikan', 'Ikan'],
-  F4: ['serangga', 'serangga', 'Serangga'], E1: ['foto', 'tumbuhan', 'Tumbuhan'], G1: ['jumpa', null, 'KEHATI sekitar desa'] };
+const CEM_FORM = { A: 'Sesi survei', B1: 'Burung pantai', B2: 'Gangguan & persinggahan', C1: 'Ipomoea & garis pantai', C2: 'Temuan ancaman',
+  D1: 'Stasiun & parameter air', D2: 'Kuadrat epifauna', E1: 'Tumbuhan', E2: 'Ikan', F1: 'Kamera jebak', F2: 'Primata', F3: 'Herpetofauna & buaya', F4: 'Serangga', G1: 'KEHATI sekitar desa' };
+const CEM_LBL = { ganggu: { MN: 'Manusia berjalan', PR: 'Perahu', JR: 'Jaring', AJ: 'Anjing', LN: 'Lainnya' }, respon: { 0: 'tidak ada', 1: 'waspada', 2: 'berpindah dekat', 3: 'terbang meninggalkan area' },
+  ancaman: { SM: 'Sampah', TI: 'Tangkapan/alat tangkap ikan', PB: 'Perburuan burung' }, garis: { AB: 'Abrasi', AK: 'Akresi', ST: 'Stabil' },
+  substrat: { LM: 'lumpur', LP: 'lumpur berpasir', PS: 'pasir' }, tipeSt: { B: 'area mencari makan burung', P: 'pembanding', L: 'titik lama' },
+  pasang: { PN: 'pasang naik', PT: 'pasang tertinggi', MS: 'menuju surut', ST: 'surut' } };
+const CEM_HAB = { LM: 'MF', LP: 'MF', PS: 'PP' };
+const CEM_V = 'v2';
 function cemCoord(v) { const m = String(v || '').match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)(?:[^\d]+(\d+))?/); return m ? { lat: +m[1], lon: +m[2], acc: m[3] ? +m[3] : null } : null; }
 function cemSpecies(text, tax) {
   const raw = String(text || '').trim(); if (!raw) return null;
@@ -3728,47 +3734,95 @@ function cemSpecies(text, tax) {
   const hit = SPECIES.find(x => x.s.toLowerCase() === q) || SPECIES.find(x => (!tax || x.tax === tax) && [x.n, x.en, ...String(x.al || '').split(',')].some(v => v && v.trim().toLowerCase() === nm.trim().toLowerCase()));
   return { nama: hit ? hit.n : nm.trim(), ilmiah: hit ? hit.s : (sci || '').trim(), hit };
 }
+const cemAvg = (...v) => { const n = v.map(x => parseFloat(String(x).replace(',', '.'))).filter(x => isFinite(x)); return n.length ? +(n.reduce((a, b) => a + b, 0) / n.length).toFixed(2) : null; };
+/* Satu lembar Cemara -> satu survei KEHATI. Temuan jenis menjadi catatan jenis; data lain (stasiun, parameter air,
+   plot Ipomoea, garis pantai, ancaman, gangguan, sesi, kamera) menjadi Titik KEHATI dengan rincian di catatan. */
 function cemaraBridge(given) {
   let C = given; if (!C) { try { C = JSON.parse(localStorage.getItem(CEMARA_KEY) || 'null'); } catch (e) { C = null; } }
   if (!C || !C.entries) return 0;
   let n = 0;
   for (const e of Object.values(C.entries)) {
-    const cf = CEM_FORM[e.form]; if (!cf) continue;
+    const title = CEM_FORM[e.form]; if (!title) continue;
     const id = 'cemara-' + e.id; if (S.deleted[id]) continue;
-    const old = S.surveys[id]; if (old && old.srcUpdated === (e.updated || e.created)) continue;
-    const h = e.header || {}, obs = {};
-    const tables = cf[0] ? [[cf[0], cf[1]]] : [['ves', 'reptil'], ['buaya', 'reptil']];
+    const stamp = (e.updated || e.created) + ':' + CEM_V, old = S.surveys[id]; if (old && old.srcUpdated === stamp) continue;
+    const h = e.header || {}, T = e.tables || {}, obs = {}, track = [];
     let tgl = h.tanggal || h.tglPasang || '';
-    for (const [tid, tax0] of tables) for (const r of (e.tables || {})[tid] || []) {
-      let tax = tax0, sp;
-      if (e.form === 'F2') sp = CEM_PRIM[r.jenis] ? { nama: '', ilmiah: CEM_PRIM[r.jenis] } : null;
-      else if (tid === 'buaya') sp = { nama: 'Buaya muara', ilmiah: 'Crocodylus porosus' };
-      else if (e.form === 'E2') sp = cemSpecies(r.ilmiah ? `${r.lokal || ''} — ${r.ilmiah}` : r.lokal, 'ikan');
-      else if (e.form === 'E1') sp = cemSpecies(r.kode, 'tumbuhan');
-      else { if (e.form === 'G1') tax = CEM_KEL[r.kelompok] || 'lain'; sp = cemSpecies(r.jenis, tax); }
-      if (!sp) continue;
-      const x = SPECIES.find(y => y.s === sp.ilmiah) || sp.hit;
-      if (x) tax = x.tax; else if (tid === 've' || tid === 'ves') tax = 'foto';
-      const c = cemCoord(r.koordinat) || cemCoord(h.koordinat);
-      const jml = +(r.total || r.jumlah || 0) || (e.form === 'E1' ? '' : 1);
-      const oid = 'c' + (r._id || rid());
-      const tt = r.tanggal || tgl; if (!tgl && tt) tgl = tt;
-      const t = Math.round(new Date(`${tt || isoDate()}T${r.jam || '00:00'}`).getTime() / 1000) || nowS();
-      obs[oid] = { id: oid, tax: x ? x.tax : tax, sp: x ? x.id : '', nama: x ? x.n : (sp.nama || sp.ilmiah), ilmiah: x ? x.s : sp.ilmiah, famili: x ? x.f : '',
-        jumlah: jml, det: [], akt: asList(r.aktivitas).map(k => CEM_AKT[k] || k), waktu: r.jam || '', t, lat: c ? c.lat : null, lon: c ? c.lon : null, acc: c ? c.acc : null,
-        hab: [], stasiun: r.sektor || r.kodeTitik || r.lokasiTangkap || '', catatan: [r.catatan, r.minimum === 'Y' ? 'jumlah perkiraan minimum' : '', ['jd', 'bd', 'rmj', 'anak'].some(k => r[k]) ? `JD ${r.jd || 0} · BD ${r.bd || 0} · remaja ${r.rmj || 0} · anak ${r.anak || 0}` : ''].filter(Boolean).join('\n'), deskripsi: '', _photos: [] };
+    const hc = cemCoord(h.koordinat);
+    const addTrack = o => { for (const seg of (o && o._track) || []) for (const p of seg || []) if (p && p.length >= 2) track.push([+p[0], +p[1], p[3] || 0]); };
+    addTrack(h);
+    const photos = (o, extra) => (o._photos || []).map(p => Object.assign({ cem: 1 }, p, extra || {}));
+    const put = (r, base) => {
+      const c = cemCoord(r && r.koordinat) || hc, tt = (r && r.tanggal) || tgl; if (!tgl && tt) tgl = tt;
+      const t = Math.round(new Date(`${tt || isoDate()}T${(r && r.jam) || '00:00'}`).getTime() / 1000) || nowS();
+      const oid = 'c' + ((r && r._id) || rid()) + (base._k || '');
+      obs[oid] = Object.assign({ id: oid, tax: 'foto', sp: '', nama: '', ilmiah: '', famili: '', jumlah: '', det: [], akt: [], waktu: (r && r.jam) || '', t,
+        lat: c ? c.lat : null, lon: c ? c.lon : null, acc: c ? c.acc : null, hab: [], stasiun: '', catatan: '', deskripsi: '', _photos: r ? photos(r) : [] }, base);
+      delete obs[oid]._k; if (r) addTrack(r);
+      return obs[oid];
+    };
+    const sp = (r, text, tax, jml, extra = {}) => {
+      const x0 = text && cemSpecies(text, tax); if (!x0) return;
+      const x = SPECIES.find(y => y.s === x0.ilmiah) || x0.hit;
+      put(r, Object.assign({ tax: x ? x.tax : (tax || 'foto'), sp: x ? x.id : '', nama: x ? x.n : (x0.nama || x0.ilmiah), ilmiah: x ? x.s : x0.ilmiah, famili: x ? x.f : '',
+        jumlah: +jml || 1, akt: asList(r && r.aktivitas).map(k => CEM_AKT[k] || k), catatan: (r && r.catatan) || '' }, extra));
+    };
+    const titik = (r, name, lines, extra = {}) => put(r, Object.assign({ titik: true, stasiun: name, catatan: lines.filter(Boolean).join('\n') }, extra));
+    const L = (k, v) => (CEM_LBL[k] || {})[v] || v || '';
+    switch (e.form) {
+      case 'A': for (const r of T.sesi || []) titik(r, `Sesi ${r.kode || ''} ${r.lokasi || ''}`.trim(), [`Kegiatan ${r.kode || '-'} · ${r.mulai || '?'}–${r.selesai || '?'}`, r.nPengamat && `${r.nPengamat} pengamat`, r.transek && `transek ${r.transek} m`, r.luas && `luas ${r.luas} ha`, r.pasang && L('pasang', r.pasang), r.cuaca, r.catatan]); break;
+      case 'B1': for (const r of T.hitung || []) sp(r, r.jenis, 'burung', r.jumlah, { stasiun: r.sektor || h.titik || '' }); break;
+      case 'B2':
+        for (const r of T.gangguan || []) titik(r, `Gangguan: ${L('ganggu', r.jenis)}`, [`Jumlah ${r.jumlah || '-'}`, r.jarak && `jarak ke burung ${r.jarak} m`, r.burung && `burung terdampak: ${r.burung}`, r.respons != null && r.respons !== '' && `respons: ${L('respon', r.respons)}`, r.catatan]);
+        for (const r of T.singgah || []) sp(r, r.jenis, 'burung', r.jumlah, { stasiun: r.kodeTitik || '' }); break;
+      case 'C1':
+        for (const r of T.plot || []) titik(r, `Plot Ipomoea ${r.kodePlot || ''}`.trim(), [`Tutupan Ipomoea pes-caprae ${r.tutupan ?? '-'}%`, (r.pPanjang || r.pLebar) && `plot ${r.pPanjang || '?'} × ${r.pLebar || '?'} m`, r.jarak && `jarak ke tepi mudflat ${r.jarak} m`, r.substrat && `substrat ${L('substrat', r.substrat)}`, r.catatan], { hab: ['VP'] });
+        for (const r of T.garis || []) titik(r, `Garis pantai ${r.kodeTitik || ''}`.trim(), [r.kondisi && `Kondisi: ${L('garis', r.kondisi)}`, r.arah && `arah foto ${r.arah}°`, r.penanda && `penanda: ${r.penanda}`, r.catatan], { hab: ['PP'] }); break;
+      case 'C2': for (const r of T.temuan || []) titik(r, `Ancaman: ${L('ancaman', r.kategori)}`, [r.uraian, (r.jumlah || r.satuan) && `jumlah ${r.jumlah || ''} ${r.satuan || ''}`.trim(), r.catatan]); break;
+      case 'D1':
+        for (const r of T.stasiun || []) titik(r, `Stasiun ${r.kode || ''}`.trim(), [r.tipe && `Tipe: ${L('tipeSt', r.tipe)}`, r.substrat && `substrat ${L('substrat', r.substrat)}`, r.deskripsi, r.catatan], { hab: CEM_HAB[r.substrat] ? [CEM_HAB[r.substrat]] : [], deskripsi: r.deskripsi || '' });
+        for (const r of T.air || []) { const ph = cemAvg(r.ph, r.ph2, r.ph3), su = cemAvg(r.suhu, r.suhu2, r.suhu3), sa = cemAvg(r.salinitas, r.sal2, r.sal3), td = cemAvg(r.tds, r.tds2, r.tds3);
+          titik(r, `Air ${r.stasiun || ''}`.trim(), [[ph != null && `pH ${ph}`, su != null && `suhu ${su} °C`, sa != null && `salinitas ${sa} ‰`, td != null && `TDS/kond. ${td} ${r.satuan || 'ppm'}`].filter(Boolean).join(' · '), r.pasang && L('pasang', r.pasang), r.mm === 'Y' && 'burung mencari makan saat ukur', r.catatan]); } break;
+      case 'D2': for (const r of T.kuadrat || []) {
+        const st = `${h.stasiun || ''} K${r.ke || ''}`.trim(), rr = Object.assign({}, r, { koordinat: r.koordinat || h.koordinat });
+        const grp = [['uca', 'Uca (kepiting biola)', 'Uca', r.uca], ['kepitingJml', r.kepiting || 'Kepiting lain', '', r.kepitingJml], ['gastropodaJml', r.gastropoda || 'Gastropoda', '', r.gastropodaJml], ['bivalvia', 'Bivalvia', '', r.bivalvia], ['lainnyaJml', r.lainnya || 'Epifauna lain', '', r.lainnyaJml]];
+        grp.forEach(([k, nm, sci, v], gi) => { if (!(+v > 0)) return; const x = sci ? null : cemSpecies(nm, 'bentos'); const hit = x && x.hit;
+          put(rr, { _k: '-' + gi, tax: 'bentos', sp: hit ? hit.id : '', nama: hit ? hit.n : nm, ilmiah: hit ? hit.s : sci, jumlah: +v, stasiun: st, det: ['Kuadrat'], hab: CEM_HAB[r.substrat] ? [CEM_HAB[r.substrat]] : ['MF'], catatan: k === 'uca' && (r.lubang || r.lubangTA) ? `lubang Uca aktif ${r.lubang || 0}, tidak aktif ${r.lubangTA || 0}` : '', _photos: gi ? [] : photos(r) }); });
+      } break;
+      case 'E1': for (const r of T.foto || []) sp(r, r.kode, 'tumbuhan', '', { jumlah: '' }); break;
+      case 'E2': for (const r of T.ikan || []) sp(r, r.ilmiah ? `${r.lokal || ''} — ${r.ilmiah}` : r.lokal, 'ikan', r.jumlah, { stasiun: r.lokasiTangkap || '', catatan: [r.alat && `alat: ${r.alat}`, (r.pMin || r.pMax) && `panjang ${r.pMin || '?'}–${r.pMax || '?'} cm`, r.musim, r.catatan].filter(Boolean).join('\n') }); break;
+      case 'F1': for (const r of T.unit || []) titik(r, `Kamera ${r.kode || ''}`.trim(), [r.habitat, r.target && `target: ${r.target}`, r.kondisi && `kondisi: ${r.kondisi}`, r.catatan]); break;
+      case 'F2': for (const r of T.jumpa || []) { if (!CEM_PRIM[r.jenis]) continue; sp(r, CEM_PRIM[r.jenis], 'mamalia', r.total, { catatan: [r.catatan, r.minimum === 'Y' ? 'jumlah perkiraan minimum' : '', ['jd', 'bd', 'rmj', 'anak'].some(k => r[k]) ? `JD ${r.jd || 0} · BD ${r.bd || 0} · remaja ${r.rmj || 0} · anak ${r.anak || 0}` : '', r.pohonTidur === 'Y' ? 'pohon tidur' : '', r.arahGerak && `arah gerak ${r.arahGerak}`].filter(Boolean).join('\n') }); } break;
+      case 'F3': for (const r of T.ves || []) sp(r, r.jenis, '', r.jumlah); for (const r of T.buaya || []) sp(r, 'Buaya muara — Crocodylus porosus', 'reptil', r.jumlah, { catatan: [r.kelas && `kelas ukuran ${r.kelas}`, r.posisi, r.catatan].filter(Boolean).join('\n') }); break;
+      case 'F4': for (const r of T.serangga || []) sp(r, r.jenis, 'serangga', r.jumlah, { stasiun: r.kodeTitik || '' }); break;
+      case 'G1': for (const r of T.jumpa || []) sp(r, r.jenis, CEM_KEL[r.kelompok] || 'lain', r.jumlah); break;
     }
-    if (!Object.keys(obs).length) continue;
-    const key = h.titik || h.periode || h.rute || h.lokasi || h.lokasiPendaratan || '';
-    S.surveys[id] = Object.assign(old || {}, { id, src: 'cemara', srcUpdated: e.updated || e.created, nama: `Pantai Cemara · ${cf[2]}${key ? ' · ' + key : ''}`,
+    if ((h._photos || []).length) put(null, { _k: 'h', titik: true, stasiun: 'Foto lokasi', catatan: 'Foto lokasi dari aplikasi Pantai Cemara', lat: hc ? hc.lat : null, lon: hc ? hc.lon : null, _photos: photos(h) });
+    if (!Object.keys(obs).length && !track.length) continue;
+    const key = h.titik || h.periode || h.rute || h.lokasi || h.lokasiPendaratan || h.stasiun || h.hari || '';
+    S.surveys[id] = Object.assign(old || {}, { id, src: 'cemara', srcUpdated: stamp, nama: `Pantai Cemara · ${title}${key ? ' · ' + key : ''}`,
       lokasi: 'Pantai Cemara, Jambi', tanggal: tgl || isoDate(Math.round((e.created || Date.now()) / 1000)), metode: [], pengamat: h.pengamat || '', cuaca: h.cuaca || '',
       catatan: `Dari aplikasi Survei Pantai Cemara (Form ${e.form}). Ubah datanya di aplikasi itu; perubahan ikut otomatis.`, deskripsi: (old && old.deskripsi) || '',
-      mulai: null, selesai: null, jamMulai: h.mulai || '', jamSelesai: h.selesai || '', track: [], area: { coords: [], mode: '' }, lebarTransek: 20, plot: { ...PLOT_DEF },
+      mulai: null, selesai: null, jamMulai: h.mulai || '', jamSelesai: h.selesai || '', track, area: { coords: [], mode: '' }, lebarTransek: 20, plot: { ...PLOT_DEF },
       obs, created: e.created || Date.now(), updated: Date.now() });
     n++;
   }
-  if (n) save();
+  if (n) { save(); cemaraPhotos().catch(e => console.warn(e)); }
   return n;
+}
+/* Salin foto dari aplikasi Cemara (IndexedDB 'survei-cemara-foto', alamat web sama) ke penyimpanan foto KEHATI. */
+async function cemaraPhotos() {
+  const need = []; for (const s of Object.values(S.surveys)) if (s.src === 'cemara') for (const o of Object.values(s.obs)) for (const p of o._photos || []) if (p.cem) need.push(p.id);
+  if (!need.length) return;
+  const cdb = await new Promise(ok => { const r = indexedDB.open('survei-cemara-foto'); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} ok(null); }; });
+  if (!cdb || !cdb.objectStoreNames.contains('foto')) return;
+  const get = (st, k) => new Promise(ok => { try { const q = cdb.transaction(st, 'readonly').objectStore(st).get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(null); } catch (e) { ok(null); } });
+  let n = 0;
+  for (const id of need) {
+    if (await pdbGet('thumb', id).catch(() => null)) continue;
+    const f = await get('foto', id), t = await get('thumb', id);
+    if (f) { await pdbPut('foto', id, f); await pdbPut('thumb', id, t || (await shrink(f, THUMB_MAX)).blob); n++; }
+  }
+  if (n && ['obs', 'survey', 'koleksi'].includes(view.v)) render();
 }
 function runCemaraBridge(show) {
   if (!SP_META.loaded) return;

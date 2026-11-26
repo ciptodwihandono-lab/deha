@@ -2595,7 +2595,7 @@ function renderData() {
       <div class="row"><button type="button" class="btn" data-a="zipshare">Bagikan paket lengkap</button><button type="button" class="btn ghost" data-a="zip">Simpan paket lengkap</button></div>
       <div class="row"><button type="button" class="btn ghost" data-a="ziplite">Paket tanpa foto</button><button type="button" class="btn ghost" data-a="kml">KML Google Earth</button><button type="button" class="btn ghost" data-a="json">Cadangan .json</button><button type="button" class="btn ghost" data-a="gpx">GPX</button></div>
     </section>
-    <section class="section"><h2>Gabungkan data dari HP lain</h2><p class="note">Pilih file cadangan .json dari anggota tim; survei dan catatan baru ditambahkan tanpa menghapus yang sudah ada. Foto tidak ikut (ada di paket ZIP).</p><button type="button" class="btn ghost block" data-a="import">Pilih file cadangan</button></section>
+    <section class="section"><h2>Gabungkan data dari HP lain</h2><p class="note">Pilih file cadangan .json dari anggota tim; survei dan catatan baru ditambahkan tanpa menghapus yang sudah ada. Foto tidak ikut (ada di paket ZIP).</p><p class="note">🔗 Juga menerima <b>cadangan .json dari aplikasi Survei Pantai Cemara</b> (menu Data → Cadangan .json di aplikasi itu), misalnya bila aplikasi Cemara dipakai sebagai APK Android atau di HP lain: lutung, burung, herpetofauna, ikan, dll. langsung menjadi survei KEHATI. ${(() => { try { const c = JSON.parse(localStorage.getItem(CEMARA_KEY) || 'null'); const n = c && c.entries ? Object.keys(c.entries).length : 0; return n ? `Di browser ini ada <b>${n} lembar</b> aplikasi Cemara (otomatis dibaca).` : 'Di browser ini tidak ada data aplikasi Cemara.'; } catch (e) { return ''; } })()}</p><button type="button" class="btn ghost block" data-a="import">Pilih file cadangan</button></section>
     <section class="section"><h2>AI di HP (gratis, tanpa sinyal)</h2>
       <p class="note">Model AI di HP membaca foto untuk mengisi <b>Deskripsi habitat</b> (tipe habitat, substrat, vegetasi umum, genangan, sampah) dan menebak <b>kelompok satwa</b> di titik foto. Gratis, foto tidak dikirim ke mana pun, dan bekerja tanpa sinyal. Model yang sama dipakai Peta Survei dan Survei Cemara di HP ini, jadi cukup diunduh sekali. Hasilnya perkiraan; tetap periksa.</p>
       ${ailReady() ? `<p class="note"><b>Model AI sudah tersimpan di HP ini.</b></p><button type="button" class="btn danger" data-a="ailrm">Hapus model AI (±170 MB)</button>` : `<button type="button" class="btn block" data-a="ailget">Unduh model AI (±170 MB, sekali saja, pakai Wi-Fi)</button>`}
@@ -2663,7 +2663,15 @@ gpxIn.addEventListener('change', async () => {
 $('app').addEventListener('click', ev => { const b = ev.target.closest('[data-cfmt]'); if (b && window.NavTools) { NavTools.setFormat(b.dataset.cfmt); render(); toast('Format koordinat: ' + NavTools.FORMATS[b.dataset.cfmt]); } });
 $('importIn').addEventListener('change', async ev => {
   const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
-  try { const n = mergeBackup(JSON.parse(await f.text())); toast(`${n} survei/catatan ditambahkan.`); render(); } catch (e) { toast('File ini bukan cadangan Survei KEHATI.'); }
+  try {
+    const obj = JSON.parse(await f.text());
+    // Cadangan dari aplikasi Survei Pantai Cemara (mis. dari APK Android atau HP lain): jadikan survei KEHATI.
+    if (obj && obj.app === 'survei-cemara' && obj.data && obj.data.entries) {
+      await loadSpeciesData(); const n = cemaraBridge(obj.data);
+      toast(n ? `${n} lembar dari aplikasi Survei Pantai Cemara ditambahkan ke KEHATI.` : 'Tidak ada lembar temuan jenis baru di file Cemara ini.'); render(); return;
+    }
+    const n = mergeBackup(obj); toast(`${n} survei/catatan ditambahkan.`); render();
+  } catch (e) { toast('File ini bukan cadangan Survei KEHATI atau Survei Pantai Cemara.'); }
 });
 const idIn = document.createElement('input'); idIn.type = 'file'; idIn.accept = 'image/*'; idIn.id = 'idIn'; idIn.hidden = true; document.body.appendChild(idIn);
 idIn.addEventListener('change', () => { const f = idIn.files[0]; idIn.value = ''; if (!f) return; f._galeri = !idIn.hasAttribute('capture'); if (idReady()) runIdentify(f, idTaxFor(JN.tax), null); else guessFromPhoto(f); });
@@ -3720,8 +3728,8 @@ function cemSpecies(text, tax) {
   const hit = SPECIES.find(x => x.s.toLowerCase() === q) || SPECIES.find(x => (!tax || x.tax === tax) && [x.n, x.en, ...String(x.al || '').split(',')].some(v => v && v.trim().toLowerCase() === nm.trim().toLowerCase()));
   return { nama: hit ? hit.n : nm.trim(), ilmiah: hit ? hit.s : (sci || '').trim(), hit };
 }
-function cemaraBridge() {
-  let C; try { C = JSON.parse(localStorage.getItem(CEMARA_KEY) || 'null'); } catch (e) { C = null; }
+function cemaraBridge(given) {
+  let C = given; if (!C) { try { C = JSON.parse(localStorage.getItem(CEMARA_KEY) || 'null'); } catch (e) { C = null; } }
   if (!C || !C.entries) return 0;
   let n = 0;
   for (const e of Object.values(C.entries)) {
